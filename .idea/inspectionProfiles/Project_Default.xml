@@ -1,0 +1,56 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="logic.filter_edited.EditedFiltrator.results" />
+          <option value="logic.filter_edited.EditedFiltrator.sources" />
+          <option value="logic.filter_edited.EditedFiltrator.path" />
+          <option value="logic.filter_edited.EditedFiltrator.read" />
+          <option value="logic.edited_filtrator.EditedFiltrator.path" />
+          <option value="logic.edited_filtrator.EditedFiltrator.*" />
+          <option value="logic.check_structure.StructureChecker.path" />
+          <option value="logic.selection_checker.SelectionChecker.selection" />
+          <option value="logic.selection_checker.SelectionChecker.results" />
+          <option value="logic.filter_selection.FilterSelection.selection" />
+          <option value="logic.filter_selection.FilterSelection.results" />
+          <option value="logic.check_selection.SelectionChecker.selection" />
+          <option value="logic.check_selection.SelectionChecker.results" />
+          <option value="logic.filter_selection.FilterSelection.path" />
+          <option value="logic.check_selection.CheckSelection.selection" />
+          <option value="logic.check_selection.CheckSelection.results" />
+          <option value="logic.filter_selection.FilterSelection.sources" />
+          <option value="logic.filter_odd_selection.FilterOddSelection.__get_joined_data" />
+          <option value="logic.filter_odd_selection.FilterOddSelection.path" />
+          <option value="logic.filter_odd_selection.FilterOddSelection.__selection_folder_path" />
+          <option value="logic.filter_unselected.FilterUnselected.path" />
+          <option value="logic.filter_unselected.FilterUnselected.__get_joined_data" />
+          <option value="logic.filter_unselected.FilterUnselected.sources" />
+          <option value="logic.check_structure.CheckStructure.path" />
+          <option value="logic.check_structure.CheckStructure.name" />
+          <option value="logic.check_selection.CheckSelection.name" />
+          <option value="logic.check_timings.CheckTimings.results" />
+          <option value="logic.check_timings.CheckTimings.sources" />
+          <option value="logic.check_timings.CheckTimings.name" />
+          <option value="logic.check_structure.CheckStructure.entry" />
+          <option value="logic.photoset.filters.filter_odd_selection.FilterOddSelection.path" />
+          <option value="logic.photoset.filters.filter_odd_selection.FilterOddSelection.__get_joined_data" />
+          <option value="logic.photoset.filters.filter_odd_selection.FilterOddSelection.__selection_folder_path" />
+          <option value="logic.photoset.filters.filter_selection.FilterSelection.selection" />
+          <option value="logic.photoset.filters.filter_selection.FilterSelection.results" />
+          <option value="logic.disk.checks.check_structure.CheckStructure.entry" />
+          <option value="logic.disk.checks.check_structure.CheckStructure.name" />
+          <option value="filesystem.path_interpretation.PathInterpretation.parts" />
+          <option value="command.mixins.set_by_path.SetByPath.entry" />
+          <option value="command.mixins.set_by_path.SetByPath.__getitem__" />
+          <option value="models.photoset_extensions.photoset_sources.Sources.edited_sources" />
+          <option value="models.photoset_extensions.photoset_selection.Selection.tree" />
+          <option value="logic.photoset.filters.filter_edited.FilterEdited.sources" />
+          <option value="logic.photoset.filters.filter_edited.FilterEdited.results" />
+          <option value="logic.photoset.filters.filter_edited.FilterEdited.edited_sources" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
