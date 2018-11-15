@@ -1,8 +1,8 @@
 import string
-from typing import List, Optional, Dict, Iterable
+from pathlib import Path
+from typing import Optional, Dict, Iterable
 
 from filesystem2.absolute_path import AbsolutePath
-from filesystem2.path import Path
 from models2.disk import Disk
 
 
@@ -39,7 +39,9 @@ class World2:
         disks_mapping = {}
 
         for disk_letter in string.ascii_uppercase:
-            disk = World2.__disk(disk_letter)
+            path = Path(disk_letter + ":") / "photos"
+
+            if path.exists():
 
             if disk is not None:
                 disks_mapping[disk_letter] = disk
@@ -54,7 +56,7 @@ if __name__ == '__main__':
     active_disk = world.active_disk
     sets = active_disk.sets
 
-    name = "18.06.11.forro_na_siberia"
+    name = "16.08.28.utkinarium"
 
     photoset = world.active_disk[name]
 
@@ -64,6 +66,6 @@ if __name__ == '__main__':
 
     published_path = AbsolutePath.from_string("D:/photos/stages/stage4.published")
 
-    photoset.split_forward(chosen_base, published_path)
+    # photoset.split_forward(chosen_base, published_path)
 
     a = 7

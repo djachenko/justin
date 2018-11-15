@@ -31,7 +31,6 @@ class StageCommand(Command):
         # move
         # prepare
 
-
         world = args.world
 
         current_stage: Stage = StageCommand.stages_by_folder[args.path.parts[-1]]

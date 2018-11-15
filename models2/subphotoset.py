@@ -124,7 +124,7 @@ class SubPhotoset(FileBased):
 
         return non_empty_bases
 
-    def split_backwards(self, base: Iterable[File], new_path: AbsolutePath)):
+    # def split_backwards(self, base: Iterable[File], new_path: AbsolutePath)):
 
     def split_forward(self, base: Iterable[File], new_path: AbsolutePath):
         sources = self.sources

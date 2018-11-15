@@ -1,6 +1,7 @@
 import os
 import shutil
 import string
+from pathlib import Path
 from typing import List
 
 import sys
@@ -20,29 +21,39 @@ def __copy_canceller(src, dst):
     sys.exit("Tried to copy {file_name}, aborting".format(file_name=src))
 
 
-def move(file_path: str, dest_path: str):
-    assert isinstance(file_path, str)
-    assert isinstance(dest_path, str)
+def move(file_path: Path, dest_path: Path):
+    assert isinstance(file_path, Path)
+    assert isinstance(dest_path, Path)
 
-    os.makedirs(dest_path, exist_ok=True)
+    if dest_path == file_path.parent:
+        return
 
-    file_name = file_path.rsplit(SEPARATOR, 1)[1]
-    new_file_path = build_path__(dest_path, file_name)
+    assert file_path.exists()
 
-    if path_exists__(new_file_path) and __isdir(file_path):
-        for subfile in subfiles__(file_path):
-            move(subfile.path, new_file_path)
+    if not dest_path.exists():
+        dest_path.mkdir(parents=True, exist_ok=True)
+
+    assert dest_path.is_dir()
+
+    new_file_path = dest_path / file_path.name
+
+    if new_file_path.exists():
+        assert new_file_path.is_dir()
+        assert file_path.is_dir()
+
+        for item in file_path.iterdir():
+            move(item, new_file_path)
 
         if tree_is_empty(file_path):
             remove_tree(file_path)
     else:
-        shutil.move(file_path, dest_path, __copy_canceller)
+        shutil.move(str(file_path), str(dest_path), __copy_canceller)
 
 
-def remove_tree(path: str) -> None:
-    assert isinstance(path, str)
+def remove_tree(path: Path) -> None:
+    assert isinstance(path, Path)
 
-    shutil.rmtree(path)
+    shutil.rmtree(str(path))
 
 
 def scandir__(path: str) -> List[os.DirEntry]:
@@ -71,15 +82,15 @@ def path_exists__(path: str) -> bool:
     return os.path.exists(path)
 
 
-def subfolders__(path: str) -> List[os.DirEntry]:
-    if path_exists__(path):
-        return [i for i in scandir__(path) if i.is_dir()]
+def subfolders__(path: Path) -> List[Path]:
+    if path.exists():
+        return [i for i in path.iterdir() if i.is_dir()]
 
     return []
 
 
-def subfiles__(path: str) -> List[os.DirEntry]:
-    return [i for i in scandir__(path) if i.is_file()]
+def subfiles__(path: Path) -> List[Path]:
+    return [i for i in path.iterdir() if i.is_file()]
 
 
 def build_path__(*components):
@@ -91,14 +102,5 @@ def build_path__(*components):
     return result
 
 
-def folder_tree__(path, depth=-1):
-    result = {subfile.name: subfile for subfile in subfiles__(path)}
-
-    if depth != 0:
-        result.update({subfolder.name: folder_tree__(subfolder.path, depth - 1) for subfolder in subfolders__(path)})
-
-    return result
-
-
-def tree_is_empty(path: str):
-    return len(subfiles__(path)) == 0 and all([tree_is_empty(subfolder.path) for subfolder in subfolders__(path)])
+def tree_is_empty(path: Path):
+    return len(subfiles__(path)) == 0 and all([tree_is_empty(subfolder) for subfolder in subfolders__(path)])

@@ -54,7 +54,7 @@ class Disk:
 
         if root.has_implicit_sets:
             if len(trace.parts) < 3:
-                trace = trace.append_component("")
+                trace = trace.append_component("")  # wtf
 
             path = trace
 
