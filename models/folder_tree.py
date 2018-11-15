@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from pathlib import Path
 from typing import List, Iterable
 
 from filesystem.file import File
@@ -26,11 +27,22 @@ class FolderTree:
 
 
 class SingleFolderTree(FolderTree):
-    def __init__(self, folder: Folder = None) -> None:
+    def __init__(self, path: Path = None) -> None:
         super().__init__()
 
         self.__subtrees = {}
         self.__files = []
+
+        for child in path.iterdir():
+            if child.is_dir():
+                self.__subtrees[child.name] = SingleFolderTree(child)
+            elif child.is_file():
+                self.files.append(File(child))
+            else:
+                print("Path not file or dir")
+
+                exit(1)
+
 
         if folder is not None:
             self.__subtrees = {i.name: SingleFolderTree(i) for i in folder.subfolders()}
@@ -62,6 +74,8 @@ class SingleFolderTree(FolderTree):
 
         return result
 
+# facade for multiple trees not having any relations to each other
+# like split photoser
 
 class MergedTree(FolderTree):
     def __init__(self, trees: Iterable[FolderTree]) -> None:
