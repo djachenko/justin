@@ -1,7 +1,7 @@
-from logic.photoset.filters.filter import Filter
+from v3_0.logic.filter import Filter
 from logic.photoset.filters.odd_selection_filter import OddSelectionFilter
-from logic.photoset.filters.unselected_filter import UnselectedFilter
-from models.photoset import Photoset
+from v3_0.logic.unselected.unselected_filter import UnselectedFilter
+from v3_0.models.photoset import Photoset
 
 
 class SelectionFilter(Filter):

@@ -1,11 +1,11 @@
-from logic.photoset.checks.base_check import BaseCheck
+from v3_0.logic.check import Check
 from logic.photoset.filters.odd_selection_filter import OddSelectionFilter
 from logic.photoset.selectors.odd_selection_selector import OddSelectionSelector
 
 
-class OddSelectionCheck(BaseCheck):
+class OddSelectionCheck(Check):
     @property
-    def check_name(self):
+    def name(self):
         return "odd selection check"
 
     @property

@@ -1,16 +1,15 @@
 from typing import List
 
-from filesystem.file import File
-from filesystem.filesystem import Filesystem
-from filesystem.path import Path
-from logic.photoset.checks.base_check import BaseCheck
-from logic.photoset.filters.filter import Filter
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.photoset import Photoset
+from v3_0.filesystem.file import File
+from pathlib import Path
+from v3_0.logic.check import Check
+from v3_0.logic.filter import Filter
+from v3_0.logic.selector import Selector
+from v3_0.models.photoset import Photoset
 
 
 class BaseFilter(Filter):
-    def __init__(self, selector: BaseSelector, filter_folder: str, prechecks: List[BaseCheck]=None) -> None:
+    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[Check] = None) -> None:
         super().__init__()
 
         if not prechecks:
@@ -29,9 +28,6 @@ class BaseFilter(Filter):
         filter_path = self.__filter_folder_path(photoset)
 
         for file in selection:
-            if file is None:
-                a = 7
-
             file.move(filter_path)
 
     def backwards(self, photoset: Photoset) -> None:
@@ -51,7 +47,7 @@ class BaseFilter(Filter):
         File.remove(filter_path)
 
     def __filter_folder_path(self, photoset: Photoset) -> Path:
-        return photoset.path.append_component(self.__filter_folder)
+        return photoset.path / self.__filter_folder
 
     def __source_folder_path(self, photoset: Photoset) -> Path:
-        return photoset.path.append_component(self.__selector.source_folder(photoset))
+        return photoset.path / self.__selector.source_folder(photoset)

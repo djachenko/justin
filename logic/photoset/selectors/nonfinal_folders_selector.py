@@ -1,12 +1,12 @@
 from typing import List
 
 import structure
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.movable import Movable
-from models.photoset import Photoset
+from v3_0.logic.selector import Selector
+from v3_0.filesystem.movable import Movable
+from v3_0.models.photoset import Photoset
 
 
-class NonfinalFoldersSelector(BaseSelector):
+class NonfinalFoldersSelector(Selector):
     def select(self, photoset: Photoset) -> List[Movable]:
         struct = structure.photoset_structure
 

@@ -2,13 +2,13 @@ from typing import List
 
 import structure
 from filesystem.folder import Folder
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.movable import Movable
-from models.photoset import Photoset
+from v3_0.logic.selector import Selector
+from v3_0.filesystem.movable import Movable
+from v3_0.models.photoset import Photoset
 from structure import Structure
 
 
-class UnnecessaryFoldersSelector(BaseSelector):
+class UnnecessaryFoldersSelector(Selector):
     def __init__(self, depth=-1) -> None:
         super().__init__()
 
