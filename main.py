@@ -1,5 +1,5 @@
 import justin
-from filesystem.path import Path
+from pathlib import Path
 
 
 def test_stage():

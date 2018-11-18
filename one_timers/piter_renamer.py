@@ -1,4 +1,5 @@
-from filesystem import fs
+from v3_0.filesystem import fs
+
 
 def main():
     path = 'D:\photos\stages\stage3.ready\_piter'.replace("\\", "/")

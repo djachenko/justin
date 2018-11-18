@@ -1,18 +1,18 @@
 from v3_0.logic.metadata.metadata_check import MetadataCheck
 from logic.photoset.filters.base_filter import BaseFilter
-from logic.photoset.selectors.odd_selection_selector import OddSelectionSelector
+from v3_0.logic.unselected.unselected_selector import UnselectedSelector
 
 
-class OddSelectionFilter(BaseFilter):
-    __ODD_SELECTION_FOLDER = "odd_selection"
+class UnselectedFilter(BaseFilter):
+    __TO_SELECT_FOLDER = "to_select"
 
     def __init__(self, selector=None) -> None:
         if selector is None:
-            selector = OddSelectionSelector()
+            selector = UnselectedSelector()
 
         super().__init__(
             selector=selector,
-            filter_folder=OddSelectionFilter.__ODD_SELECTION_FOLDER,
+            filter_folder=UnselectedFilter.__TO_SELECT_FOLDER,
             prechecks=[
                 MetadataCheck()
             ]

@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
 
 from command.command import Command
-from models import stage
-from models.photoset import Photoset
-from models.stage import Stage
+from v3_0.models.stages import stage
+from v3_0.models.photoset import Photoset
+from v3_0.models.stages.stage import Stage
 
 
 class StageCommand(Command):

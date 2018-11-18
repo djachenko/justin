@@ -12,3 +12,21 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+def collide():
+    sets = []
+
+    mapping = {}
+
+    for photoset in sets:
+        key = photoset.name
+        bucket = mapping.get(key, [])
+
+        bucket.append(photoset)
+
+        mapping[key] = bucket
+
+    buckets = mapping.values()
+
+    collisions = [bucket for bucket in buckets if len(bucket) > 1]
