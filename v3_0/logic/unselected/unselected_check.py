@@ -8,10 +8,6 @@ class UnselectedCheck(Check):
     def name(self):
         return "selection check"
 
-    @property
-    def failed_files_characteristic(self):
-        return "without unsigned copies"
-
     def __init__(self) -> None:
         selector = UnselectedSelector()
 

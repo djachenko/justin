@@ -28,19 +28,10 @@ class Stage:
         self.__name = path.stem
         self.__folder = path.name
         self.__path = path
+        self.__command = command
         self.__incoming_checks = incoming_checks
         self.__outcoming_checks = outcoming_checks
         self.__preparation_hooks = preparation_hooks
-
-    @classmethod
-    @abstractmethod
-    def name(cls) -> str:
-        return ""
-
-    @classmethod
-    @abstractmethod
-    def command(cls) -> str:
-        return ""
 
     @property
     def folder(self) -> str:
@@ -49,6 +40,10 @@ class Stage:
     @property
     def path(self) -> Path:
         return self.__path
+
+    @property
+    def command(self) -> str:
+        return self.__command
 
     @staticmethod
     def __run_checks(photoset: Photoset, checks: Iterable[Check]) -> bool:

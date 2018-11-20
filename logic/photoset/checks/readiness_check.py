@@ -7,14 +7,6 @@ class ReadinessCheck(Check):
     def name(self):
         return "check of destinations"
 
-    @property
-    def failed_files_characteristic(self):
-        return "which aren't designed in structure"
-
-    @property
-    def file_type(self):
-        return "Folders"
-
     def __init__(self) -> None:
         selector = UnnecessaryFoldersSelector(depth=1)
         messages = [

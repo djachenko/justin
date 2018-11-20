@@ -44,10 +44,5 @@ class Check:
         assert False
 
     @property
-    @abstractmethod
-    def failed_files_characteristic(self):
-        assert False
-
-    @property
     def file_type(self):
         return "Files"

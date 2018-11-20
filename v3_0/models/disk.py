@@ -28,7 +28,7 @@ class Disk:
         return None
 
     @staticmethod
-    def __collect(folder_root: FolderTree, structure_root: Structure) -> Iterable[SubPhotoset]:
+    def __collect(folder_root: FolderTree, structure_root: Structure) -> Iterable[Photoset]:
         result = []
 
         for i in structure_root.substructures:

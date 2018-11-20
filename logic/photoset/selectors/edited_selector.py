@@ -1,6 +1,6 @@
 from typing import List
 
-from v3_0.helpers import util
+from v3_0.helpers import util, joins
 from v3_0.logic.selector import Selector
 from v3_0.filesystem.movable import Movable
 from v3_0.models.photoset import Photoset
@@ -15,11 +15,10 @@ class EditedSelector(Selector):
         results = photoset.results
         sources = photoset.sources
 
-        join = util.left_join(
+        join = joins.left(
             results,
             sources,
-            lambda result: result.name_without_extension(),
-            lambda source: source.name
+            lambda result, source: result.name_without_extension() == source.name
         )
 
         results = [i[1] for i in join]
