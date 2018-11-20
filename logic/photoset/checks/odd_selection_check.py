@@ -8,10 +8,6 @@ class OddSelectionCheck(Check):
     def name(self):
         return "odd selection check"
 
-    @property
-    def failed_files_characteristic(self):
-        return "without signed pair"
-
     def __init__(self) -> None:
         selector = OddSelectionSelector()
 

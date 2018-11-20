@@ -1,8 +1,9 @@
+import os
 import string
 from pathlib import Path
-from typing import Optional, Dict, Iterable
+from typing import Dict, Iterable
 
-from filesystem2.absolute_path import AbsolutePath
+from v3_0.filesystem.folder_tree.single_folder_tree import SingleFolderTree
 from v3_0.models.disk import Disk
 from v3_0.models.photoset import Photoset
 
@@ -11,9 +12,10 @@ class World:
     __PHOTOS_FOLDER = "photos"
     __ACTIVE_DISK = "D"
 
-    @property
-    def __disks_map(self) -> Dict[str, Disk]:
-        return World.__discover_disks()
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.__disks_map = World.__discover_disks()
 
     @property
     def disks(self) -> Iterable[Disk]:
@@ -24,28 +26,15 @@ class World:
         return self.__disks_map[World.__ACTIVE_DISK]
 
     @staticmethod
-    def __disk(disk_letter: str) -> Optional[Disk]:
-        pattern = ":/" + World.__PHOTOS_FOLDER
-
-        path_string = disk_letter + pattern
-        path: AbsolutePath = AbsolutePath.from_string(path_string)
-
-        if path.exists():
-            return Disk(path)
-
-        return None
-
-    @staticmethod
     def __discover_disks() -> Dict[str, Disk]:
         disks_mapping = {}
 
         for disk_letter in string.ascii_uppercase:
-            path = Path(disk_letter + ":") / "photos"
+            path = Path(disk_letter + ":/") / "photos"
 
-            if path.exists():
-                disk = Disk()
+            if os.access(path, os.F_OK) and path.exists():
+                disk = Disk(SingleFolderTree(path))
 
-            if disk is not None:
                 disks_mapping[disk_letter] = disk
 
         return disks_mapping
