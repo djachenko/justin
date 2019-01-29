@@ -1,16 +1,15 @@
+from pathlib import Path
 from typing import List
 
-from filesystem.file import File
-from filesystem.filesystem import Filesystem
-from filesystem.path import Path
-from logic.photoset.checks.base_check import BaseCheck
-from logic.photoset.filters.filter import Filter
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.photoset import Photoset
+from v3_0.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.logic.check import Check
+from v3_0.logic.filter import Filter
+from v3_0.logic.selector import Selector
+from v3_0.models.photoset import Photoset
 
 
 class BaseFilter(Filter):
-    def __init__(self, selector: BaseSelector, filter_folder: str, prechecks: List[BaseCheck]=None) -> None:
+    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[Check] = None) -> None:
         super().__init__()
 
         if not prechecks:
@@ -29,10 +28,9 @@ class BaseFilter(Filter):
         filter_path = self.__filter_folder_path(photoset)
 
         for file in selection:
-            if file is None:
-                a = 7
-
             file.move(filter_path)
+
+        photoset.tree.refresh()
 
     def backwards(self, photoset: Photoset) -> None:
         filter_path = self.__filter_folder_path(photoset)
@@ -40,18 +38,21 @@ class BaseFilter(Filter):
         if not filter_path.exists():
             return
 
-        filtered = Filesystem.folder(filter_path)
+        # todo: remove creation and replace with edited tree
+        filtered = SingleFolderTree(filter_path)
 
-        for folder in filtered.subfiles():
+        for file in filtered.files:
+            file.move(self.__source_folder_path(photoset))
+
+        for folder in filtered.subtrees:
             folder.move(self.__source_folder_path(photoset))
 
-        for folder in filtered.subfolders():
-            folder.move(self.__source_folder_path(photoset))
+        filter_path.rmdir()
 
-        File.remove(filter_path)
+        photoset.tree.refresh()
 
     def __filter_folder_path(self, photoset: Photoset) -> Path:
-        return photoset.path.append_component(self.__filter_folder)
+        return photoset.path / self.__filter_folder
 
     def __source_folder_path(self, photoset: Photoset) -> Path:
-        return photoset.path.append_component(self.__selector.source_folder(photoset))
+        return photoset.path / self.__selector.source_folder(photoset)
