@@ -1,4 +1,4 @@
-from filesystem import fs
+from v3_0.filesystem import fs
 
 __SEPARE = "separated_jpegs"
 

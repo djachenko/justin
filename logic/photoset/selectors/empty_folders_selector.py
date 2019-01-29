@@ -1,12 +1,12 @@
 from typing import List
 
 from filesystem.folder import Folder
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.movable import Movable
-from models.photoset import Photoset
+from v3_0.logic.selector import Selector
+from v3_0.filesystem.movable import Movable
+from v3_0.models.photoset import Photoset
 
 
-class EmptyFoldersSelector(BaseSelector):
+class EmptyFoldersSelector(Selector):
     def source_folder(self, photoset: Photoset) -> str:
         return ""
 

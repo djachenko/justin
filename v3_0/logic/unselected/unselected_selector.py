@@ -6,18 +6,30 @@ from v3_0.logic.selector import Selector
 from v3_0.models.photoset import Photoset
 
 
-class OddSelectionSelector(Selector):
+class UnselectedSelector(Selector):
     def source_folder(self, photoset: Photoset) -> str:
-        return photoset.selection_folder_name
+        return photoset.sources_folder_name
 
     def select(self, photoset: Photoset) -> List[Movable]:
         selection = photoset.selection
         results = photoset.results
 
         join = joins.left(
-            selection,
             results,
+            selection,
             lambda x, y: x.name_without_extension() == y.name_without_extension()
         )
 
-        return [i[0] for i in join if i[1] is None]
+        unselected = [i[0] for i in join if i[1] is None]
+
+        sources = photoset.sources
+
+        join2 = joins.left(
+            unselected,
+            sources,
+            lambda jpeg, source: jpeg.name_without_extension() == source.name
+        )
+
+        unselected_sources = [i[1] for i in join2]
+
+        return unselected_sources

@@ -6,7 +6,7 @@ from v3_0.filesystem.movable import Movable
 from v3_0.models.photoset import Photoset
 
 
-class OutdatedSelector(Selector):
+class MetadataSelector(Selector):
     def source_folder(self, photoset: Photoset) -> str:
         return ""
 

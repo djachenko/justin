@@ -1,4 +1,4 @@
-from filesystem import fs
+from v3_0.filesystem import fs
 
 __source_folder = "D:/photos/stages/stage2.develop/_/17.08.05.lika_night_lake"
 __jpeg_folder = "selection"
