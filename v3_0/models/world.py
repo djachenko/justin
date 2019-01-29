@@ -1,5 +1,4 @@
 import os
-import string
 from pathlib import Path
 from typing import Dict, Iterable
 
@@ -29,7 +28,8 @@ class World:
     def __discover_disks() -> Dict[str, Disk]:
         disks_mapping = {}
 
-        for disk_letter in string.ascii_uppercase:
+        # for disk_letter in string.ascii_uppercase:
+        for disk_letter in ["D"]:
             path = Path(disk_letter + ":/") / "photos"
 
             if os.access(path, os.F_OK) and path.exists():
@@ -41,25 +41,3 @@ class World:
 
     def __getitem__(self, key) -> Photoset:
         return self.active_disk[key]
-
-
-if __name__ == '__main__':
-    world = World()
-
-    disks = world.disks
-    active_disk = world.active_disk
-    sets = active_disk.sets
-
-    name = "16.08.28.utkinarium"
-
-    photoset = world.active_disk[name]
-
-    bases = photoset.split_bases()
-
-    chosen_base = bases[0]
-
-    published_path = AbsolutePath.from_string("D:/photos/stages/stage4.published")
-
-    # photoset.split_forward(chosen_base, published_path)
-
-    a = 7

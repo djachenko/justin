@@ -62,14 +62,14 @@ class Source(Movable):
         return size
 
     def __str__(self) -> str:
-        return "Source {name}".format(name=self.name)
+        return "Source: {name}".format(name=self.name)
 
     @staticmethod
     def from_file_sequence(seq: Iterable[File]) -> List['Source']:
         split = list(util.split_by_predicates(
             seq,
-            lambda file: file.extension.lower() in ['nef', "tif", ],
-            lambda file: file.extension.lower() == "xmp"
+            lambda file: file.extension.lower() in ['.nef', ".tif", ],
+            lambda file: file.extension.lower() == ".xmp"
         ))
 
         join = joins.left(

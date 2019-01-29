@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Optional
 
 from v3_0.filesystem.file import File
 from v3_0.filesystem.path_based import PathBased
@@ -27,9 +27,17 @@ class FolderTree(PathBased):
         pass
 
     @abstractmethod
-    def __getitem__(self, key: str) -> 'FolderTree':
+    def __getitem__(self, key: str) -> Optional['FolderTree']:
+        pass
+
+    @abstractmethod
+    def __contains__(self, key: str) -> bool:
         pass
 
     @abstractmethod
     def flatten(self) -> List[File]:
+        pass
+
+    @abstractmethod
+    def refresh(self):
         pass
