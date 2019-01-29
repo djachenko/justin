@@ -17,7 +17,7 @@ class UnselectedSelector(Selector):
         join = joins.left(
             results,
             selection,
-            lambda x, y: x.name_without_extension() == y.name_name_without_extension()
+            lambda x, y: x.name_without_extension() == y.name_without_extension()
         )
 
         unselected = [i[0] for i in join if i[1] is None]

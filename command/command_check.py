@@ -1,4 +1,4 @@
-from command.command import Command
+from v3_0.commands.command import Command
 
 
 class CommandCheck(Command):

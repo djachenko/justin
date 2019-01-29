@@ -1,20 +1,22 @@
 import argparse
 
 from command.command_check import CommandCheck
-from command.command_stage import StageCommand
+from v3_0.commands.command_stage import StageCommand
 from v3_0.models.world import World
 
 
 class Args(argparse.Namespace):
-    def __init__(self) -> None:
+    def __init__(self, world: World) -> None:
         super().__init__()
 
-        self.world = World()
+        self.world = world
 
 
-def main(args=None, path=None):
+def main(args=None):
+    world = World()
+
     commands = [
-        StageCommand(),
+        StageCommand(world),
         CommandCheck()
     ]
 
@@ -25,11 +27,11 @@ def main(args=None, path=None):
     for command in commands:
         command.configure_parser(parser_adder)
 
-    name = parser.parse_args(args, namespace=Args())
+    name = parser.parse_args(args, namespace=Args(world))
 
     if name.func:
         name.func(name)
 
 
 if __name__ == '__main__':
-    main()
+    main(["ready", "16.11.12.moon"])

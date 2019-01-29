@@ -1,7 +1,7 @@
+from pathlib import Path
 from typing import List
 
-from v3_0.filesystem.file import File
-from pathlib import Path
+from v3_0.filesystem.folder_tree.single_folder_tree import SingleFolderTree
 from v3_0.logic.check import Check
 from v3_0.logic.filter import Filter
 from v3_0.logic.selector import Selector
@@ -30,21 +30,26 @@ class BaseFilter(Filter):
         for file in selection:
             file.move(filter_path)
 
+        photoset.tree.refresh()
+
     def backwards(self, photoset: Photoset) -> None:
         filter_path = self.__filter_folder_path(photoset)
 
         if not filter_path.exists():
             return
 
-        filtered = Filesystem.folder(filter_path)
+        # todo: remove creation and replace with edited tree
+        filtered = SingleFolderTree(filter_path)
 
-        for folder in filtered.subfiles():
+        for file in filtered.files:
+            file.move(self.__source_folder_path(photoset))
+
+        for folder in filtered.subtrees:
             folder.move(self.__source_folder_path(photoset))
 
-        for folder in filtered.subfolders():
-            folder.move(self.__source_folder_path(photoset))
+        filter_path.rmdir()
 
-        File.remove(filter_path)
+        photoset.tree.refresh()
 
     def __filter_folder_path(self, photoset: Photoset) -> Path:
         return photoset.path / self.__filter_folder

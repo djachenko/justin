@@ -1,7 +1,8 @@
-from typing import Type
+from pathlib import Path
+from typing import Type, List, Optional
 
-import structure
-from structure import Structure
+from v3_0 import structure
+from v3_0.structure import Structure
 from v3_0.models.stages.develop_stage import DevelopStage
 from v3_0.models.stages.filter_stage import FilterStage
 from v3_0.models.stages.gif_stage import GifStage
@@ -34,7 +35,7 @@ class StagesFactory:
     __STAGE_STRUCTURES = structure.disk_structure["stages"].substructures
 
     @staticmethod
-    def __map_stages(world: World):
+    def __map_stages(world: World) -> List[Stage]:
         classes_by_name = {StagesFactory.__name_from_class(cls): cls for cls in StagesFactory.__STAGE_CLASSES}
         structures_by_name = {StagesFactory.__name_from_structure(struct): struct for struct in
                               StagesFactory.__STAGE_STRUCTURES}
@@ -43,10 +44,9 @@ class StagesFactory:
 
         names = classes_by_name.keys()
 
-        stages_by_name = {}
-        stages_by_command = {}
-
         root_path = world.active_disk.root.path
+
+        stages = []
 
         for name in names:
             struct = structures_by_name[name]
@@ -54,26 +54,35 @@ class StagesFactory:
 
             stage = cls(root_path / struct.path)
 
-            stages_by_name[name] = stage
-            stages_by_command[stage.command] = stage
+            stages.append(stage)
 
-        return stages_by_name, stages_by_command
+        return stages
 
     def __init__(self, world: World) -> None:
         super().__init__()
 
-        self.__stages_by_name, self.__stages_by_command = StagesFactory.__map_stages(world)
+        stages = StagesFactory.__map_stages(world)
 
-    def stage_by_name(self, name: str) -> Stage:
-        return self.__stages_by_name[name]
+        self.__stages_by_command = {stage.command: stage for stage in stages}
+        self.__stages_by_folders = {stage.folder: stage for stage in stages}
+
+        self.__commands = [stage.command for stage in stages]
+
+    @property
+    def commands(self):
+        return self.__commands
+
+    def stage_by_folder(self, name: str) -> Optional[Stage]:
+        return self.__stages_by_folders.get(name)
 
     def stage_by_command(self, command: str) -> Stage:
         return self.__stages_by_command[command]
 
+    def stage_by_path(self, path: Path) -> Optional[Stage]:
+        for path_part in path.parts:
+            possible_stage = self.stage_by_folder(path_part)
 
-if __name__ == '__main__':
-    w = World()
+            if possible_stage is not None:
+                return possible_stage
 
-    fac = StagesFactory(w)
-
-    a = 7
+        return None

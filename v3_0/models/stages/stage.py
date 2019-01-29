@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from pathlib import Path
 from typing import Iterable
 
@@ -25,8 +24,6 @@ class Stage:
         if preparation_hooks is None:
             preparation_hooks = []
 
-        self.__name = path.stem
-        self.__folder = path.name
         self.__path = path
         self.__command = command
         self.__incoming_checks = incoming_checks
@@ -34,8 +31,12 @@ class Stage:
         self.__preparation_hooks = preparation_hooks
 
     @property
+    def name(self):
+        return self.path.suffix.strip(".")
+
+    @property
     def folder(self) -> str:
-        return self.__folder
+        return self.path.name
 
     @property
     def path(self) -> Path:
@@ -44,6 +45,9 @@ class Stage:
     @property
     def command(self) -> str:
         return self.__command
+
+    def __str__(self) -> str:
+        return "Stage: " + self.name
 
     @staticmethod
     def __run_checks(photoset: Photoset, checks: Iterable[Check]) -> bool:

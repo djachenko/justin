@@ -1,20 +1,9 @@
-import os
 import shutil
-import string
+import sys
 from pathlib import Path
 from typing import List
 
-import sys
-
 SEPARATOR = "/"
-
-
-def __isdir(path: str) -> bool:
-    return os.path.isdir(path)
-
-
-def __isfile(path: str) -> bool:
-    return os.path.isfile(path)
 
 
 def __copy_canceller(src, dst):
@@ -54,32 +43,6 @@ def remove_tree(path: Path) -> None:
     assert isinstance(path, Path)
 
     shutil.rmtree(str(path))
-
-
-def scandir__(path: str) -> List[os.DirEntry]:
-    assert isinstance(path, str)
-
-    path = path.strip("/")
-
-    if path.endswith(":"):
-        path += "/"
-
-    return os.scandir(path)
-
-
-def __disk_path(disk_letter: str) -> str:
-    return disk_letter + ":"
-
-
-def find_disks() -> List[str]:
-    disk_letters = [__disk_path(disk_letter) for disk_letter in string.ascii_uppercase if
-                    path_exists__(__disk_path(disk_letter))]
-
-    return disk_letters
-
-
-def path_exists__(path: str) -> bool:
-    return os.path.exists(path)
 
 
 def subfolders__(path: Path) -> List[Path]:

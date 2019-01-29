@@ -38,7 +38,7 @@ class Photoset(Movable):
 
     @property
     def edited_sources(self) -> List[Source]:
-        return Source.from_file_sequence(self.tree[Photoset.__EDITED_SOURCES].files)
+        return Source.from_file_sequence(self.__subtree_files(Photoset.__EDITED_SOURCES))
 
     @property
     def edited_sources_folder_name(self):
@@ -69,13 +69,21 @@ class Photoset(Movable):
     def sources_folder_name(self):
         return ""
 
+    def __subtree_files(self, key: str) -> List[File]:
+        subtree = self.tree[key]
+
+        if subtree is not None:
+            return subtree.files
+        else:
+            return []
+
     @property
     def photoclub(self) -> List[File]:
-        return self.tree[Photoset.__PHOTOCLUB].files
+        return self.__subtree_files(Photoset.__PHOTOCLUB)
 
     @property
     def selection(self) -> List[File]:
-        return self.tree[Photoset.__SELECTION].files
+        return self.__subtree_files(Photoset.__SELECTION)
 
     @property
     def selection_folder_name(self) -> str:
@@ -95,8 +103,23 @@ class Photoset(Movable):
 
     @property
     def results(self) -> List[File]:
-        return self.photoclub + self.instagram.flatten() + self.our_people.flatten() + self.justin.flatten() + \
-               self.closed.flatten()
+        possible_subtrees = [
+            self.instagram,
+            self.our_people,
+            self.justin,
+            self.closed
+        ]
+
+        possible_subtrees = [i for i in possible_subtrees if i is not None]
+
+        results_lists = [self.photoclub] + [sub.flatten() for sub in possible_subtrees]
+
+        result = []
+
+        for results_list in results_lists:
+            result += results_list
+
+        return result
 
     @property
     def big_jpegs(self) -> List[File]:
