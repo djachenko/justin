@@ -12,7 +12,7 @@ class Args(argparse.Namespace):
         self.world = world
 
 
-def main(args=None):
+def run(args=None):
     world = World()
 
     commands = [
@@ -34,4 +34,4 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    main(["ready", "16.11.12.moon"])
+    run()
