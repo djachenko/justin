@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from pathlib import Path
 from typing import List, Optional
 
 from v3_0.filesystem.file import File
@@ -41,3 +42,20 @@ class FolderTree(PathBased):
     @abstractmethod
     def refresh(self):
         pass
+
+    def move(self, path: Path):
+        super().move(path)
+
+        self.refresh()
+
+    def move_down(self, subfolder: str) -> None:
+        super().move_down(subfolder)
+
+        self.refresh()
+
+    def move_up(self) -> None:
+        super().move_up()
+
+        self.refresh()
+
+
