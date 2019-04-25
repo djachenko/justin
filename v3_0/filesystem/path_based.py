@@ -17,7 +17,7 @@ class PathBased(Movable):
     def move(self, path: Path):
         fs.move(self.path, path)
 
-        self.__path = path
+        self.__path = path / self.path.name
 
     def move_down(self, subfolder: str) -> None:
         self.move(self.path.parent / subfolder)

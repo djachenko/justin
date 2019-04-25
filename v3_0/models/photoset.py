@@ -37,8 +37,8 @@ class Photoset(Movable):
         return "Photoset: " + self.tree.name
 
     @property
-    def edited_sources(self) -> List[Source]:
-        return Source.from_file_sequence(self.__subtree_files(Photoset.__EDITED_SOURCES))
+    def edited_sources(self) -> FolderTree:
+        return self.tree[Photoset.__EDITED_SOURCES]
 
     @property
     def edited_sources_folder_name(self):
@@ -62,8 +62,12 @@ class Photoset(Movable):
 
     @property
     def sources(self) -> List[Source]:
-        return Source.from_file_sequence(self.tree.files) + \
-               self.edited_sources
+        source_files = self.tree.files
+
+        if self.edited_sources:
+            source_files += self.edited_sources.files
+
+        return Source.from_file_sequence(source_files)
 
     @property
     def sources_folder_name(self):
