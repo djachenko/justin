@@ -32,19 +32,21 @@ class BaseFilter(Filter):
             lambda s, f: s.name_without_extension() == f.name_without_extension()
         )
 
-        sources_join = joins.left(
+        sources_join = list(joins.left(
             selection,
             photoset.sources,
             lambda s, f: s.name_without_extension() == f.name_without_extension()
-        )
+        ))
 
         jpegs_to_move = [e[1] for e in jpegs_join]
-        nefs_to_move = [e[1].raw for e in sources_join]
-        xmps_to_move = [e[1].metadata for e in sources_join]
 
-        xmps_to_move = [e for e in xmps_to_move if e]
+        sources_contents_to_move = []
 
-        files_to_move = jpegs_to_move + nefs_to_move + xmps_to_move
+        for sources_pair in sources_join:
+            for file in sources_pair[1].files():
+                sources_contents_to_move.append(file)
+
+        files_to_move = jpegs_to_move + sources_contents_to_move
 
         virtual_set = RelativeFileset(photoset.path, files_to_move)
 
