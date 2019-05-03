@@ -54,7 +54,13 @@ class SingleFolderTree(FolderTree):
 
         for child in self.path.iterdir():
             if child.is_dir():
-                self.__subtrees[child.name] = SingleFolderTree(child)
+                child_contents = [i for i in child.iterdir()]
+
+                if len(child_contents) > 0:
+                    self.__subtrees[child.name] = SingleFolderTree(child)
+                else:
+                    child.rmdir()
+
             elif child.is_file():
                 self.files.append(File(child))
             else:
