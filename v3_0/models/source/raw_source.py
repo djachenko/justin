@@ -1,7 +1,7 @@
 from typing import List
 
 from v3_0.filesystem.file import File
-from v3_0.models.source import Source
+from v3_0.models.source.source import Source
 
 
 class RawSource(Source):
