@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Iterable
+from typing import List, Iterable, Optional
 
 from v3_0.filesystem.file import File
 from v3_0.filesystem.folder_tree.folder_tree import FolderTree
@@ -22,11 +22,6 @@ class Photoset(Movable):
     def __init__(self, entry: FolderTree):
         self.__tree = entry
 
-        date = entry.name.rsplit(".", maxsplit=1)[0]
-
-        if not date or len(date.split(".")) != 3:
-            a = 7
-
     @property
     def tree(self) -> FolderTree:
         return self.__tree
@@ -43,8 +38,11 @@ class Photoset(Movable):
         return "Photoset: " + self.tree.name
 
     @property
-    def edited_sources(self) -> FolderTree:
-        return self.tree[Photoset.__EDITED_SOURCES]
+    def edited_sources(self) -> Optional['Photoset']:
+        if self.tree[Photoset.__EDITED_SOURCES]:
+            return Photoset(self.tree[Photoset.__EDITED_SOURCES])
+        else:
+            return None
 
     @property
     def edited_sources_folder_name(self):
@@ -68,12 +66,12 @@ class Photoset(Movable):
 
     @property
     def sources(self) -> List[Source]:
-        source_files = self.tree.files
+        sources = SourcesParser.from_file_sequence(self.tree.files)
 
         if self.edited_sources:
-            source_files += self.edited_sources.files
+            sources += self.edited_sources.sources
 
-        return SourcesParser.from_file_sequence(source_files)
+        return sources
 
     @property
     def sources_folder_name(self):
