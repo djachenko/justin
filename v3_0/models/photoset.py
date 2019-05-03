@@ -6,6 +6,7 @@ from v3_0.filesystem.folder_tree.folder_tree import FolderTree
 from v3_0.filesystem.movable import Movable
 from v3_0.helpers import joins
 from v3_0.models.source import Source
+from v3_0.models.sources_parser import SourcesParser
 
 
 class Photoset(Movable):
@@ -20,6 +21,11 @@ class Photoset(Movable):
 
     def __init__(self, entry: FolderTree):
         self.__tree = entry
+
+        date = entry.name.rsplit(".", maxsplit=1)[0]
+
+        if not date or len(date.split(".")) != 3:
+            a = 7
 
     @property
     def tree(self) -> FolderTree:
@@ -67,7 +73,7 @@ class Photoset(Movable):
         if self.edited_sources:
             source_files += self.edited_sources.files
 
-        return Source.from_file_sequence(source_files)
+        return SourcesParser.from_file_sequence(source_files)
 
     @property
     def sources_folder_name(self):
