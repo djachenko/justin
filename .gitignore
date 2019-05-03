@@ -2,3 +2,5 @@
 \.idea/
 
 *_pycache__*
+
+v3_0/config\.py
