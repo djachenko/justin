@@ -5,8 +5,8 @@ from v3_0.filesystem.file import File
 from v3_0.filesystem.folder_tree.folder_tree import FolderTree
 from v3_0.filesystem.movable import Movable
 from v3_0.helpers import joins
-from v3_0.models.source import Source
-from v3_0.models.sources_parser import SourcesParser
+from v3_0.models.source.source import Source
+from v3_0.models.source.sources_parser import SourcesParser
 
 
 class Photoset(Movable):

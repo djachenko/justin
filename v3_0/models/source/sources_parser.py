@@ -2,9 +2,9 @@ from typing import Iterable, List
 
 from v3_0.filesystem.file import File
 from v3_0.helpers import util, joins
-from v3_0.models.jpeg_source import JpegSource
-from v3_0.models.raw_source import RawSource
-from v3_0.models.source import Source
+from v3_0.models.source.jpeg_source import JpegSource
+from v3_0.models.source.raw_source import RawSource
+from v3_0.models.source.source import Source
 
 
 class SourcesParser:
