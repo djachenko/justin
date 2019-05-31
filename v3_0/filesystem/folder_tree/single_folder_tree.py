@@ -41,7 +41,7 @@ class SingleFolderTree(FolderTree):
         return key in self.subtrees
 
     def flatten(self) -> List[File]:
-        result = self.files
+        result = self.files.copy()
 
         for subtree in self.__subtree_values:
             result += subtree.flatten()
