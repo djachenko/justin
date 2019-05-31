@@ -39,3 +39,6 @@ class Source(Movable):
     @abstractmethod
     def files(self) -> List[File]:
         pass
+
+    def __str__(self) -> str:
+        return f"{type(self).__name__}: {self.name}"

@@ -4,7 +4,7 @@ from v3_0.filesystem.file import File
 from v3_0.models.source.source import Source
 
 
-class JpegSource(Source):
+class InternalMetadataSource(Source):
     def __init__(self, jpeg: File):
         super().__init__()
 
@@ -22,6 +22,3 @@ class JpegSource(Source):
 
     def files(self) -> List[File]:
         return [self.__jpeg]
-
-    def __str__(self) -> str:
-        return "JpegSource: {name}".format(name=self.name)
