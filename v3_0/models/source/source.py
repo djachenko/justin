@@ -17,7 +17,7 @@ class Source(Movable):
     def name(self):
         pass
 
-    def name_without_extension(self) -> str:
+    def stem(self) -> str:
         return self.name
 
     def move(self, path: Path):

@@ -14,13 +14,13 @@ class SourcesParser:
             seq,
             lambda file: file.extension.lower() in ['.nef', ".tif", ],
             lambda file: file.extension.lower() == ".xmp",
-            lambda file: file.extension.lower() in ['.jpg', ]
+            lambda file: file.extension.lower() in ['.jpg', ".dng"]
         ))
 
         join = joins.left(
             split[0],
             split[1],
-            lambda raw, xmp: raw.name_without_extension() == xmp.name_without_extension()
+            lambda raw, xmp: raw.stem() == xmp.stem()
         )
 
         raws = [RawSource(raw, meta) for raw, meta in join]

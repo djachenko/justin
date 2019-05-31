@@ -17,7 +17,7 @@ def main():
     join = util.left_join(
         nefs,
         jpegs,
-        lambda x: x.name_without_extension()
+        lambda x: x.stem()
     )
 
     non_paired = [nef for nef, jpeg in join if jpeg is None]

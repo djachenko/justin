@@ -11,7 +11,7 @@ class RawSource(Source):
         assert raw.extension != "jpg"
 
         if metadata is not None:
-            assert raw.name_without_extension() == metadata.name_without_extension()
+            assert raw.stem() == metadata.stem()
 
         self.raw = raw
         self.metadata = metadata
@@ -25,7 +25,7 @@ class RawSource(Source):
 
     @property
     def name(self):
-        return self.raw.name_without_extension()
+        return self.raw.stem()
 
     def files(self) -> List[File]:
         files = [self.raw]
