@@ -4,7 +4,7 @@ from v3_0.filesystem.file import File
 from v3_0.models.source.source import Source
 
 
-class RawSource(Source):
+class ExternalMetadataSource(Source):
     def __init__(self, raw: File, metadata: File):
         super().__init__()
 
@@ -34,6 +34,3 @@ class RawSource(Source):
             files.append(self.metadata)
 
         return files
-
-    def __str__(self) -> str:
-        return "RawSource: {name}".format(name=self.name)
