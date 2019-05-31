@@ -18,7 +18,7 @@ class EditedSelector(Selector):
         join = joins.left(
             results,
             sources,
-            lambda result, source: result.name_without_extension() == source.name
+            lambda result, source: result.stem() == source.name
         )
 
         results = [i[1] for i in join]

@@ -176,7 +176,7 @@ class Photoset(Movable):
         sources_join = joins.inner(
             base,
             sources,
-            lambda x, s: x.name_without_extension() == s.name
+            lambda x, s: x.stem() == s.name
         )
 
         results_join = joins.inner(

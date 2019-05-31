@@ -17,7 +17,7 @@ class UnselectedSelector(Selector):
         join = joins.left(
             results,
             selection,
-            lambda x, y: x.name_without_extension() == y.name_without_extension()
+            lambda x, y: x.stem() == y.stem()
         )
 
         unselected = [i[0] for i in join if i[1] is None]
@@ -27,7 +27,7 @@ class UnselectedSelector(Selector):
         join2 = joins.left(
             unselected,
             sources,
-            lambda jpeg, source: jpeg.name_without_extension() == source.name
+            lambda jpeg, source: jpeg.stem() == source.name
         )
 
         unselected_sources = [i[1] for i in join2]

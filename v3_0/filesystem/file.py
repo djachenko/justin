@@ -28,7 +28,7 @@ class File(PathBased):
     def remove(path: Path):
         fs.remove_tree(path)
 
-    def name_without_extension(self) -> str:
+    def stem(self) -> str:
         name = self.path.stem
 
         if "-" in name:

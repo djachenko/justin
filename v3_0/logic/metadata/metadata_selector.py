@@ -17,7 +17,7 @@ class MetadataSelector(Selector):
         join = joins.inner(
             results,
             sources,
-            lambda jpeg, source: jpeg.name_without_extension() == source.name
+            lambda jpeg, source: jpeg.stem() == source.name
         )
 
         time_diffs = [(jpeg, jpeg.mtime - source.mtime) for jpeg, source in join]

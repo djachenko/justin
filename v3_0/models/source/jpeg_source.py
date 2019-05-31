@@ -18,7 +18,7 @@ class JpegSource(Source):
 
     @property
     def name(self):
-        return self.__jpeg.name_without_extension()
+        return self.__jpeg.stem()
 
     def files(self) -> List[File]:
         return [self.__jpeg]

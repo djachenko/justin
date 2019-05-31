@@ -8,10 +8,10 @@ def names_by_extension(entries, extension):
 
 
 def names_without_extension(names):
-    return [name_without_extension(name) for name in names]
+    return [stem(name) for name in names]
 
 
-def name_without_extension(name):
+def stem(name):
     return name.rsplit(".", 1)[0]
 
 
