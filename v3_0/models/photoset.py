@@ -34,6 +34,9 @@ class Photoset(Movable):
     def name(self) -> str:
         return self.tree.name
 
+    def stem(self) -> str:
+        return self.name
+
     def __str__(self) -> str:
         return "Photoset: " + self.tree.name
 

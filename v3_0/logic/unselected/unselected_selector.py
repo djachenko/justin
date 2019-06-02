@@ -10,7 +10,7 @@ class UnselectedSelector(Selector):
     def source_folder(self, photoset: Photoset) -> str:
         return photoset.sources_folder_name
 
-    def select(self, photoset: Photoset) -> List[Movable]:
+    def select(self, photoset: Photoset) -> List[str]:
         selection = photoset.selection
         results = photoset.results
 
@@ -30,6 +30,6 @@ class UnselectedSelector(Selector):
             lambda jpeg, source: jpeg.stem() == source.name
         )
 
-        unselected_sources = [i[1] for i in join2]
+        unselected_sources = [i[1].stem() for i in join2]
 
         return unselected_sources

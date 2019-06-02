@@ -29,13 +29,13 @@ class BaseFilter(Filter):
         jpegs_join = joins.left(
             selection,
             photoset.big_jpegs,
-            lambda s, f: s.stem() == f.stem()
+            lambda s, f: s == f.stem()
         )
 
         sources_join = list(joins.left(
             selection,
             photoset.sources,
-            lambda s, f: s.stem() == f.stem()
+            lambda s, f: s == f.stem()
         ))
 
         jpegs_to_move = [e[1] for e in jpegs_join]
