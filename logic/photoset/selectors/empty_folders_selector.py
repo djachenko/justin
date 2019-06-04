@@ -1,7 +1,7 @@
 from typing import List
 
 from filesystem.folder import Folder
-from v3_0.logic.selector import Selector
+from v3_0.logic.base.selector import Selector
 from v3_0.filesystem.movable import Movable
 from v3_0.models.photoset import Photoset
 

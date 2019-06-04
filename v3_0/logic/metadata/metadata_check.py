@@ -1,14 +1,15 @@
-from v3_0.logic.check import Check
-from logic.photoset.selectors.outdated_selector import OutdatedSelector
+from functools import lru_cache
+
+from v3_0.logic.base.check import Check
+from v3_0.logic.factories.selector_factory import SelectorFactory
 
 
 class MetadataCheck(Check):
-
-    @property
-    def name(self) -> str:
-        return "metadata check"
-
-    def __init__(self) -> None:
-        selector = OutdatedSelector()
-
-        super().__init__(["Checking timings", "Have outdated metadata"], selector, None)
+    @staticmethod
+    @lru_cache()
+    def instance() -> Check:
+        return Check(
+            name="metadata check",
+            selector=SelectorFactory.instance().metadata(),
+            hook=None
+        )
