@@ -10,7 +10,7 @@ class OutdatedSelector(Selector):
     def source_folder(self, photoset: Photoset) -> str:
         return ""
 
-    def select(self, photoset: Photoset) -> List[Movable]:
+    def select(self, photoset: Photoset) -> List[str]:
         results = photoset.big_jpegs
         sources = photoset.sources
 
@@ -24,6 +24,6 @@ class OutdatedSelector(Selector):
 
         outdated = [time_diff for time_diff in time_diffs if time_diff[1] > 0]
 
-        outdated_jpegs = [jpeg for jpeg, time in outdated]
+        outdated_jpegs = [jpeg.stem() for jpeg, time in outdated]
 
         return outdated_jpegs
