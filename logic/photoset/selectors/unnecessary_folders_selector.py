@@ -2,7 +2,7 @@ from typing import List
 
 from v3_0 import structure
 from v3_0.filesystem.folder_tree.folder_tree import FolderTree
-from v3_0.logic.selector import Selector
+from v3_0.logic.base.selector import Selector
 from v3_0.filesystem.movable import Movable
 from v3_0.models.photoset import Photoset
 from v3_0.structure import Structure

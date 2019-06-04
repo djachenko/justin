@@ -2,15 +2,14 @@ from pathlib import Path
 from typing import List
 
 from v3_0.helpers import joins
-from v3_0.logic.check import Check
-from v3_0.logic.filter import Filter
-from v3_0.logic.relative_fileset import RelativeFileset
-from v3_0.logic.selector import Selector
+from v3_0.filesystem.relative_fileset import RelativeFileset
+from v3_0.logic.base.abstract_check import AbstractCheck
+from v3_0.logic.base.selector import Selector
 from v3_0.models.photoset import Photoset
 
 
-class BaseFilter(Filter):
-    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[Check] = None) -> None:
+class Extractor:
+    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[AbstractCheck] = None) -> None:
         super().__init__()
 
         if not prechecks:
