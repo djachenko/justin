@@ -2,15 +2,14 @@ from pathlib import Path
 from typing import List
 
 from v3_0.helpers import joins
-from v3_0.logic.check import Check
-from v3_0.logic.filter import Filter
-from v3_0.logic.relative_fileset import RelativeFileset
-from v3_0.logic.selector import Selector
+from v3_0.filesystem.relative_fileset import RelativeFileset
+from v3_0.logic.base.abstract_check import AbstractCheck
+from v3_0.logic.base.selector import Selector
 from v3_0.models.photoset import Photoset
 
 
-class BaseFilter(Filter):
-    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[Check] = None) -> None:
+class Extractor:
+    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[AbstractCheck] = None) -> None:
         super().__init__()
 
         if not prechecks:
@@ -29,13 +28,13 @@ class BaseFilter(Filter):
         jpegs_join = joins.left(
             selection,
             photoset.big_jpegs,
-            lambda s, f: s.stem() == f.stem()
+            lambda s, f: s == f.stem()
         )
 
         sources_join = list(joins.left(
             selection,
             photoset.sources,
-            lambda s, f: s.stem() == f.stem()
+            lambda s, f: s == f.stem()
         ))
 
         jpegs_to_move = [e[1] for e in jpegs_join]
