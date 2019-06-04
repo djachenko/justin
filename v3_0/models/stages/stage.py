@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Iterable
 
-from v3_0.logic.check import Check
-from v3_0.logic.filter import Filter
+from v3_0.logic.base.check import Check
+from v3_0.logic.base.extractor import Extractor
 from v3_0.models.photoset import Photoset
 
 
@@ -13,7 +13,7 @@ class Stage:
             command: str = None,
             incoming_checks: Iterable[Check] = None,
             outcoming_checks: Iterable[Check] = None,
-            preparation_hooks: Iterable[Filter] = None
+            preparation_hooks: Iterable[Extractor] = None
     ):
         if incoming_checks is None:
             incoming_checks = []
