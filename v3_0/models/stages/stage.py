@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Iterable
 
-from v3_0.logic.check import Check
-from v3_0.logic.filter import Filter
+from v3_0.logic.base.check import Check
+from v3_0.logic.base.extractor import Extractor
 from v3_0.models.photoset import Photoset
 
 
@@ -13,7 +13,7 @@ class Stage:
             command: str = None,
             incoming_checks: Iterable[Check] = None,
             outcoming_checks: Iterable[Check] = None,
-            preparation_hooks: Iterable[Filter] = None
+            preparation_hooks: Iterable[Extractor] = None
     ):
         if incoming_checks is None:
             incoming_checks = []
@@ -54,26 +54,16 @@ class Stage:
         for check in checks:
             print(f"Running {check.name} for {photoset.name}... ", end="")
 
-            result = check.check(photoset)
+            while True:
+                result = check.check(photoset)
+
+                if result or not check.ask_for_extract():
+                    break
+
+                check.extract(photoset)
 
             if not result:
                 print("not passed")
-
-                if check.hookable:
-                    while True:
-                        answer_input = input("Extract not passed files? y/n")
-
-                        answer_input = answer_input.lower()
-
-                        if answer_input in ["y", "n"]:
-                            answer = answer_input == "y"
-
-                            break
-
-                    if answer:
-                        check.extract(photoset)
-
-                return False
             else:
                 print("passed")
 

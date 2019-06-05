@@ -11,5 +11,5 @@ class Selector:
         pass
 
     @abstractmethod
-    def select(self, photoset: Photoset) -> List[Movable]:
+    def select(self, photoset: Photoset) -> List[str]:
         pass
