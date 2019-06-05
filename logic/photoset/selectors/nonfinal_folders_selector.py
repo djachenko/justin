@@ -18,6 +18,3 @@ class NonfinalFoldersSelector(Selector):
         nonfinal_subfolders = [subfolder for subfolder in subfolders if subfolder.name not in supposed_folders_names]
 
         return nonfinal_subfolders
-
-    def source_folder(self, photoset: Photoset) -> str:
-        return ""

@@ -48,7 +48,7 @@ class StageCommand(Command):
 
             assert isinstance(photoset, Photoset)
 
-            print("Trying to move \"{photoset} to stage {stage}\"".format(photoset=photoset.name, stage=new_stage.name))
+            print(f"Trying to move \"{photoset.name}\" to stage \"{new_stage.name}\"")
 
             success = False
 

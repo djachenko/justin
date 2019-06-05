@@ -76,10 +76,6 @@ class Photoset(Movable):
 
         return sources
 
-    @property
-    def sources_folder_name(self):
-        return ""
-
     def __subtree_files(self, key: str) -> List[File]:
         subtree = self.tree[key]
 

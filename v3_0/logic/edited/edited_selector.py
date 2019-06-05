@@ -6,10 +6,6 @@ from v3_0.models.photoset import Photoset
 
 
 class EditedSelector(Selector):
-
-    def source_folder(self, photoset: Photoset) -> str:
-        return photoset.sources_folder_name
-
     def select(self, photoset: Photoset) -> List[str]:
         results = photoset.results
         sources = photoset.sources
