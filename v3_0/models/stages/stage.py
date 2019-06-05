@@ -24,7 +24,7 @@ class Stage:
         if preparation_hooks is None:
             preparation_hooks = []
 
-        self.__path = path
+        self.__path = Path("..") / path
         self.__command = command
         self.__incoming_checks = incoming_checks
         self.__outcoming_checks = outcoming_checks
@@ -32,15 +32,11 @@ class Stage:
 
     @property
     def name(self):
-        return self.path.suffix.strip(".")
+        return self.__path.suffix.strip(".")
 
     @property
     def folder(self) -> str:
-        return self.path.name
-
-    @property
-    def path(self) -> Path:
-        return self.__path
+        return self.__path.name
 
     @property
     def command(self) -> str:
@@ -86,4 +82,4 @@ class Stage:
             hook.backwards(photoset)
 
     def transfer(self, photoset: Photoset):
-        photoset.move(self.__path)
+        photoset.move(photoset.path.parent / self.__path)
