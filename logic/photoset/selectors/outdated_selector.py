@@ -1,24 +1,23 @@
 from typing import List
 
-import util
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.movable import Movable
-from models.photoset import Photoset
+from v3_0.helpers import joins
+from v3_0.logic.selector import Selector
+from v3_0.filesystem.movable import Movable
+from v3_0.models.photoset import Photoset
 
 
-class OutdatedSelector(BaseSelector):
+class OutdatedSelector(Selector):
     def source_folder(self, photoset: Photoset) -> str:
         return ""
 
     def select(self, photoset: Photoset) -> List[Movable]:
-        results = photoset.results + photoset.selection
+        results = photoset.big_jpegs
         sources = photoset.sources
 
-        join = util.inner_join(
+        join = joins.inner(
             results,
             sources,
-            lambda jpeg: jpeg.name_without_extension(),
-            lambda source: source.name
+            lambda jpeg, source: jpeg.stem() == source.name
         )
 
         time_diffs = [(jpeg, jpeg.mtime - source.mtime) for jpeg, source in join]

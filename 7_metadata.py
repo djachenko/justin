@@ -1,4 +1,4 @@
-import util
+from v3_0.helpers import util
 
 
 def check_metadata_existence(path):

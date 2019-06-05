@@ -1,12 +1,12 @@
 from typing import List
 
-import util
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.movable import Movable
-from models.photoset import Photoset
+from v3_0.filesystem.movable import Movable
+from v3_0.helpers import joins
+from v3_0.logic.selector import Selector
+from v3_0.models.photoset import Photoset
 
 
-class OddSelectionSelector(BaseSelector):
+class OddSelectionSelector(Selector):
     def source_folder(self, photoset: Photoset) -> str:
         return photoset.selection_folder_name
 
@@ -14,6 +14,10 @@ class OddSelectionSelector(BaseSelector):
         selection = photoset.selection
         results = photoset.results
 
-        join = util.left_join(selection, results, lambda x: x.name_without_extension())
+        join = joins.left(
+            selection,
+            results,
+            lambda x, y: x.stem() == y.stem()
+        )
 
         return [i[0] for i in join if i[1] is None]
