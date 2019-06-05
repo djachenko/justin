@@ -1,7 +1,6 @@
 import argparse
 
-from command.command_check import CommandCheck
-from v3_0.commands.command_stage import StageCommand
+from v3_0.commands.command_factory import CommandFactory
 from v3_0.models.world import World
 
 
@@ -15,10 +14,7 @@ class Args(argparse.Namespace):
 def run(args=None):
     world = World()
 
-    commands = [
-        StageCommand(),
-        CommandCheck()
-    ]
+    commands = CommandFactory.instance().commands()
 
     parser = argparse.ArgumentParser()
 
