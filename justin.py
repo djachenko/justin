@@ -16,7 +16,7 @@ def run(args=None):
     world = World()
 
     commands = [
-        StageCommand(world),
+        StageCommand(),
         CommandCheck()
     ]
 

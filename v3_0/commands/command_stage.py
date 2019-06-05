@@ -12,10 +12,10 @@ from v3_0.models.world import World
 
 class StageCommand(Command):
 
-    def __init__(self, world: World) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
-        self.__factory = StagesFactory(world)
+        self.__factory = StagesFactory.instance()
 
     def configure_parser(self, parser_adder):
         for command in self.__factory.commands:
