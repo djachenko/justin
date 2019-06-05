@@ -1,6 +1,6 @@
 import os
 
-import util
+from v3_0.helpers import util
 
 __copies_folder = "copies"
 
@@ -31,5 +31,5 @@ def filter_copies(path):
         os.makedirs(copies_directory)
 
         for jpeg in jpegs:
-            if util.name_without_extension(jpeg.name) in copies_names:
+            if util.stem(jpeg.name) in copies_names:
                 os.rename(jpeg.path, copies_directory + "/" + jpeg.name)

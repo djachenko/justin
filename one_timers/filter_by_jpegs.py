@@ -1,6 +1,6 @@
-import util
-from filesystem.path import Path
-from models.photoset import Photoset
+from v3_0.helpers import util
+from pathlib import Path
+from v3_0.models.photoset import Photoset
 from models.world import World
 
 
@@ -17,7 +17,7 @@ def main():
     join = util.left_join(
         nefs,
         jpegs,
-        lambda x: x.name_without_extension()
+        lambda x: x.stem()
     )
 
     non_paired = [nef for nef, jpeg in join if jpeg is None]

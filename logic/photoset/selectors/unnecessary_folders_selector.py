@@ -1,14 +1,14 @@
 from typing import List
 
-import structure
-from filesystem.folder import Folder
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.movable import Movable
-from models.photoset import Photoset
-from structure import Structure
+from v3_0 import structure
+from v3_0.filesystem.folder_tree.folder_tree import FolderTree
+from v3_0.logic.selector import Selector
+from v3_0.filesystem.movable import Movable
+from v3_0.models.photoset import Photoset
+from v3_0.structure import Structure
 
 
-class UnnecessaryFoldersSelector(BaseSelector):
+class UnnecessaryFoldersSelector(Selector):
     def __init__(self, depth=-1) -> None:
         super().__init__()
 
@@ -20,15 +20,15 @@ class UnnecessaryFoldersSelector(BaseSelector):
     def select(self, photoset: Photoset) -> List[Movable]:
         possible_destinations = structure.photoset_structure
 
-        result = self.__descend(photoset.entry, possible_destinations, self.__depth)
+        result = self.__descend(photoset.tree, possible_destinations, self.__depth)
 
         return result
 
-    def __descend(self, entry: Folder, struct: Structure, depth: int) -> List[Movable]:
+    def __descend(self, entry: FolderTree, struct: Structure, depth: int) -> List[Movable]:
         if depth == 0:
             return []
 
-        subfolders = entry.subfolders()
+        subfolders = entry.subtrees
 
         result = []
 
@@ -39,6 +39,6 @@ class UnnecessaryFoldersSelector(BaseSelector):
                 result.append(subfolder)
 
         if not struct.has_unlimited_files:
-            result += entry.subfiles()
+            result += entry.files
 
         return result

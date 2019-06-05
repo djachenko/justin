@@ -1,16 +1,16 @@
+from pathlib import Path
 from typing import List
 
-from filesystem.file import File
-from filesystem.filesystem import Filesystem
-from filesystem.path import Path
-from logic.photoset.checks.base_check import BaseCheck
-from logic.photoset.filters.filter import Filter
-from logic.photoset.selectors.base_selector import BaseSelector
-from models.photoset import Photoset
+from v3_0.helpers import joins
+from v3_0.logic.check import Check
+from v3_0.logic.filter import Filter
+from v3_0.logic.relative_fileset import RelativeFileset
+from v3_0.logic.selector import Selector
+from v3_0.models.photoset import Photoset
 
 
 class BaseFilter(Filter):
-    def __init__(self, selector: BaseSelector, filter_folder: str, prechecks: List[BaseCheck]=None) -> None:
+    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[Check] = None) -> None:
         super().__init__()
 
         if not prechecks:
@@ -26,32 +26,49 @@ class BaseFilter(Filter):
 
         selection = self.__selector.select(photoset)
 
-        filter_path = self.__filter_folder_path(photoset)
+        jpegs_join = joins.left(
+            selection,
+            photoset.big_jpegs,
+            lambda s, f: s.stem() == f.stem()
+        )
 
-        for file in selection:
-            if file is None:
-                a = 7
+        sources_join = list(joins.left(
+            selection,
+            photoset.sources,
+            lambda s, f: s.stem() == f.stem()
+        ))
 
-            file.move(filter_path)
+        jpegs_to_move = [e[1] for e in jpegs_join]
+
+        sources_contents_to_move = []
+
+        for sources_pair in sources_join:
+            for file in sources_pair[1].files():
+                sources_contents_to_move.append(file)
+
+        files_to_move = jpegs_to_move + sources_contents_to_move
+
+        virtual_set = RelativeFileset(photoset.path, files_to_move)
+
+        virtual_set.move_down(self.__filter_folder)
+
+        photoset.tree.refresh()
 
     def backwards(self, photoset: Photoset) -> None:
-        filter_path = self.__filter_folder_path(photoset)
+        filtered = photoset.tree[self.__filter_folder]
 
-        if not filter_path.exists():
+        if not filtered:
             return
 
-        filtered = Filesystem.folder(filter_path)
+        for file in filtered.files:
+            file.move(self.__source_folder_path(photoset))
 
-        for folder in filtered.subfiles():
+        for folder in filtered.subtrees:
             folder.move(self.__source_folder_path(photoset))
 
-        for folder in filtered.subfolders():
-            folder.move(self.__source_folder_path(photoset))
+        filtered.path.rmdir()
 
-        File.remove(filter_path)
-
-    def __filter_folder_path(self, photoset: Photoset) -> Path:
-        return photoset.path.append_component(self.__filter_folder)
+        photoset.tree.refresh()
 
     def __source_folder_path(self, photoset: Photoset) -> Path:
-        return photoset.path.append_component(self.__selector.source_folder(photoset))
+        return photoset.path / self.__selector.source_folder(photoset)

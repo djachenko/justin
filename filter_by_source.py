@@ -1,4 +1,4 @@
-from filesystem import fs
+from v3_0.filesystem import fs
 
 __source_folder = "D:/photos/stages/stage2.develop/_/17.08.05.lika_night_lake"
 __jpeg_folder = "selection"
@@ -58,13 +58,13 @@ def join(a, b, selector):
 def filter_by_sources():
     nefs = fs.files_by_extension(__source_folder, "nef")
 
-    nef_names = [fs.name_without_extension(nef) for nef in nefs]
+    nef_names = [fs.stem(nef) for nef in nefs]
 
     zipped_nefs = list(zip(nef_names, nefs))
 
     jpegs = fs.subfiles(fs.build_path(__source_folder, __jpeg_folder))
 
-    jpeg_names = [fs.name_without_extension(jpeg) for jpeg in jpegs]
+    jpeg_names = [fs.stem(jpeg) for jpeg in jpegs]
 
     zipped_jpegs = list(zip(jpeg_names, jpegs))
 

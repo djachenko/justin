@@ -1,4 +1,4 @@
-from logic.photoset.checks.metadata_check import MetadataCheck
+from v3_0.logic.metadata.metadata_check import MetadataCheck
 from logic.photoset.filters.base_filter import BaseFilter
 from logic.photoset.selectors.odd_selection_selector import OddSelectionSelector
 
