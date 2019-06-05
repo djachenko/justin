@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import List
 
-from v3_0.filesystem.movable import Movable
 from v3_0.models.photoset import Photoset
 
 
