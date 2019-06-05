@@ -6,9 +6,6 @@ from v3_0.models.photoset import Photoset
 
 
 class UnselectedSelector(Selector):
-    def source_folder(self, photoset: Photoset) -> str:
-        return photoset.sources_folder_name
-
     def select(self, photoset: Photoset) -> List[str]:
         selection = photoset.selection
         results = photoset.results

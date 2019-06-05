@@ -63,15 +63,8 @@ class Extractor:
         if not filtered:
             return
 
-        for file in filtered.files:
-            file.move(self.__source_folder_path(photoset))
+        filtered_set = RelativeFileset(filtered.path, filtered.flatten())
 
-        for folder in filtered.subtrees:
-            folder.move(self.__source_folder_path(photoset))
-
-        filtered.path.rmdir()
+        filtered_set.move_up()
 
         photoset.tree.refresh()
-
-    def __source_folder_path(self, photoset: Photoset) -> Path:
-        return photoset.path / self.__selector.source_folder(photoset)

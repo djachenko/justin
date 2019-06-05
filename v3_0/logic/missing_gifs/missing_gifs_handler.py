@@ -27,7 +27,7 @@ class MissingGifsHandler(Extractor):
             maker.make_gif(part.path, name)
 
     def backwards(self, photoset: Photoset) -> None:
-        parts = MissingGifsHandler.__gif_parts(photoset)
+        parts = PartingHelper.folder_tree_parts(photoset.gif)
 
         for part in parts:
             for file in part.files:

@@ -14,9 +14,6 @@ class UnnecessaryFoldersSelector(Selector):
 
         self.__depth = depth
 
-    def source_folder(self, photoset: Photoset) -> str:
-        return ""
-
     def select(self, photoset: Photoset) -> List[Movable]:
         possible_destinations = structure.photoset_structure
 
