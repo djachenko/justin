@@ -19,6 +19,10 @@ class Extractor:
         self.__filter_folder = filter_folder
         self.__prechecks = prechecks
 
+    @property
+    def selector(self) -> Selector:
+        return self.__selector
+
     def forward(self, photoset: Photoset) -> None:
         if not all([precheck.check(photoset) for precheck in self.__prechecks]):
             return

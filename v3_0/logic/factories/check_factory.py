@@ -24,9 +24,9 @@ class CheckFactory:
     @lru_cache()
     def unselected(self) -> Check:
         return Check(
-            "selection check",
-            self.selector_factory.unselected(),
-            self.extractor_factory.unselected()
+            name="selection check",
+            selector=self.selector_factory.unselected(),
+            hook=self.extractor_factory.unselected()
         )
 
     @lru_cache()
@@ -40,3 +40,12 @@ class CheckFactory:
     @lru_cache()
     def metadata(self) -> Check:
         return MetadataCheck.instance()
+
+    @lru_cache()
+    def missing_gifs(self) -> Check:
+        return Check(
+            name="missing gifs check",
+            selector=self.selector_factory.missing_gifs(),
+            hook=self.extractor_factory.missing_gifs(),
+            message="You have missing gif. Generate?"
+        )

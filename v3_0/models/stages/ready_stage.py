@@ -16,6 +16,7 @@ class ReadyStage(Stage):
                 checks_factory.metadata(),
                 checks_factory.odd_selection(),
                 checks_factory.unselected(),
+                checks_factory.missing_gifs(),
 
                 # todo: investigate and rewrite
                 ReadinessCheck(),
