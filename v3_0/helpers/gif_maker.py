@@ -3,8 +3,6 @@ from typing import List
 
 from PIL import Image
 
-from v3_0.models.photoset import Photoset
-
 
 class GifMaker:
     __START_MIN_SIZE = 0
@@ -13,7 +11,7 @@ class GifMaker:
     __MB = 1024 * 1024
 
     __MAX_DESIRED_SIZE = 200 * __MB
-    __MIN_DESIRED_SIZE = 199 * __MB
+    __MIN_DESIRED_SIZE = 195 * __MB
 
     @staticmethod
     def __make_gif(sources: Path, name: str, size: int):
@@ -43,14 +41,8 @@ class GifMaker:
 
         return GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE
 
-    def make(self, photoset: Photoset):
-        if photoset.gif is None:
-            return
-
-        sources_path = photoset.gif.path
-        gif_name = f"{photoset.name}.gif"
-
-        gif_path = sources_path / gif_name
+    def make_gif(self, sources_path: Path, name: str):
+        gif_path = sources_path / name
 
         if gif_path.exists() and self.__gif_has_good_size(gif_path):
             print("Valid gif already exists")
@@ -65,7 +57,7 @@ class GifMaker:
 
             print(f"Starting iteration with size {iteration_size}")
 
-            self.__make_gif(sources_path, gif_name, iteration_size)
+            self.__make_gif(sources_path, name, iteration_size)
 
             gif_size = gif_path.stat().st_size
 

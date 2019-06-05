@@ -54,26 +54,16 @@ class Stage:
         for check in checks:
             print(f"Running {check.name} for {photoset.name}... ", end="")
 
-            result = check.check(photoset)
+            while True:
+                result = check.check(photoset)
+
+                if result or not check.ask_for_extract():
+                    break
+
+                check.extract(photoset)
 
             if not result:
                 print("not passed")
-
-                if check.hookable:
-                    while True:
-                        answer_input = input("Extract not passed files? y/n")
-
-                        answer_input = answer_input.lower()
-
-                        if answer_input in ["y", "n"]:
-                            answer = answer_input == "y"
-
-                            break
-
-                    if answer:
-                        check.extract(photoset)
-
-                return False
             else:
                 print("passed")
 

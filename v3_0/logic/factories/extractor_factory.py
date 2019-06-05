@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from v3_0.logic.base.extractor import Extractor
 from v3_0.logic.factories.selector_factory import SelectorFactory
+from v3_0.logic.missing_gifs.missing_gifs_handler import MissingGifsHandler
 from v3_0.logic.metadata.metadata_check import MetadataCheck
 
 
@@ -48,4 +49,12 @@ class ExtractorFactory:
             prechecks=[
                 self.__metadata_check
             ]
+        )
+
+    @lru_cache()
+    def missing_gifs(self) -> Extractor:
+        return MissingGifsHandler(
+            selector=self.__selector_factory.missing_gifs(),
+            filter_folder="",
+            prechecks=[]
         )

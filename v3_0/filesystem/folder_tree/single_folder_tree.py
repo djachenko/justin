@@ -57,7 +57,7 @@ class SingleFolderTree(FolderTree):
                 child_tree = SingleFolderTree(child)
 
                 if len(child_tree.flatten()) > 0:
-                    self.__subtrees[child.name] = SingleFolderTree(child)
+                    self.__subtrees[child.name] = child_tree
                 else:
                     child.rmdir()
 
