@@ -4,25 +4,23 @@ from v3_0.commands.command import Command
 from v3_0.models.photoset import Photoset
 from v3_0.models.stages.stage import Stage
 from v3_0.models.stages.stages_factory import StagesFactory
-from v3_0.models.world import World
 
-
-# todo: introduce f-strings
-# todo: mak multi-set mode
 
 class StageCommand(Command):
 
-    def __init__(self) -> None:
+    def __init__(self, factory: StagesFactory) -> None:
         super().__init__()
 
-        self.__factory = StagesFactory.instance()
+        self.__stages_factory = factory
 
     def configure_parser(self, parser_adder):
-        for command in self.__factory.commands:
+        for stage in self.__stages_factory.stages():
+            command = stage.command
+
             subparser: ArgumentParser = parser_adder.add_parser(command)
 
             subparser.add_argument("name", nargs="+")
-            subparser.set_defaults(new_stage=self.__factory.stage_by_command(command))
+            subparser.set_defaults(new_stage=stage)
 
             self.setup_callback(subparser)
 
@@ -44,7 +42,7 @@ class StageCommand(Command):
 
             photoset = photosets[0]
 
-            current_stage = self.__factory.stage_by_path(photoset.path)
+            current_stage = self.__stages_factory.stage_by_path(photoset.path)
 
             assert isinstance(photoset, Photoset)
 
@@ -68,5 +66,4 @@ class StageCommand(Command):
             if success:
                 print("Moved successfully")
             else:
-                print("Unable to {stage_name} {set_name}. Something happened.".format(
-                    stage_name=new_stage.name, set_name=photoset.name))
+                print(f"Unable to {new_stage.name} {photoset.name}. Something happened.")
