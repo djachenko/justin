@@ -1,29 +1,26 @@
-from abc import abstractmethod
-from typing import List, Optional
+from typing import Optional
 
-from v3_0.logic.filter import Filter
-from v3_0.logic.selector import Selector
+from v3_0.helpers import util
+from v3_0.logic.base.abstract_check import AbstractCheck
+from v3_0.logic.base.extractor import Extractor
+from v3_0.logic.base.selector import Selector
 from v3_0.models.photoset import Photoset
 
 
-class Check:
-    def __init__(self, messages: List[str], selector: Selector, hook: Optional[Filter]) -> None:
+class Check(AbstractCheck):
+    def __init__(self, name: str, selector: Selector, hook: Optional[Extractor], message: str = "") -> None:
         super().__init__()
 
         assert selector is not None
-        assert messages is not None
-        assert len(messages) == 2
 
         self.__selector = selector
         self.__hook = hook
-        self.__messages = messages
+        self.__name = name
+        self.__message = message
 
     @property
     def hookable(self) -> bool:
         return self.__hook is not None
-
-    def extract(self, photoset: Photoset):
-        self.__hook.forward(photoset)
 
     def check(self, photoset: Photoset) -> bool:
         if self.__hook is not None:
@@ -33,16 +30,20 @@ class Check:
 
         return result
 
+    def ask_for_extract(self):
+        if self.__hook is None:
+            return False
+
+        return util.ask_for_permission(self.__message)
+
+    def extract(self, photoset: Photoset):
+        self.__hook.forward(photoset)
+
     def __check_inner(self, photoset: Photoset) -> bool:
         select = self.__selector.select(photoset)
 
         return not any(select)
 
     @property
-    @abstractmethod
     def name(self):
-        assert False
-
-    @property
-    def file_type(self):
-        return "Files"
+        return self.__name
