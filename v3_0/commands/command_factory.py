@@ -12,7 +12,7 @@ class CommandFactory:
     def instance() -> 'CommandFactory':
         return CommandFactory()
 
-    @lru_cache
+    @lru_cache()
     def commands(self) -> List[Command]:
         return [
             self.stage()
