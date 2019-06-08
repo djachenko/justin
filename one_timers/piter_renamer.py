@@ -1,4 +1,4 @@
-from v3_0.filesystem import fs
+from v3_0.shared.filesystem import fs
 
 
 def main():

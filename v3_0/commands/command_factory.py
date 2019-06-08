@@ -2,8 +2,8 @@ from functools import lru_cache
 from typing import List
 
 from v3_0.commands.command import Command
-from v3_0.commands.stage_command import StageCommand
-from v3_0.models.stages.stages_factory import StagesFactory
+from v3_0.stage.stage_command import StageCommand
+from v3_0.stage.models.stages_factory import StagesFactory
 
 
 class CommandFactory:

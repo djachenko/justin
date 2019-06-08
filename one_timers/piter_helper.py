@@ -2,7 +2,7 @@ import shutil
 
 MAIN_FOLDER = "D:\photos\stages\stage2.develop\_piter"
 
-from v3_0.filesystem import fs
+from v3_0.shared.filesystem import fs
 
 
 def main():

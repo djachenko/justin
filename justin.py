@@ -5,7 +5,7 @@ import argparse
 import sys
 
 from v3_0.commands.command_factory import CommandFactory
-from v3_0.models.world import World
+from v3_0.shared.models.world import World
 
 
 class Args(argparse.Namespace):
