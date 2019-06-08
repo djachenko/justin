@@ -52,7 +52,9 @@ class StagesFactory:
             path=Path("stage0.gif"),
             command="gif",
             incoming_checks=[],
-            outcoming_checks=[],
+            outcoming_checks=[
+                self.__checks_factory.gif_sources()
+            ],
             preparation_hooks=[]
         )
 
@@ -74,6 +76,7 @@ class StagesFactory:
             incoming_checks=[],
             outcoming_checks=[
                 self.__checks_factory.unselected(),
+                self.__checks_factory.odd_selection(),
                 self.__checks_factory.metadata(),
             ],
             preparation_hooks=[]
@@ -87,6 +90,7 @@ class StagesFactory:
             incoming_checks=[],
             outcoming_checks=[
                 self.__checks_factory.unselected(),
+                self.__checks_factory.odd_selection(),
                 self.__checks_factory.metadata(),
             ],
             preparation_hooks=[
@@ -109,7 +113,6 @@ class StagesFactory:
                 ReadinessCheck(),
 
                 # todo: no service folders
-                # todo: gifs has been created
             ],
             outcoming_checks=[],
             preparation_hooks=[
@@ -124,6 +127,9 @@ class StagesFactory:
             path=Path("stage4.published"),
             command="publish",
             incoming_checks=[
+                self.__checks_factory.metadata(),
+                self.__checks_factory.odd_selection(),
+                self.__checks_factory.unselected(),
                 self.__checks_factory.missing_gifs()
             ],
             outcoming_checks=[],
