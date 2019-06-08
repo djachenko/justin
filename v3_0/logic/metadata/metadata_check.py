@@ -11,5 +11,4 @@ class MetadataCheck(Check):
         return Check(
             name="metadata check",
             selector=SelectorFactory.instance().metadata(),
-            hook=None
         )

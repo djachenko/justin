@@ -8,7 +8,7 @@ from v3_0.models.photoset import Photoset
 
 
 class Check(AbstractCheck):
-    def __init__(self, name: str, selector: Selector, hook: Optional[Extractor], message: str = "") -> None:
+    def __init__(self, name: str, selector: Selector, hook: Optional[Extractor] = None, message: str = "") -> None:
         super().__init__()
 
         assert selector is not None
