@@ -50,18 +50,17 @@ class Stage:
         for check in checks:
             print(f"Running {check.name} for {photoset.name}... ", end="")
 
-            while True:
-                result = check.check(photoset)
+            result = check.check(photoset)
 
-                if result or not check.ask_for_extract():
-                    break
-
-                check.extract(photoset)
-
-            if not result:
-                print("not passed")
-            else:
+            if result:
                 print("passed")
+            else:
+                print("not passed")
+
+                if check.ask_for_extract():
+                    check.extract(photoset)
+
+                return False
 
         return True
 

@@ -1,3 +1,4 @@
+import time
 from typing import Iterable, TypeVar, Callable
 
 T = TypeVar("T")
@@ -9,6 +10,8 @@ def split_by_predicates(seq: Iterable[T], *lambdas: Callable[[T], bool]) -> Iter
 
 
 def ask_for_permission(question: str) -> bool:
+    time.process_time()
+
     while True:
         answer_input = input(f"{question} y/n ")
 
@@ -18,3 +21,26 @@ def ask_for_permission(question: str) -> bool:
             answer = answer_input == "y"
 
             return answer
+
+
+def measure_time(name=None):
+    if name is None:
+        name = "Execution"
+
+    def decorator(func):
+        def inner(*args, **kwargs):
+            start = time.process_time()
+
+            result = func(*args, **kwargs)
+
+            end = time.process_time()
+
+            passed = end - start
+
+            print(f"{name} took {passed} s.")
+
+            return result
+
+        return inner
+
+    return decorator

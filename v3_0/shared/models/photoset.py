@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Iterable, Optional
+from typing import List, Iterable
 
 from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
@@ -41,13 +41,6 @@ class Photoset(Movable):
         return "Photoset: " + self.tree.name
 
     @property
-    def edited_sources(self) -> Optional['Photoset']:
-        if self.tree[Photoset.__EDITED_SOURCES]:
-            return Photoset(self.tree[Photoset.__EDITED_SOURCES])
-        else:
-            return None
-
-    @property
     def edited_sources_folder_name(self):
         return Photoset.__EDITED_SOURCES
 
@@ -55,6 +48,7 @@ class Photoset(Movable):
     def instagram(self) -> FolderTree:
         return self.tree[Photoset.__INSTAGRAM]
 
+    # todo: we now have parting_helper, this method is unused
     @property
     def parts(self) -> List['Photoset']:
         parts_names = [name for name in self.tree.subtree_names if name.split(".")[0].isdecimal()]
@@ -70,9 +64,6 @@ class Photoset(Movable):
     @property
     def sources(self) -> List[Source]:
         sources = SourcesParser.from_file_sequence(self.tree.files)
-
-        if self.edited_sources:
-            sources += self.edited_sources.sources
 
         return sources
 

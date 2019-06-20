@@ -22,9 +22,10 @@ class Extractor:
     def selector(self) -> Selector:
         return self.__selector
 
-    def forward(self, photoset: Photoset) -> None:
+    # todo: introduce exception
+    def forward(self, photoset: Photoset) -> bool:
         if not all([precheck.check(photoset) for precheck in self.__prechecks]):
-            return
+            return False
 
         selection = self.__selector.select(photoset)
 
@@ -56,14 +57,27 @@ class Extractor:
 
         photoset.tree.refresh()
 
-    def backwards(self, photoset: Photoset) -> None:
+        return True
+
+    # todo: introduce exception
+    def backwards(self, photoset: Photoset) -> bool:
+        if not all([precheck.check(photoset) for precheck in self.__prechecks]):
+            return False
+
         filtered = photoset.tree[self.__filter_folder]
 
         if not filtered:
-            return
+            return True
+
+        filtered_photoset = Photoset(filtered)
+
+        if not all([precheck.check(filtered_photoset) for precheck in self.__prechecks]):
+            return False
 
         filtered_set = RelativeFileset(filtered.path, filtered.flatten())
 
         filtered_set.move_up()
 
         photoset.tree.refresh()
+
+        return True
