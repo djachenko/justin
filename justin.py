@@ -15,7 +15,7 @@ class Args(argparse.Namespace):
         self.world = world
 
 
-def run(args):
+def run(args=None):
     world = World()
 
     commands = CommandFactory.instance().commands()
@@ -27,9 +27,6 @@ def run(args):
     for command in commands:
         command.configure_parser(parser_adder)
 
-    if len(args) < 2:
-        parser.error("Please choose the command")
-
     name = parser.parse_args(args, namespace=Args(world))
 
     if hasattr(name, "func") and name.func:
@@ -37,4 +34,4 @@ def run(args):
 
 
 if __name__ == '__main__':
-    run(sys.argv)
+    run()

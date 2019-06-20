@@ -24,7 +24,10 @@ class Check(AbstractCheck):
 
     def check(self, photoset: Photoset) -> bool:
         if self.__hook is not None:
-            self.__hook.backwards(photoset)
+            successful_rollback = self.__hook.backwards(photoset)
+
+            if not successful_rollback:
+                return False
 
         result = not any(self.__selector.select(photoset)) and all([self.check(part) for part in photoset.parts])
 
