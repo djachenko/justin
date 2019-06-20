@@ -26,7 +26,8 @@ class CheckFactory:
         return Check(
             name="selection check",
             selector=self.__selector_factory.unselected(),
-            hook=self.__extractor_factory.unselected()
+            hook=self.__extractor_factory.unselected(),
+            message="You have results without selection. Extract?"
         )
 
     @lru_cache()
@@ -34,7 +35,8 @@ class CheckFactory:
         return Check(
             name="odd selection check",
             selector=self.__selector_factory.odd_selection(),
-            hook=self.__extractor_factory.odd_selection()
+            hook=self.__extractor_factory.odd_selection(),
+            message="You have selections without results. Extract?"
         )
 
     @lru_cache()
