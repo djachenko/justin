@@ -51,21 +51,16 @@ class StagesFactory:
         return Stage(
             path=Path("stage0.gif"),
             command="gif",
-            incoming_checks=[],
             outcoming_checks=[
                 self.__checks_factory.gif_sources()
-            ],
-            preparation_hooks=[]
+            ]
         )
 
     @lru_cache()
     def filter(self) -> Stage:
         return Stage(
             path=Path("stage1.filter"),
-            command="filter",
-            incoming_checks=[],
-            outcoming_checks=[],
-            preparation_hooks=[]
+            command="filter"
         )
 
     @lru_cache()
@@ -73,13 +68,11 @@ class StagesFactory:
         return Stage(
             path=Path("stage2.develop"),
             command="develop",
-            incoming_checks=[],
             outcoming_checks=[
                 self.__checks_factory.unselected(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.metadata(),
-            ],
-            preparation_hooks=[]
+            ]
         )
 
     @lru_cache()
@@ -87,7 +80,6 @@ class StagesFactory:
         return Stage(
             path=Path("stage2.ourate"),
             command="ourate",
-            incoming_checks=[],
             outcoming_checks=[
                 self.__checks_factory.unselected(),
                 self.__checks_factory.odd_selection(),
@@ -108,13 +100,13 @@ class StagesFactory:
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.unselected(),
                 self.__checks_factory.missing_gifs(),
+                self.__checks_factory.structure(),
 
                 # todo: investigate and rewrite
                 ReadinessCheck(),
 
                 # todo: no service folders
             ],
-            outcoming_checks=[],
             preparation_hooks=[
                 # todo: instagram
                 # sandbox
@@ -131,9 +123,13 @@ class StagesFactory:
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.unselected(),
                 self.__checks_factory.missing_gifs()
-            ],
-            outcoming_checks=[],
-            preparation_hooks=[]
+            ]
+        )
+
+    def scheduled(self) -> Stage:
+        return Stage(
+            path=Path("stage3.scheduled"),
+            command="schedule"
         )
 
     def stage_by_folder(self, name: str) -> Optional[Stage]:

@@ -58,3 +58,11 @@ class CheckFactory:
             name="gif sources check",
             selector=self.__selector_factory.gif_sources()
         )
+
+    def structure(self) -> Check:
+        return Check(
+            name="structure check",
+            selector=self.__selector_factory.structure(),
+            hook=self.__extractor_factory.structure(),
+            message="You have some unexpected structures. Extract?"
+        )
