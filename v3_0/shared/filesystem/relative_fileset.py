@@ -1,22 +1,17 @@
 from pathlib import Path
 from typing import List
 
-from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.movable import Movable
+from v3_0.shared.filesystem.path_based import PathBased
 
 
 class RelativeFileset(Movable):
 
-    def __init__(self, root: Path, files: List[File]) -> None:
+    def __init__(self, root: Path, files: List[PathBased]) -> None:
         super().__init__()
 
         self.__root = root
         self.__files = files
-
-    def add_file(self, file: File) -> None:
-        assert self.__root in file.path.parents
-
-        self.__files.append(file)
 
     def move(self, path: Path) -> None:
         for file in self.__files:

@@ -10,6 +10,7 @@ class ExtractorFactory:
     __EDITED_FOLDER = "edited_sources"
     __ODD_SELECTION_FOLDER = "odd_selection"
     __TO_SELECT_FOLDER = "to_select"
+    __UNEXPECTED_STRUCTURES = "unexpected_structures"
 
     @staticmethod
     @lru_cache()
@@ -57,4 +58,14 @@ class ExtractorFactory:
             selector=self.__selector_factory.missing_gifs(),
             filter_folder="",
             prechecks=[]
+        )
+
+    @lru_cache()
+    def structure(self) -> Extractor:
+        return Extractor(
+            selector=self.__selector_factory.structure(),
+            filter_folder=ExtractorFactory.__UNEXPECTED_STRUCTURES,
+            prechecks=[
+                self.__metadata_check
+            ]
         )

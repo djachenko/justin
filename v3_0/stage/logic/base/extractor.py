@@ -1,5 +1,7 @@
+from pathlib import Path
 from typing import List
 
+from v3_0.shared.filesystem.path_based import PathBased
 from v3_0.shared.helpers import joins
 from v3_0.shared.filesystem.relative_fileset import RelativeFileset
 from v3_0.stage.logic.base.abstract_check import AbstractCheck
@@ -22,11 +24,10 @@ class Extractor:
     def selector(self) -> Selector:
         return self.__selector
 
-    # todo: introduce exception
-    def forward(self, photoset: Photoset) -> bool:
-        if not all([precheck.check(photoset) for precheck in self.__prechecks]):
-            return False
+    def __run_prechecks(self, photoset: Photoset) -> bool:
+        return all([precheck.check(photoset) for precheck in self.__prechecks])
 
+    def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         selection = self.__selector.select(photoset)
 
         jpegs_join = joins.left(
@@ -51,6 +52,15 @@ class Extractor:
 
         files_to_move = jpegs_to_move + sources_contents_to_move
 
+        return files_to_move
+
+    # todo: introduce exception
+    def forward(self, photoset: Photoset) -> bool:
+        if not self.__run_prechecks(photoset):
+            return False
+
+        files_to_move = self.files_to_extract(photoset)
+
         virtual_set = RelativeFileset(photoset.path, files_to_move)
 
         virtual_set.move_down(self.__filter_folder)
@@ -61,7 +71,7 @@ class Extractor:
 
     # todo: introduce exception
     def backwards(self, photoset: Photoset) -> bool:
-        if not all([precheck.check(photoset) for precheck in self.__prechecks]):
+        if not self.__run_prechecks(photoset):
             return False
 
         filtered = photoset.tree[self.__filter_folder]
@@ -71,7 +81,7 @@ class Extractor:
 
         filtered_photoset = Photoset(filtered)
 
-        if not all([precheck.check(filtered_photoset) for precheck in self.__prechecks]):
+        if not self.__run_prechecks(filtered_photoset):
             return False
 
         filtered_set = RelativeFileset(filtered.path, filtered.flatten())
