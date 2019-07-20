@@ -55,7 +55,7 @@ class GifMaker:
         while True:
             iteration_size = round((min_size + max_size) / 2)
 
-            print(f"Starting iteration with size {iteration_size}")
+            print(f"Starting iteration with size {iteration_size}... ", end="")
 
             self.__make_gif(sources_path, name, iteration_size)
 
@@ -65,14 +65,14 @@ class GifMaker:
 
             if GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE or \
                     iteration_size == GifMaker.__START_MAX_SIZE:
-                print(f"Iteration {iteration_size} successful, final result lies at {gif_path.name}")
+                print(f"successful\nFinal result lies at {gif_path.name}")
 
                 break
             elif gif_size > GifMaker.__MAX_DESIRED_SIZE:
-                print(f"GIF too large ({gif_size_in_mb} MB), decreasing")
+                print(f"too large ({gif_size_in_mb} MB), decreasing")
 
                 max_size = iteration_size
             else:
-                print(f"GIF too small ({gif_size_in_mb} MB), increasing")
+                print(f"too small ({gif_size_in_mb} MB), increasing")
 
                 min_size = iteration_size
