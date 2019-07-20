@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 class Command:
     @abstractmethod
-    def run(self, args):
+    def run(self, args) -> None:
         pass
 
     @abstractmethod
