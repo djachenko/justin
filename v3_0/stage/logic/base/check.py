@@ -22,6 +22,10 @@ class Check(AbstractCheck):
     def hookable(self) -> bool:
         return self.__hook is not None
 
+    @property
+    def message(self) -> str:
+        return self.__message
+
     def check(self, photoset: Photoset) -> bool:
         if self.__hook is not None:
             successful_rollback = self.__hook.backwards(photoset)
