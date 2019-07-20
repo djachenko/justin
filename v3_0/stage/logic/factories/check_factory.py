@@ -3,6 +3,7 @@ from functools import lru_cache
 from v3_0.stage.logic.base.check import Check
 from v3_0.stage.logic.factories.extractor_factory import ExtractorFactory
 from v3_0.stage.logic.factories.selector_factory import SelectorFactory
+from v3_0.stage.logic.gif_sources.gif_sources_check import GifSourcesCheck
 from v3_0.stage.logic.metadata.metadata_check import MetadataCheck
 
 
@@ -54,9 +55,10 @@ class CheckFactory:
 
     @lru_cache()
     def gif_sources(self) -> Check:
-        return Check(
+        return GifSourcesCheck(
             name="gif sources check",
-            selector=self.__selector_factory.gif_sources()
+            selector=self.__selector_factory.gif_sources(),
+            message="Not all your sources have gif pair. This ok?"
         )
 
     def structure(self) -> Check:
