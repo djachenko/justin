@@ -1,7 +1,7 @@
 import logger
-from v3_0 import structure
+from v3_0.shared import structure
 from filesystem.folder import Folder
-from v3_0.structure import Structure
+from v3_0.shared.structure import Structure
 
 
 class CheckStructure:

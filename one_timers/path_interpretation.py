@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from v3_0 import structure
+from v3_0.shared import structure
 
 
 class PathInterpretation:
