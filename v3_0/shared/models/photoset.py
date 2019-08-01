@@ -5,6 +5,7 @@ from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
 from v3_0.shared.filesystem.movable import Movable
 from v3_0.shared.helpers import joins
+from v3_0.shared.metafiles.photoset_metafile import PhotosetMetafile
 from v3_0.shared.models.source.source import Source
 from v3_0.shared.models.source.sources_parser import SourcesParser
 
@@ -19,12 +20,20 @@ class Photoset(Movable):
     __INSTAGRAM = "instagram"
     __EDITED_SOURCES = "edited_sources"
 
+    __METAFILE = "_meta.json"
+
     def __init__(self, entry: FolderTree):
         self.__tree = entry
 
     @property
     def tree(self) -> FolderTree:
         return self.__tree
+
+    def get_metafile(self) -> PhotosetMetafile:
+        return PhotosetMetafile.read(self.tree.path / Photoset.__METAFILE)
+
+    def save_metafile(self, metafile: PhotosetMetafile):
+        metafile.write(self.tree.path / Photoset.__METAFILE)
 
     @property
     def path(self) -> Path:

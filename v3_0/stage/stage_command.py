@@ -34,7 +34,6 @@ class StageCommand(Command):
 
         world = args.world
 
-        #
         new_stage: Stage = args.new_stage
 
         for photoset_name in args.name:
