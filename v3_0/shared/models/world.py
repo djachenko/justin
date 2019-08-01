@@ -1,13 +1,14 @@
 import os
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Dict, Iterable, List
 
 from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
 from v3_0.shared.models.disk import Disk
 from v3_0.shared.models.photoset import Photoset
+from v3_0.shared.singleton import Singleton
 
 
-class World:
+class World(Singleton):
     __PHOTOS_FOLDER = "photos"
     __ACTIVE_DISK = "D"
 
@@ -39,5 +40,5 @@ class World:
 
         return disks_mapping
 
-    def __getitem__(self, key) -> Photoset:
+    def __getitem__(self, key) -> List[Photoset]:
         return self.active_disk[key]
