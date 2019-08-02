@@ -8,3 +8,9 @@ v3_0/config\.py
 venv
 
 configs/
+
+dist/
+
+justin\.egg-info/
+
+build/
