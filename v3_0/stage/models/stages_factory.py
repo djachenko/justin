@@ -2,7 +2,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
 
-from logic.photoset.checks.readiness_check import ReadinessCheck
 from v3_0.stage.logic.factories.check_factory import CheckFactory
 from v3_0.stage.logic.factories.extractor_factory import ExtractorFactory
 from v3_0.stage.models.stage import Stage
@@ -103,7 +102,7 @@ class StagesFactory:
                 self.__checks_factory.structure(),
 
                 # todo: investigate and rewrite
-                ReadinessCheck(),
+                # ReadinessCheck(),
 
                 # todo: no service folders
             ],
