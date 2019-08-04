@@ -1,5 +1,6 @@
 from argparse import Namespace
 from pathlib import Path
+from typing import Callable
 
 from pyvko.pyvko_main import Pyvko
 from pyvko.config.config import Config as PyvkoConfig
@@ -30,17 +31,20 @@ class Justin(Singleton):
     def __run_action(self, action: Action, args: Namespace) -> None:
         action.perform(args, self.__world, self.__group)
 
-    def schedule(self, args: Namespace) -> None:
-        action = self.__actions_factory.schedule()
+    def __build_action(self, action: Action) -> Callable[[Namespace], None]:
+        def inner(args: Namespace) -> None:
+            self.__run_action(action, args)
 
-        self.__run_action(action, args)
+        return inner
 
-    def stage(self, args: Namespace) -> None:
-        action = self.__actions_factory.stage()
+    @property
+    def schedule(self) -> Callable[[Namespace], None]:
+        return self.__build_action(self.__actions_factory.schedule())
 
-        self.__run_action(action, args)
+    @property
+    def stage(self) -> Callable[[Namespace], None]:
+        return self.__build_action(self.__actions_factory.stage())
 
-    def rearrange(self, args: Namespace) -> None:
-        action = self.__actions_factory.rearrange()
-
-        self.__run_action(action, args)
+    @property
+    def rearrange(self) -> Callable[[Namespace], None]:
+        return self.__build_action(self.__actions_factory.rearrange())
