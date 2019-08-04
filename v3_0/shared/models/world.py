@@ -5,7 +5,7 @@ from typing import Dict, Iterable, List
 from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
 from v3_0.shared.models.disk import Disk
 from v3_0.shared.models.photoset import Photoset
-from v3_0.shared.singleton import Singleton
+from v3_0.shared.helpers.singleton import Singleton
 
 
 class World(Singleton):
