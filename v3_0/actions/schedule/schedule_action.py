@@ -2,7 +2,7 @@ import random
 from argparse import Namespace
 from datetime import time, date, datetime, timedelta
 from pathlib import Path
-from typing import List
+from typing import List, Generator
 
 from pyvko.models.group import Group
 from pyvko.models.post import Post
@@ -11,7 +11,7 @@ from v3_0.actions.action import Action
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
 from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
 from v3_0.shared.helpers.parting_helper import PartingHelper
-from v3_0.shared.metafiles.post_metafile import PostMetafile
+from v3_0.shared.metafiles.post_metafile import PostMetafile, PostStatus
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
 
@@ -27,16 +27,6 @@ class ScheduleAction(Action):
         stage_tree = SingleFolderTree(ready_path)
 
         return stage_tree
-
-    @staticmethod
-    def __filter_existing_posts(post_metafiles: List[PostMetafile], existing_ids: List[int]):
-        existing_posts = []
-
-        for post_metafile in post_metafiles:
-            if post_metafile.post_id in existing_ids:
-                existing_posts.append(post_metafile)
-
-        return existing_posts
 
     @staticmethod
     def date_generator(start_date: date):
@@ -65,25 +55,22 @@ class ScheduleAction(Action):
         last_date = ScheduleAction.get_start_date(scheduled_posts)
         date_generator = ScheduleAction.date_generator(last_date)
 
-        published_posts = group.get_posts()
-
-        all_post_ids = [post.id for post in scheduled_posts + published_posts]
+        print("Performing upload")
 
         for photoset in photosets:
+            print(f"Uploading photoset {photoset.name}")
+
             justin_folder = photoset.justin
 
             photoset_metafile = photoset.get_metafile()
 
-            existing_posts = self.__filter_existing_posts(photoset_metafile.posts, all_post_ids)
-
-            photoset_metafile.posts = existing_posts
-            photoset.save_metafile(photoset_metafile)
-
-            posted_paths = [post.path for post in existing_posts]
+            posted_paths = [post.path for post in photoset_metafile.posts]
 
             new_posts = []
 
             for hashtag in justin_folder.subtrees:
+                print(f"Uploading #{hashtag.name}")
+
                 parts = PartingHelper.folder_tree_parts(hashtag)
 
                 for part in parts:
@@ -91,6 +78,8 @@ class ScheduleAction(Action):
 
                     if part_path in posted_paths:
                         continue
+
+                    print(f"Uploading contents of {part_path}... ", end="")
 
                     assert len(part.subtrees) == 0
 
@@ -108,11 +97,11 @@ class ScheduleAction(Action):
 
                     post_id = group.add_post(post)
 
-                    post_metafile = PostMetafile(part_path, post_id)
+                    post_metafile = PostMetafile(part_path, post_id, PostStatus.SCHEDULED)
 
                     new_posts.append(post_metafile)
 
-                    print(post_id)
+                    print(f"successful, new post has id {post_id}")
 
             photoset_metafile.posts += new_posts
 
