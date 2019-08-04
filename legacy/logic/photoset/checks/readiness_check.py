@@ -1,5 +1,5 @@
 from legacy.logic.photoset.selectors.unnecessary_folders_selector import UnnecessaryFoldersSelector
-from v3_0.stage.logic.base.check import Check
+from v3_0.actions.stage import Check
 
 
 class ReadinessCheck(Check):
