@@ -1,7 +1,8 @@
 from argparse import Namespace
 from pathlib import Path
 
-from pyvko.pyvko import Pyvko
+from pyvko.pyvko_main import Pyvko
+from pyvko.config.config import Config as PyvkoConfig
 
 from v3_0.actions.action import Action
 from v3_0.actions.action_factory import ActionFactory
@@ -19,16 +20,15 @@ class Justin(Singleton):
 
         config = Config.read(Justin.__CONFIGS_FOLDER / Justin.__CONFIG_FILE)
 
-        pyvko = Pyvko(Justin.__CONFIGS_FOLDER / config.pyvko_config)
+        pyvko = Pyvko(PyvkoConfig.read(Justin.__CONFIGS_FOLDER / config.pyvko_config))
 
         self.__group = pyvko.get_group(config.group_url)
-        self.__photos_uploader = pyvko.get_photos_uploader()
         self.__world = World.instance()
 
         self.__actions_factory = ActionFactory.instance()
 
     def __run_action(self, action: Action, args: Namespace) -> None:
-        action.perform(args, self.__world, self.__group, self.__photos_uploader)
+        action.perform(args, self.__world, self.__group)
 
     def schedule(self, args: Namespace) -> None:
         action = self.__actions_factory.schedule()

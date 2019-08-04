@@ -1,7 +1,6 @@
 from argparse import Namespace
 
-from pyvko.group.group import Group
-from pyvko.photos.photos_uploader import PhotosUploader
+from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
 from v3_0.actions.stage.models.stage import Stage
@@ -16,7 +15,7 @@ class StageAction(Action):
 
         self.__stages_factory = factory
 
-    def perform(self, args: Namespace, world: World, group: Group, uploader: PhotosUploader) -> None:
+    def perform(self, args: Namespace, world: World, group: Group) -> None:
 
         # check if able to exit
         # cleanup
