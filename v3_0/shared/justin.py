@@ -39,3 +39,8 @@ class Justin(Singleton):
         action = self.__actions_factory.stage()
 
         self.__run_action(action, args)
+
+    def rearrange(self, args: Namespace) -> None:
+        action = self.__actions_factory.rearrange()
+
+        self.__run_action(action, args)

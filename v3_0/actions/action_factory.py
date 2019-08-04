@@ -2,6 +2,7 @@ from functools import lru_cache
 from typing import List
 
 from v3_0.actions.action import Action
+from v3_0.actions.rearrange.rearrange_action import RearrangeAction
 from v3_0.actions.schedule.schedule_action import ScheduleAction
 from v3_0.actions.stage.stage_action import StageAction
 from v3_0.shared.helpers.singleton import Singleton
@@ -23,3 +24,7 @@ class ActionFactory(Singleton):
     @lru_cache()
     def schedule(self) -> Action:
         return ScheduleAction()
+
+    @lru_cache()
+    def rearrange(self) -> Action:
+        return RearrangeAction()
