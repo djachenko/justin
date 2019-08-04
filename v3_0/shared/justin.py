@@ -48,3 +48,7 @@ class Justin(Singleton):
     @property
     def rearrange(self) -> Callable[[Namespace], None]:
         return self.__build_action(self.__actions_factory.rearrange())
+    
+    @property
+    def sync_posts_status(self) -> Callable[[Namespace], None]:
+        return self.__build_action(self.__actions_factory.sync_posts_status())

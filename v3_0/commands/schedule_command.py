@@ -16,5 +16,6 @@ class ScheduleCommand(Command):
         self.setup_callback(subparser)
 
     def run(self, args, justin: Justin) -> None:
+        justin.sync_posts_status(args)
         justin.schedule(args)
         justin.rearrange(args)
