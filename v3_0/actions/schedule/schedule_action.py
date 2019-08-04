@@ -4,9 +4,8 @@ from datetime import time, date, datetime, timedelta
 from pathlib import Path
 from typing import List
 
-from pyvko.group.group import Group
-from pyvko.photos.photos_uploader import PhotosUploader
-from pyvko.post import Post
+from pyvko.models.group import Group
+from pyvko.models.post import Post
 
 from v3_0.actions.action import Action
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
@@ -56,7 +55,7 @@ class ScheduleAction(Action):
 
             yield post_datetime
 
-    def perform(self, args: Namespace, world: World, group: Group, photo_uploader: PhotosUploader) -> None:
+    def perform(self, args: Namespace, world: World, group: Group) -> None:
         stage_tree = self.__tree_with_sets()
 
         photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
@@ -97,13 +96,12 @@ class ScheduleAction(Action):
 
                     photo_files = part.files
 
-                    vk_photos = [photo_uploader.upload_to_wall(group.id, file.path) for file in
-                                 photo_files]
+                    vk_photos = [group.upload_photo_to_wall(file.path) for file in photo_files]
 
                     post_datetime = next(date_generator)
 
                     post = Post(
-                        text=f"#{hashtag.name}@djachenko",
+                        text=f"#{hashtag.name}@{group.url}",
                         attachments=vk_photos,
                         date=post_datetime
                     )
