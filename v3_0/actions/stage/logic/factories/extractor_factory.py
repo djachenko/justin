@@ -69,3 +69,7 @@ class ExtractorFactory:
                 self.__metadata_check
             ]
         )
+
+    @lru_cache
+    def parts_renumbering(self) -> Extractor:
+        return PartsRenumberingHandler()
