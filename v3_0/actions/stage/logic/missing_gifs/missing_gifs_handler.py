@@ -7,19 +7,16 @@ from v3_0.shared.models.photoset import Photoset
 
 class MissingGifsHandler(Extractor):
     def forward(self, photoset: Photoset) -> bool:
-        parts = PartingHelper.folder_tree_parts(photoset.gif)
-
         parts_to_generate = self.selector.select(photoset)
 
         maker = GifMaker()
 
-        for part_number, part in enumerate(parts, start=1):
-            if part.name not in parts_to_generate:
-                continue
+        for part_number, part_name in enumerate(parts_to_generate, start=1):
+            part = photoset.tree[part_name]
 
             print(f"Generating gif for {part.path.relative_to(photoset.path.parent)}")
 
-            if len(parts) == 1:
+            if len(parts_to_generate) == 1:
                 name = f"{photoset.name}.gif"
             else:
                 name = f"{photoset.name}_{part_number}.gif"
