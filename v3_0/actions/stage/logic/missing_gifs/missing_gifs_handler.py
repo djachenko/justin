@@ -6,7 +6,7 @@ from v3_0.shared.models.photoset import Photoset
 
 
 class MissingGifsHandler(Extractor):
-    def forward(self, photoset: Photoset) -> bool:
+    def forward(self, photoset: Photoset):
         parts = PartingHelper.folder_tree_parts(photoset.gif)
 
         parts_to_generate = self.selector.select(photoset)
@@ -26,14 +26,10 @@ class MissingGifsHandler(Extractor):
 
             maker.make_gif(part.path, name)
 
-        return True
-
-    def backwards(self, photoset: Photoset) -> bool:
+    def backwards(self, photoset: Photoset):
         parts = PartingHelper.folder_tree_parts(photoset.gif)
 
         for part in parts:
             for file in part.files:
-                if file.extension == ".gifs":
+                if file.extension == ".gif":
                     File.remove(file.path)
-
-        return True
