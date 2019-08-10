@@ -5,6 +5,7 @@ from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
 from v3_0.shared.filesystem.movable import Movable
 from v3_0.shared.helpers import joins
+from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.metafiles.photoset_metafile import PhotosetMetafile
 from v3_0.shared.models.source.source import Source
 from v3_0.shared.models.source.sources_parser import SourcesParser
@@ -57,11 +58,9 @@ class Photoset(Movable):
     def instagram(self) -> FolderTree:
         return self.tree[Photoset.__INSTAGRAM]
 
-    # todo: we now have parting_helper, this method is unused
     @property
     def parts(self) -> List['Photoset']:
-        parts_names = [name for name in self.tree.subtree_names if name.split(".")[0].isdecimal()]
-        parts_folders = [self.tree[name] for name in parts_names]
+        parts_folders = PartingHelper.folder_tree_parts(self.tree)
         parts = [Photoset(part_folder) for part_folder in parts_folders]
 
         return parts
