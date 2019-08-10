@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterable
+from typing import List, Iterable
 
 from v3_0.actions.stage.logic.base.check import Check
 from v3_0.actions.stage.logic.base.extractor import Extractor
@@ -11,9 +11,9 @@ class Stage:
             self,
             path: Path,
             command: str = None,
-            incoming_checks: Iterable[Check] = None,
-            outcoming_checks: Iterable[Check] = None,
-            preparation_hooks: Iterable[Extractor] = None
+            incoming_checks: List[Check] = None,
+            outcoming_checks: List[Check] = None,
+            preparation_hooks: List[Extractor] = None
     ):
         if incoming_checks is None:
             incoming_checks = []
@@ -43,11 +43,11 @@ class Stage:
         return self.__command
 
     @property
-    def incoming_checks(self):
+    def incoming_checks(self) -> List[Check]:
         return self.__incoming_checks
 
     @property
-    def outcoming_checks(self):
+    def outcoming_checks(self) -> List[Check]:
         return self.__outcoming_checks
 
     def __str__(self) -> str:
@@ -80,19 +80,13 @@ class Stage:
         print("Running incoming checks")
         return self.__run_checks(photoset, self.__incoming_checks)
 
-    def prepare(self, photoset: Photoset) -> bool:
+    def prepare(self, photoset: Photoset):
         for hook in self.__preparation_hooks:
-            if not hook.forward(photoset):
-                return False
+            hook.forward(photoset)
 
-        return True
-
-    def cleanup(self, photoset: Photoset) -> bool:
+    def cleanup(self, photoset: Photoset):
         for hook in self.__preparation_hooks:
-            if not hook.backwards(photoset):
-                return False
-
-        return True
+            hook.backwards(photoset)
 
     def transfer(self, photoset: Photoset):
         photoset.move(photoset.path.parent / self.__path)
