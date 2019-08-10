@@ -4,8 +4,8 @@ from v3_0.shared.models.photoset import Photoset
 
 
 class GifSourcesCheck(Check):
-    def check(self, photoset: Photoset) -> bool:
-        super_result = super().check(photoset)
+    def is_good(self, photoset: Photoset) -> bool:
+        super_result = super().is_good(photoset)
 
         if super_result:
             return super_result

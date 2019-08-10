@@ -24,7 +24,7 @@ class Extractor:
         return self.__selector
 
     def __run_prechecks(self, photoset: Photoset) -> bool:
-        return all([precheck.check(photoset) for precheck in self.__prechecks])
+        return all([precheck.is_good(photoset) for precheck in self.__prechecks])
 
     def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         selection = self.__selector.select(photoset)

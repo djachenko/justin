@@ -4,6 +4,7 @@ from v3_0.actions.stage.logic.base.extractor import Extractor
 from v3_0.actions.stage.logic.factories.selector_factory import SelectorFactory
 from v3_0.actions.stage.logic.metadata.metadata_check import MetadataCheck
 from v3_0.actions.stage.logic.missing_gifs.missing_gifs_handler import MissingGifsHandler
+from v3_0.actions.stage.logic.structure.structure_extractor import StructureExtractor
 
 
 class ExtractorFactory:
@@ -62,7 +63,7 @@ class ExtractorFactory:
 
     @lru_cache()
     def structure(self) -> Extractor:
-        return Extractor(
+        return StructureExtractor(
             selector=self.__selector_factory.structure(),
             filter_folder=ExtractorFactory.__UNEXPECTED_STRUCTURES,
             prechecks=[

@@ -42,6 +42,14 @@ class Stage:
     def command(self) -> str:
         return self.__command
 
+    @property
+    def incoming_checks(self):
+        return self.__incoming_checks
+
+    @property
+    def outcoming_checks(self):
+        return self.__outcoming_checks
+
     def __str__(self) -> str:
         return "Stage: " + self.name
 
@@ -50,7 +58,7 @@ class Stage:
         for check in checks:
             print(f"Running {check.name} for {photoset.name}... ", end="")
 
-            result = check.check(photoset)
+            result = check.is_good(photoset)
 
             if result:
                 print("passed")
@@ -72,13 +80,19 @@ class Stage:
         print("Running incoming checks")
         return self.__run_checks(photoset, self.__incoming_checks)
 
-    def prepare(self, photoset: Photoset):
+    def prepare(self, photoset: Photoset) -> bool:
         for hook in self.__preparation_hooks:
-            hook.forward(photoset)
+            if not hook.forward(photoset):
+                return False
 
-    def cleanup(self, photoset: Photoset):
+        return True
+
+    def cleanup(self, photoset: Photoset) -> bool:
         for hook in self.__preparation_hooks:
-            hook.backwards(photoset)
+            if not hook.backwards(photoset):
+                return False
+
+        return True
 
     def transfer(self, photoset: Photoset):
         photoset.move(photoset.path.parent / self.__path)

@@ -36,20 +36,42 @@ class StageAction(Action):
 
             print(f"Trying to move \"{photoset.name}\" to stage \"{new_stage.name}\"")
 
-            success = False
+            transfer_checks = current_stage.outcoming_checks + new_stage.incoming_checks
 
-            if current_stage.able_to_come_out(photoset):
-                current_stage.cleanup(photoset)
+            success = current_stage.cleanup(photoset)
 
-                if new_stage.able_to_come_in(photoset):
-                    if new_stage != current_stage:
-                        new_stage.transfer(photoset)
+            if success:
+                for check in transfer_checks:
+                    if not check.rollback(photoset):
+                        success = False
 
-                    new_stage.prepare(photoset)
+                        break
 
-                    success = True
-                else:
-                    current_stage.prepare(photoset)
+            if success:
+                print("Running checks")
+
+                for check in transfer_checks:
+                    print(f"Running {check.name} for {photoset.name}... ", end="")
+
+                    result = check.is_good(photoset)
+
+                    if result:
+                        print("passed")
+                    else:
+                        print("not passed")
+
+                        if check.ask_for_extract():
+                            check.extract(photoset)
+
+                        success = False
+
+                        break
+
+            if success:
+                if new_stage != current_stage:
+                    new_stage.transfer(photoset)
+
+                success = new_stage.prepare(photoset)
 
             if success:
                 print("Moved successfully")

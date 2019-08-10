@@ -5,5 +5,5 @@ from v3_0.shared.models.photoset import Photoset
 
 class AbstractCheck:
     @abstractmethod
-    def check(self, photoset: Photoset) -> bool:
+    def is_good(self, photoset: Photoset) -> bool:
         pass

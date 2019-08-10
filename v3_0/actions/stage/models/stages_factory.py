@@ -43,6 +43,7 @@ class StagesFactory:
             self.ourate(),
             self.ready(),
             self.published(),
+            self.scheduled(),
         ]
 
     @lru_cache()
@@ -98,13 +99,10 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.unselected(),
-                self.__checks_factory.missing_gifs(),
+                self.__checks_factory.missing_gifs()
+            ],
+            outcoming_checks=[
                 self.__checks_factory.structure(),
-
-                # todo: investigate and rewrite
-                # ReadinessCheck(),
-
-                # todo: no service folders
             ],
             preparation_hooks=[
                 # todo: instagram
@@ -121,14 +119,29 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.unselected(),
-                self.__checks_factory.missing_gifs()
+                self.__checks_factory.missing_gifs(),
+                self.__checks_factory.structure(),
             ]
         )
 
+    @lru_cache()
     def scheduled(self) -> Stage:
         return Stage(
-            path=Path("stage3.scheduled"),
-            command="schedule"
+            path=Path("stage3.schedule"),
+            command="schedule",
+            incoming_checks=[
+                self.__checks_factory.metadata(),
+                self.__checks_factory.odd_selection(),
+                self.__checks_factory.unselected(),
+                self.__checks_factory.missing_gifs(),
+                self.__checks_factory.structure(),
+            ],
+            outcoming_checks=[
+                # all was published
+            ],
+            preparation_hooks=[
+                # upload
+            ]
         )
 
     def stage_by_folder(self, name: str) -> Optional[Stage]:
