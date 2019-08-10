@@ -5,11 +5,11 @@ from v3_0.commands.command import Command
 from v3_0.shared.justin import Justin
 
 
-class ScheduleCommand(Command):
-    __COMMAND = "schedule"
+class UploadCommand(Command):
+    __COMMAND = "upload"
 
     def configure_parser(self, parser_adder):
-        subparser: ArgumentParser = parser_adder.add_parser(ScheduleCommand.__COMMAND)
+        subparser: ArgumentParser = parser_adder.add_parser(UploadCommand.__COMMAND)
 
         subparser.add_argument("-s", "--step", default=RearrangeAction.DEFAULT_STEP, type=int)
 
