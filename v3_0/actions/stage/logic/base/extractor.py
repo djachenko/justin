@@ -1,5 +1,6 @@
 from typing import List
 
+from v3_0.actions.stage.logic.exceptions.extractor_error import ExtractorError
 from v3_0.shared.filesystem.path_based import PathBased
 from v3_0.shared.helpers import joins
 from v3_0.shared.filesystem.relative_fileset import RelativeFileset
@@ -9,12 +10,14 @@ from v3_0.shared.models.photoset import Photoset
 
 
 class Extractor:
-    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[AbstractCheck] = None) -> None:
+    def __init__(self, name: str, selector: Selector, filter_folder: str,
+                 prechecks: List[AbstractCheck] = None) -> None:
         super().__init__()
 
         if not prechecks:
             prechecks = []
 
+        self.__name = name
         self.__selector = selector
         self.__filter_folder = filter_folder
         self.__prechecks = prechecks
@@ -54,9 +57,9 @@ class Extractor:
         return files_to_move
 
     # todo: introduce exception
-    def forward(self, photoset: Photoset) -> bool:
+    def forward(self, photoset: Photoset):
         if not self.__run_prechecks(photoset):
-            return False
+            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor forward on {photoset.name}")
 
         files_to_move = self.files_to_extract(photoset)
 
@@ -66,22 +69,21 @@ class Extractor:
 
         photoset.tree.refresh()
 
-        return True
-
     # todo: introduce exception
-    def backwards(self, photoset: Photoset) -> bool:
+    def backwards(self, photoset: Photoset):
         if not self.__run_prechecks(photoset):
-            return False
+            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {photoset.name}")
 
         filtered = photoset.tree[self.__filter_folder]
 
         if not filtered:
-            return True
+            return
 
         filtered_photoset = Photoset(filtered)
 
         if not self.__run_prechecks(filtered_photoset):
-            return False
+            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {photoset.name}/"
+                                 f"{self.__filter_folder}")
 
         filtered_set = RelativeFileset(filtered.path, filtered.flatten())
 
@@ -89,4 +91,4 @@ class Extractor:
 
         photoset.tree.refresh()
 
-        return True
+        return

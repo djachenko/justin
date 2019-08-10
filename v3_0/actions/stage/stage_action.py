@@ -3,6 +3,8 @@ from argparse import Namespace
 from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
+from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
+from v3_0.actions.stage.logic.exceptions.extractor_error import ExtractorError
 from v3_0.actions.stage.models.stage import Stage
 from v3_0.actions.stage.models.stages_factory import StagesFactory
 from v3_0.shared.models.photoset import Photoset
@@ -38,16 +40,12 @@ class StageAction(Action):
 
             transfer_checks = current_stage.outcoming_checks + new_stage.incoming_checks
 
-            success = current_stage.cleanup(photoset)
+            try:
+                current_stage.cleanup(photoset)
 
-            if success:
                 for check in transfer_checks:
-                    if not check.rollback(photoset):
-                        success = False
+                    check.rollback(photoset)
 
-                        break
-
-            if success:
                 print("Running checks")
 
                 for check in transfer_checks:
@@ -63,17 +61,13 @@ class StageAction(Action):
                         if check.ask_for_extract():
                             check.extract(photoset)
 
-                        success = False
+                        raise CheckFailedError(f"Failed {check.name}")
 
-                        break
-
-            if success:
                 if new_stage != current_stage:
                     new_stage.transfer(photoset)
 
-                success = new_stage.prepare(photoset)
-
-            if success:
-                print("Moved successfully")
+                new_stage.prepare(photoset)
+            except (ExtractorError, CheckFailedError) as error:
+                print(f"Unable to {new_stage.name} {photoset.name}: {error}")
             else:
-                print(f"Unable to {new_stage.name} {photoset.name}. Something happened.")
+                print("Moved successfully")

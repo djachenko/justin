@@ -40,17 +40,13 @@ class Check(AbstractCheck):
 
         return util.ask_for_permission(self.__message)
 
-    def extract(self, photoset: Photoset) -> bool:
+    def extract(self, photoset: Photoset):
         if self.__hook is not None:
-            return self.__hook.forward(photoset)
-
-        return True
+            self.__hook.forward(photoset)
 
     def rollback(self, photoset: Photoset):
         if self.__hook is not None:
-            return self.__hook.backwards(photoset)
-
-        return True
+            self.__hook.backwards(photoset)
 
     def __check_inner(self, photoset: Photoset) -> bool:
         select = self.__selector.select(photoset)
