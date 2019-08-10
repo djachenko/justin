@@ -2,7 +2,7 @@ import random
 from argparse import Namespace
 from datetime import time, date, datetime, timedelta
 from pathlib import Path
-from typing import List, Generator
+from typing import List, Dict
 
 from pyvko.models.group import Group
 from pyvko.models.post import Post
@@ -45,7 +45,8 @@ class ScheduleAction(Action):
 
             yield post_datetime
 
-    def __get_not_uploaded_hierarchy(self, photosets: List[Photoset]):
+    @staticmethod
+    def __get_not_uploaded_hierarchy(photosets: List[Photoset]) -> Dict[Photoset, Dict[str, List[FolderTree]]]:
         upload_hierarchy = {}
 
         for photoset in photosets:
@@ -88,7 +89,7 @@ class ScheduleAction(Action):
 
         print("Performing scheduling... ", end="")
 
-        upload_hierarchy = self.__get_not_uploaded_hierarchy(photosets)
+        upload_hierarchy = ScheduleAction.__get_not_uploaded_hierarchy(photosets)
 
         if len(upload_hierarchy) > 0:
             print()
@@ -100,15 +101,15 @@ class ScheduleAction(Action):
         for photoset, hashtags in upload_hierarchy.items():
             print(f"Uploading photoset {photoset.name}")
 
-            new_posts = []
+            photoset_metafile = photoset.get_metafile()
 
-            for hashtag, parts in hashtags:
-                print(f"Uploading #{hashtag.name}")
+            for hashtag, parts in hashtags.items():
+                print(f"Uploading #{hashtag}")
 
                 for part in parts:
                     part_path = part.path.relative_to(photoset.path)
 
-                    print(f"Uploading contents of {part_path}... ", end="")
+                    print(f"Uploading contents of {part_path}... ", end="", flush=True)
 
                     assert len(part.subtrees) == 0
 
@@ -119,7 +120,7 @@ class ScheduleAction(Action):
                     post_datetime = next(date_generator)
 
                     post = Post(
-                        text=f"#{hashtag.name}@{group.url}",
+                        text=f"#{hashtag}@{group.url}",
                         attachments=vk_photos,
                         date=post_datetime
                     )
@@ -128,13 +129,10 @@ class ScheduleAction(Action):
 
                     post_metafile = PostMetafile(part_path, post_id, PostStatus.SCHEDULED)
 
-                    new_posts.append(post_metafile)
+                    photoset_metafile.posts.append(post_metafile)
+                    photoset.save_metafile(photoset_metafile)
 
                     print(f"successful, new post has id {post_id}")
-
-            photoset_metafile = photoset.get_metafile()
-            photoset_metafile.posts += new_posts
-            photoset.save_metafile(photoset_metafile)
 
     @staticmethod
     def get_start_date(scheduled_posts: List[Post]) -> date:
