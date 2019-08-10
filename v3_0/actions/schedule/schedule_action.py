@@ -45,6 +45,37 @@ class ScheduleAction(Action):
 
             yield post_datetime
 
+    def __get_not_uploaded_hierarchy(self, photosets: List[Photoset]):
+        upload_hierarchy = {}
+
+        for photoset in photosets:
+            hashtags_to_upload = {}
+
+            justin_folder = photoset.justin
+
+            photoset_metafile = photoset.get_metafile()
+
+            posted_paths = [post.path for post in photoset_metafile.posts]
+
+            for hashtag in justin_folder.subtrees:
+                parts = PartingHelper.folder_tree_parts(hashtag)
+
+                parts_to_upload = []
+
+                for part in parts:
+                    part_path = part.path.relative_to(photoset.path)
+
+                    if part_path not in posted_paths:
+                        parts_to_upload.append(part)
+
+                if len(parts_to_upload) > 0:
+                    hashtags_to_upload[hashtag.name] = parts_to_upload
+
+            if len(hashtags_to_upload) > 0:
+                upload_hierarchy[photoset] = hashtags_to_upload
+
+        return upload_hierarchy
+
     def perform(self, args: Namespace, world: World, group: Group) -> None:
         stage_tree = self.__tree_with_sets()
 
@@ -55,29 +86,27 @@ class ScheduleAction(Action):
         last_date = ScheduleAction.get_start_date(scheduled_posts)
         date_generator = ScheduleAction.date_generator(last_date)
 
-        print("Performing upload")
+        print("Performing scheduling... ", end="")
 
-        for photoset in photosets:
+        upload_hierarchy = self.__get_not_uploaded_hierarchy(photosets)
+
+        if len(upload_hierarchy) > 0:
+            print()
+        else:
+            print("already done.")
+
+            return
+
+        for photoset, hashtags in upload_hierarchy.items():
             print(f"Uploading photoset {photoset.name}")
-
-            justin_folder = photoset.justin
-
-            photoset_metafile = photoset.get_metafile()
-
-            posted_paths = [post.path for post in photoset_metafile.posts]
 
             new_posts = []
 
-            for hashtag in justin_folder.subtrees:
+            for hashtag, parts in hashtags:
                 print(f"Uploading #{hashtag.name}")
-
-                parts = PartingHelper.folder_tree_parts(hashtag)
 
                 for part in parts:
                     part_path = part.path.relative_to(photoset.path)
-
-                    if part_path in posted_paths:
-                        continue
 
                     print(f"Uploading contents of {part_path}... ", end="")
 
@@ -103,8 +132,8 @@ class ScheduleAction(Action):
 
                     print(f"successful, new post has id {post_id}")
 
+            photoset_metafile = photoset.get_metafile()
             photoset_metafile.posts += new_posts
-
             photoset.save_metafile(photoset_metafile)
 
     @staticmethod
