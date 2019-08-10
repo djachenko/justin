@@ -20,7 +20,9 @@ class StructureSelector(Selector):
         parted = PartingHelper.is_parted(tree)
 
         if parted and not structure.has_parts:
-            result += [tree.path for tree in tree.subtrees]
+            result += [subtree.path for subtree in tree.subtrees]
+
+            return result
 
         if not structure.has_unlimited_files:
             result += [file.path for file in tree.files]
@@ -41,9 +43,6 @@ class StructureSelector(Selector):
 
     def select(self, photoset: Photoset) -> List[str]:
         wrong_paths = self.__inner_select(photoset.tree, self.__structure)
-
-        for x in sorted([str(i) for i in wrong_paths]):
-            print(x)
 
         relative_wrong_paths = [path.relative_to(photoset.path) for path in wrong_paths]
 

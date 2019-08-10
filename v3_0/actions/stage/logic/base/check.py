@@ -26,14 +26,11 @@ class Check(AbstractCheck):
     def message(self) -> str:
         return self.__message
 
-    def check(self, photoset: Photoset) -> bool:
-        if self.__hook is not None:
-            successful_rollback = self.__hook.backwards(photoset)
+    def __check_part(self, photoset: Photoset) -> bool:
+        return len(self.__selector.select(photoset)) == 0
 
-            if not successful_rollback:
-                return False
-
-        result = not any(self.__selector.select(photoset)) and all([self.check(part) for part in photoset.parts])
+    def is_good(self, photoset: Photoset) -> bool:
+        result = all(self.__check_part(part) for part in photoset.parts)
 
         return result
 
@@ -43,8 +40,17 @@ class Check(AbstractCheck):
 
         return util.ask_for_permission(self.__message)
 
-    def extract(self, photoset: Photoset):
-        self.__hook.forward(photoset)
+    def extract(self, photoset: Photoset) -> bool:
+        if self.__hook is not None:
+            return self.__hook.forward(photoset)
+
+        return True
+
+    def rollback(self, photoset: Photoset):
+        if self.__hook is not None:
+            return self.__hook.backwards(photoset)
+
+        return True
 
     def __check_inner(self, photoset: Photoset) -> bool:
         select = self.__selector.select(photoset)
@@ -54,3 +60,6 @@ class Check(AbstractCheck):
     @property
     def name(self):
         return self.__name
+
+    def __repr__(self) -> str:
+        return self.name.capitalize()
