@@ -1,26 +1,24 @@
-from typing import List
-
+from v3_0.shared.metafiles.groups_metafile import GroupsMetafile
 from v3_0.shared.metafiles.metafile import Metafile
-from v3_0.shared.metafiles.post_metafile import PostMetafile
 
 
 class PhotosetMetafile(Metafile):
     __POSTS_KEY = "posts"
 
-    def __init__(self, posts: List[PostMetafile]) -> None:
+    def __init__(self, posts: GroupsMetafile) -> None:
         super().__init__()
 
         self.posts = posts
 
     def to_dict(self) -> dict:
         return {
-            "posts": [post.to_dict() for post in self.posts]
+            "posts": self.posts.to_dict()
         }
 
     @classmethod
     def from_dict(cls, d: dict) -> 'PhotosetMetafile':
-        posts_array = d.get(PhotosetMetafile.__POSTS_KEY, [])
+        posts_dict = d.get(PhotosetMetafile.__POSTS_KEY, {})
 
-        posts = [PostMetafile.from_dict(i) for i in posts_array]
+        posts = GroupsMetafile.from_dict(posts_dict)
 
         return cls(posts)

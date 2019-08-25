@@ -46,7 +46,8 @@ class ScheduleAction(Action):
             yield post_datetime
 
     @staticmethod
-    def __get_not_uploaded_hierarchy(photosets: List[Photoset]) -> Dict[Photoset, Dict[str, List[FolderTree]]]:
+    def __get_not_uploaded_hierarchy(photosets: List[Photoset], group_url: str)\
+            -> Dict[Photoset, Dict[str, List[FolderTree]]]:
         upload_hierarchy = {}
 
         for photoset in photosets:
@@ -56,7 +57,7 @@ class ScheduleAction(Action):
 
             photoset_metafile = photoset.get_metafile()
 
-            posted_paths = [post.path for post in photoset_metafile.posts]
+            posted_paths = [post.path for post in photoset_metafile.posts[group_url]]
 
             for hashtag in justin_folder.subtrees:
                 parts = PartingHelper.folder_tree_parts(hashtag)
@@ -89,7 +90,7 @@ class ScheduleAction(Action):
 
         print("Performing scheduling... ", end="")
 
-        upload_hierarchy = ScheduleAction.__get_not_uploaded_hierarchy(photosets)
+        upload_hierarchy = ScheduleAction.__get_not_uploaded_hierarchy(photosets, group.url)
 
         if len(upload_hierarchy) > 0:
             print()
@@ -127,9 +128,13 @@ class ScheduleAction(Action):
 
                     post_id = group.add_post(post)
 
-                    post_metafile = PostMetafile(part_path, post_id, PostStatus.SCHEDULED)
+                    post_metafile = PostMetafile(
+                        path=part_path,
+                        post_id=post_id,
+                        status=PostStatus.SCHEDULED
+                    )
 
-                    photoset_metafile.posts.append(post_metafile)
+                    photoset_metafile.posts[group.url].append(post_metafile)
                     photoset.save_metafile(photoset_metafile)
 
                     print(f"successful, new post has id {post_id}")
