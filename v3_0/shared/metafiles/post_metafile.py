@@ -29,20 +29,17 @@ class PostMetafile(Metafile):
     __VERSION_KEY = "version"
     __PATH_KEY = "path"
     __POST_ID_KEY = "id"
-    __GROUP_ID_KEY = "group_url"
     __STATUS_KEY = "post_status"
 
-    def __init__(self, path: Path, post_id: int, group_url: str, status: PostStatus) -> None:
+    def __init__(self, path: Path, post_id: int, status: PostStatus) -> None:
         super().__init__()
 
         self.path = path
-        self.group_url = group_url
         self.post_id = post_id
         self.status = status
 
     def to_dict(self) -> dict:
         return {
-            PostMetafile.__GROUP_ID_KEY: self.group_url,
             PostMetafile.__PATH_KEY: str(self.path),
             PostMetafile.__POST_ID_KEY: self.post_id,
             PostMetafile.__STATUS_KEY: self.status.to_string(),
@@ -51,11 +48,6 @@ class PostMetafile(Metafile):
 
     @classmethod
     def from_dict(cls, json: dict) -> 'PostMetafile':
-        if PostMetafile.__GROUP_ID_KEY in json:
-            group_url = json[PostMetafile.__GROUP_ID_KEY]
-        else:
-            group_url = "pyvko_test2"
-
         post_id = json[PostMetafile.__POST_ID_KEY]
         path = Path(json[PostMetafile.__PATH_KEY])
 
@@ -67,6 +59,5 @@ class PostMetafile(Metafile):
         return PostMetafile(
             path=path,
             post_id=post_id,
-            group_url=group_url,
             status=status
         )

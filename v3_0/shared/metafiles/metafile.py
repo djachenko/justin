@@ -15,7 +15,7 @@ class Metafile:
 
     @classmethod
     def read(cls, path: Path):
-        if path.exists():
+        if path.exists() and path.stat().st_size > 0:
             with path.open() as metafile_file:
                 json_dict = json.load(metafile_file)
         else:

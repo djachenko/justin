@@ -32,6 +32,7 @@ def full_outer(seq1: Iterable[T], seq2: Iterable[V], on: Callable[[T, V], bool])
 
                 result.append(joining)
 
+    # noinspection PyTypeChecker
     return result
 
 

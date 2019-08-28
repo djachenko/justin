@@ -42,7 +42,7 @@ class SyncPostsStatusAction(Action):
 
             existing_posts = []
 
-            for post_metafile in photoset_metafile.posts:
+            for post_metafile in photoset_metafile.posts[group.url]:
                 post_id = post_metafile.post_id
 
                 print(f"Syncing post with id {post_id}... ", end="")
@@ -82,9 +82,7 @@ class SyncPostsStatusAction(Action):
                     else:
                         print("was deleted")
 
-            print("Saving metafiles")
-
-            photoset_metafile.posts = existing_posts
+            photoset_metafile.posts[group.url] = existing_posts
             photoset.save_metafile(photoset_metafile)
 
-            print("Performed successfully")
+        print("Performed successfully")
