@@ -15,6 +15,7 @@ class PathBased(Movable):
         return self.__path
 
     def move(self, path: Path):
+        # todo: explain why
         fs.move(self.path, path)
 
         self.__path = path / self.path.name

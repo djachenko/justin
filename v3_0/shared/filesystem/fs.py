@@ -42,17 +42,17 @@ def move(file_path: Path, dest_path: Path):
 def remove_tree(path: Path) -> None:
     assert isinstance(path, Path)
 
-    shutil.rmtree(str(path))
+    shutil.rmtree(path)
 
 
-def subfolders__(path: Path) -> List[Path]:
+def __subfolders(path: Path) -> List[Path]:
     if path.exists():
         return [i for i in path.iterdir() if i.is_dir()]
 
     return []
 
 
-def subfiles__(path: Path) -> List[Path]:
+def __subfiles(path: Path) -> List[Path]:
     return [i for i in path.iterdir() if i.is_file()]
 
 
@@ -66,4 +66,4 @@ def build_path__(*components):
 
 
 def tree_is_empty(path: Path):
-    return len(subfiles__(path)) == 0 and all([tree_is_empty(subfolder) for subfolder in subfolders__(path)])
+    return len(__subfiles(path)) == 0 and all([tree_is_empty(subfolder) for subfolder in __subfolders(path)])
