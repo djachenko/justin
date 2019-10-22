@@ -42,6 +42,9 @@ class GifMaker:
         return GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE
 
     def make_gif(self, sources_path: Path, name: str):
+        if not name.endswith(".gif"):
+            name = name + ".gif"
+
         gif_path = sources_path / name
 
         if gif_path.exists() and self.__gif_has_good_size(gif_path):
