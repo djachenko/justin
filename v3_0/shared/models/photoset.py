@@ -19,7 +19,6 @@ class Photoset(Movable):
     __PHOTOCLUB = "photoclub"
     __OUR_PEOPLE = "our_people"
     __INSTAGRAM = "instagram"
-    __EDITED_SOURCES = "edited_sources"
 
     __METAFILE = "_meta.json"
 
@@ -49,10 +48,6 @@ class Photoset(Movable):
 
     def __str__(self) -> str:
         return "Photoset: " + self.tree.name
-
-    @property
-    def edited_sources_folder_name(self):
-        return Photoset.__EDITED_SOURCES
 
     @property
     def instagram(self) -> FolderTree:
