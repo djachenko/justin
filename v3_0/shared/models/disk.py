@@ -1,7 +1,7 @@
 from typing import Iterable, List
 
 from v3_0.shared import structure
-from v3_0.shared.structure import Structure
+from v3_0.shared.new_structure import Structure
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
 from v3_0.shared.models.photoset import Photoset
 
