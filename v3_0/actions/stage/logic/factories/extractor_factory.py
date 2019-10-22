@@ -13,15 +13,10 @@ class ExtractorFactory:
     __TO_SELECT_FOLDER = "to_select"
     __UNEXPECTED_STRUCTURES = "unexpected_structures"
 
-    @staticmethod
-    @lru_cache()
-    def instance() -> 'ExtractorFactory':
-        return ExtractorFactory(SelectorFactory.instance())
-
     def __init__(self, selector_factory: SelectorFactory) -> None:
         super().__init__()
         self.__selector_factory = selector_factory
-        self.__metadata_check = MetadataCheck.instance()
+        self.__metadata_check = MetadataCheck(selector_factory)
 
     @lru_cache()
     def edited(self) -> Extractor:
