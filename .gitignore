@@ -15,4 +15,4 @@ justin\.egg-info/
 
 build/
 
-.justin_configs/
+.justin_configs/*

@@ -13,7 +13,7 @@ from pyvko.config.config import Config as PyvkoConfig
 from v3_0.shared.models.world import World
 
 __CONFIGS_FOLDER = Path(".justin_configs")
-__CONFIG_FILE = "structure_config.py"
+__CONFIG_FILE = "config.py"
 
 
 def __prepare_configs() -> Tuple[Config, PyvkoConfig]:
@@ -51,7 +51,7 @@ def run(working_path: Path, args=None):
             url = config[Config.Keys.GROUP_URL]
             group = pyvko.get(url)
 
-            world = World.instance()
+            world = World(config[Config.Keys.DISK_STRUCTURE])
 
             justin = Justin(group, world, factories_container.actions_factory)
 
