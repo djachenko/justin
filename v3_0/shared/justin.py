@@ -5,12 +5,10 @@ from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
 from v3_0.actions.action_factory import ActionFactory
-from v3_0.shared.helpers.singleton import Singleton
 from v3_0.shared.models.world import World
 
 
-class Justin(Singleton):
-
+class Justin:
     def __init__(self, group: Group, world: World, actions_factory: ActionFactory) -> None:
         super().__init__()
 
