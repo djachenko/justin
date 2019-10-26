@@ -8,14 +8,6 @@ from v3_0.actions.stage.models.stage import Stage
 
 
 class StagesFactory:
-    @staticmethod
-    @lru_cache()
-    def instance() -> 'StagesFactory':
-        return StagesFactory(
-            checks_factory=CheckFactory.instance(),
-            extractors_factory=ExtractorFactory.instance()
-        )
-
     def __init__(self, checks_factory: CheckFactory, extractors_factory: ExtractorFactory) -> None:
         super().__init__()
 

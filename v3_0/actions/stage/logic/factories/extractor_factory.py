@@ -8,20 +8,15 @@ from v3_0.actions.stage.logic.structure.structure_extractor import StructureExtr
 
 
 class ExtractorFactory:
-    __EDITED_FOLDER = "edited_sources"
+    __EDITED_FOLDER = "edited"
     __ODD_SELECTION_FOLDER = "odd_selection"
     __TO_SELECT_FOLDER = "to_select"
     __UNEXPECTED_STRUCTURES = "unexpected_structures"
 
-    @staticmethod
-    @lru_cache()
-    def instance() -> 'ExtractorFactory':
-        return ExtractorFactory(SelectorFactory.instance())
-
     def __init__(self, selector_factory: SelectorFactory) -> None:
         super().__init__()
         self.__selector_factory = selector_factory
-        self.__metadata_check = MetadataCheck.instance()
+        self.__metadata_check = MetadataCheck(selector_factory)
 
     @lru_cache()
     def edited(self) -> Extractor:

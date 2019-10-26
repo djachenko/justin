@@ -26,7 +26,12 @@ class File(PathBased):
 
     @staticmethod
     def remove(path: Path):
-        fs.remove_tree(path)
+        if path.is_dir():
+            fs.remove_tree(path)
+        elif path.is_file():
+            path.unlink()
+        else:
+            assert False
 
     def stem(self) -> str:
         name = self.path.stem
