@@ -1,20 +1,20 @@
 from typing import Iterable, List
 
-from v3_0.shared import structure
 from v3_0.shared.new_structure import Structure
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
 from v3_0.shared.models.photoset import Photoset
 
 
 class Disk:
-    def __init__(self, root: FolderTree) -> None:
+    def __init__(self, root: FolderTree, structure: Structure) -> None:
         super().__init__()
 
         self.root = root
+        self.__structure = structure
 
     @property
     def sets(self) -> Iterable[Photoset]:
-        shared_structure = structure.disk_structure
+        shared_structure = self.__structure
 
         result = Disk.__collect_photosets(self.root, shared_structure)
 
