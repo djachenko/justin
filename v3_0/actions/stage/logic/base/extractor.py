@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Tuple, Any, Iterable
 
+from v3_0.actions.stage.exceptions.no_files_for_name_error import NoFilesForNameError
 from v3_0.actions.stage.logic.exceptions.extractor_error import ExtractorError
 from v3_0.shared.filesystem.path_based import PathBased
 from v3_0.shared.helpers import joins
@@ -29,6 +30,19 @@ class Extractor:
     def __run_prechecks(self, photoset: Photoset) -> bool:
         return all([precheck.is_good(photoset) for precheck in self.__prechecks])
 
+    @staticmethod
+    def __validate_join(join: Iterable[Tuple[str, Any]], name: str):
+        names_of_unjoined_files = []
+
+        for source_name, source in join:
+            if source is None:
+                names_of_unjoined_files.append(source_name)
+
+        if names_of_unjoined_files:
+            unjoined_files_names_string = ", ".join(names_of_unjoined_files)
+
+            raise NoFilesForNameError(f"Unable to extract {name}: {unjoined_files_names_string}")
+
     def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         selection = self.__selector.select(photoset)
 
@@ -38,11 +52,15 @@ class Extractor:
             lambda s, f: s == f.stem()
         )
 
+        self.__validate_join(jpegs_join, "jpegs")
+
         sources_join = list(joins.left(
             selection,
             photoset.sources,
             lambda s, f: s == f.stem()
         ))
+
+        self.__validate_join(sources_join, "sources")
 
         jpegs_to_move = [e[1] for e in jpegs_join]
 
@@ -56,39 +74,37 @@ class Extractor:
 
         return files_to_move
 
-    # todo: introduce exception
     def forward(self, photoset: Photoset):
-        if not self.__run_prechecks(photoset):
-            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor forward on {photoset.name}")
+        for part in photoset.parts:
+            if not self.__run_prechecks(part):
+                raise ExtractorError(f"Failed prechecks while running {self.__name} extractor forward on {part.name}")
 
-        files_to_move = self.files_to_extract(photoset)
+            files_to_move = self.files_to_extract(part)
 
-        virtual_set = RelativeFileset(photoset.path, files_to_move)
+            virtual_set = RelativeFileset(part.path, files_to_move)
 
-        virtual_set.move_down(self.__filter_folder)
+            virtual_set.move_down(self.__filter_folder)
 
         photoset.tree.refresh()
 
-    # todo: introduce exception
     def backwards(self, photoset: Photoset):
-        if not self.__run_prechecks(photoset):
-            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {photoset.name}")
+        for part in photoset.parts:
+            if not self.__run_prechecks(part):
+                raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {part.name}")
 
-        filtered = photoset.tree[self.__filter_folder]
+            filtered = part.tree[self.__filter_folder]
 
-        if not filtered:
-            return
+            if not filtered:
+                return
 
-        filtered_photoset = Photoset(filtered)
+            filtered_photoset = Photoset(filtered)
 
-        if not self.__run_prechecks(filtered_photoset):
-            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {photoset.name}/"
-                                 f"{self.__filter_folder}")
+            if not self.__run_prechecks(filtered_photoset):
+                raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {part.name}/"
+                                     f"{self.__filter_folder}")
 
-        filtered_set = RelativeFileset(filtered.path, filtered.flatten())
+            filtered_set = RelativeFileset(filtered.path, filtered.flatten())
 
-        filtered_set.move_up()
+            filtered_set.move_up()
 
         photoset.tree.refresh()
-
-        return

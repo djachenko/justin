@@ -8,14 +8,6 @@ from v3_0.actions.stage.logic.metadata.metadata_check import MetadataCheck
 
 
 class CheckFactory:
-    @staticmethod
-    @lru_cache()
-    def instance() -> 'CheckFactory':
-        return CheckFactory(
-            selector_factory=SelectorFactory.instance(),
-            extractor_factory=ExtractorFactory.instance()
-        )
-
     def __init__(self, selector_factory: SelectorFactory, extractor_factory: ExtractorFactory) -> None:
         super().__init__()
 
@@ -42,7 +34,7 @@ class CheckFactory:
 
     @lru_cache()
     def metadata(self) -> Check:
-        return MetadataCheck.instance()
+        return MetadataCheck(self.__selector_factory)
 
     @lru_cache()
     def missing_gifs(self) -> Check:

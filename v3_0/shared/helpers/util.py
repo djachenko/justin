@@ -1,5 +1,5 @@
 import time
-from typing import Iterable, TypeVar, Callable
+from typing import Iterable, TypeVar, Callable, Dict, Any
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -44,3 +44,16 @@ def measure_time(name=None):
         return inner
 
     return decorator
+
+
+def concat_dictionaries(*dictionaries: Dict[T, Any]) -> Dict[T, Any]:
+    result = {}
+
+    for dictionary in dictionaries:
+        keys = dictionary.keys()
+
+        assert len(set(keys).intersection(result.keys())) == 0
+
+        result.update(dictionary)
+
+    return result

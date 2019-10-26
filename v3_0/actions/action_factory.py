@@ -10,10 +10,16 @@ from v3_0.actions.sync_posts_status_action import SyncPostsStatusAction
 from v3_0.shared.helpers.singleton import Singleton
 
 
-class ActionFactory(Singleton):
+class ActionFactory:
+
+    def __init__(self, stages_factory: StagesFactory) -> None:
+        super().__init__()
+
+        self.__stages_factory = stages_factory
+
     @lru_cache()
     def stage(self) -> Action:
-        return StageAction(StagesFactory.instance())
+        return StageAction(self.__stages_factory)
 
     @lru_cache()
     def schedule(self) -> Action:

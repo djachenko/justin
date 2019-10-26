@@ -8,8 +8,6 @@ class InternalMetadataSource(Source):
     def __init__(self, jpeg: File):
         super().__init__()
 
-        assert jpeg.extension != "jpg"
-
         self.__jpeg = jpeg
 
     @property

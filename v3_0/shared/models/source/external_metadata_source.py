@@ -8,7 +8,7 @@ class ExternalMetadataSource(Source):
     def __init__(self, raw: File, metadata: File):
         super().__init__()
 
-        assert raw.extension != "jpg"
+        assert raw.extension != ".jpg"
 
         if metadata is not None:
             assert raw.stem() == metadata.stem()
