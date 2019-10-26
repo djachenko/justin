@@ -1,21 +1,20 @@
-import os
 from pathlib import Path
 from typing import Dict, Iterable, List
 
 from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.shared.locations.locations_manager import LocationsManager
 from v3_0.shared.models.disk import Disk
 from v3_0.shared.models.photoset import Photoset
-from v3_0.shared.helpers.singleton import Singleton
+from v3_0.shared.new_structure import Structure
 
 
-class World(Singleton):
-    __PHOTOS_FOLDER = "photos"
-    __ACTIVE_DISK = "D"
-
-    def __init__(self) -> None:
+# todo: class is currently unused, review
+class World:
+    def __init__(self, disk_structure: Structure) -> None:
         super().__init__()
 
-        self.__disks_map = World.__discover_disks()
+        self.__locations_manager = LocationsManager.instance()
+        self.__disks_map = self.__discover_disks(disk_structure)
 
     @property
     def disks(self) -> Iterable[Disk]:
@@ -23,20 +22,15 @@ class World(Singleton):
 
     @property
     def active_disk(self) -> Disk:
-        return self.__disks_map[World.__ACTIVE_DISK]
+        return self.__disks_map[self.__locations_manager.main_location()]
 
-    @staticmethod
-    def __discover_disks() -> Dict[str, Disk]:
+    def __discover_disks(self, disk_structure: Structure) -> Dict[Path, Disk]:
         disks_mapping = {}
 
-        # for disk_letter in string.ascii_uppercase:
-        for disk_letter in ["D"]:
-            path = Path(disk_letter + ":/") / "photos"
+        for path in self.__locations_manager.get_locations():
+            disk = Disk(SingleFolderTree(path), disk_structure)
 
-            if os.access(path, os.F_OK) and path.exists():
-                disk = Disk(SingleFolderTree(path))
-
-                disks_mapping[disk_letter] = disk
+            disks_mapping[path] = disk
 
         return disks_mapping
 

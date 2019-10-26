@@ -7,7 +7,6 @@ from v3_0.actions.schedule.schedule_action import ScheduleAction
 from v3_0.actions.stage.models.stages_factory import StagesFactory
 from v3_0.actions.stage.stage_action import StageAction
 from v3_0.actions.sync_posts_status_action import SyncPostsStatusAction
-from v3_0.shared.helpers.singleton import Singleton
 
 
 class ActionFactory:
