@@ -8,6 +8,7 @@ from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.new_structure import Structure
 
 
+# todo: class is currently unused, review
 class World:
     def __init__(self, disk_structure: Structure) -> None:
         super().__init__()
