@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, Iterable, List
 
+from v3_0.actions.archive.archive import Archive
 from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
 from v3_0.shared.locations.locations_manager import LocationsManager
 from v3_0.shared.models.disk import Disk
@@ -15,6 +16,12 @@ class World:
 
         self.__locations_manager = LocationsManager.instance()
         # self.__disks_map = self.__discover_disks(disk_structure)
+
+        self.__archive = Archive(SingleFolderTree(self.__locations_manager.main_location()), disk_structure)
+
+    @property
+    def archive(self):
+        return self.__archive
 
     @property
     def disks(self) -> Iterable[Disk]:

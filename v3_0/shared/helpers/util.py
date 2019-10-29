@@ -1,5 +1,7 @@
+import glob
 import time
-from typing import Iterable, TypeVar, Callable, Dict, Any
+from pathlib import Path
+from typing import Iterable, TypeVar, Callable, Dict, Any, List, Generator
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -57,3 +59,11 @@ def concat_dictionaries(*dictionaries: Dict[T, Any]) -> Dict[T, Any]:
         result.update(dictionary)
 
     return result
+
+
+def resolve_patterns(patterns: List[str]) -> Generator[Path, None, None]:
+    for pattern in patterns:
+        for str_path in glob.iglob(pattern):
+            path = Path(str_path)
+
+            yield path

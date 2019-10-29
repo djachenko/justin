@@ -1,24 +1,24 @@
-from v3_0.actions.archive import Category
-from v3_0.actions.archive import TreeBased
+from typing import Optional
+
+from v3_0.actions.archive.tree_based import TreeBased
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
+from v3_0.shared.new_structure import Structure
 
 
 class Destination(TreeBased):
-    def __init__(self, tree: FolderTree) -> None:
+    def __init__(self, tree: FolderTree, structure: Structure) -> None:
         super().__init__(tree)
 
-        self.__categories = [Category(subtree) for subtree in tree.subtrees]
+        if structure.has_substructures:
+            assert len(set(subtree.name for subtree in tree.subtrees)) == len(tree.subtrees)
+
+            self.__categories = {subtree.name: subtree for subtree in tree.subtrees}
+        else:
+            self.__categories = None
 
     @property
     def has_categories(self):
-        return True
+        return self.__categories is not None
 
-    def get_category(self, name: str) -> Optional[Category]:
-        categories_with_name = [cat for cat in self.__categories if cat.name == name]
-
-        assert len(categories_with_name) < 2
-
-        if len(categories_with_name) == 1:
-            return categories_with_name[0]
-        else:
-            return None
+    def get_category(self, name: str) -> Optional[FolderTree]:
+        return self.__categories.get(name)

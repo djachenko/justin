@@ -1,18 +1,24 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
 
 
 class SingleFolderTree(FolderTree):
+    # noinspection PyTypeChecker
     def __init__(self, path: Path) -> None:
         super().__init__(path)
 
-        self.__subtrees = {}
-        self.__files = []
+        self.__backing_subtrees: Dict[str, FolderTree] = None
+        self.__files: List[File] = None
 
-        self.refresh()
+    @property
+    def __subtrees(self) -> Dict[str, FolderTree]:
+        if self.__backing_subtrees is None:
+            self.refresh()
+
+        return self.__backing_subtrees
 
     @property
     def name(self) -> str:
@@ -20,6 +26,9 @@ class SingleFolderTree(FolderTree):
 
     @property
     def files(self) -> List[File]:
+        if self.__files is None:
+            self.refresh()
+
         return self.__files
 
     @property
@@ -27,11 +36,7 @@ class SingleFolderTree(FolderTree):
         return list(self.__subtrees.keys())
 
     @property
-    def subtrees(self) -> List['FolderTree']:
-        return self.__subtree_values
-
-    @property
-    def __subtree_values(self) -> List['FolderTree']:
+    def subtrees(self) -> List[FolderTree]:
         return list(self.__subtrees.values())
 
     def __getitem__(self, key: str) -> Optional[FolderTree]:
@@ -43,13 +48,13 @@ class SingleFolderTree(FolderTree):
     def flatten(self) -> List[File]:
         result = self.files.copy()
 
-        for subtree in self.__subtree_values:
+        for subtree in self.subtrees:
             result += subtree.flatten()
 
         return result
 
     def refresh(self):
-        self.__subtrees = {}
+        self.__backing_subtrees = {}
         self.__files = []
 
         for child in self.path.iterdir():
@@ -64,6 +69,6 @@ class SingleFolderTree(FolderTree):
             elif child.is_file():
                 self.files.append(File(child))
             else:
-                print("Path not file or dir")
+                print("Path is neither file nor dir")
 
                 exit(1)
