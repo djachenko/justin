@@ -46,3 +46,7 @@ class Justin:
     @property
     def local_sync(self):
         return self.__build_action(self.__actions_factory.local_sync())
+
+    @property
+    def archive(self):
+        return self.__build_action(self.__actions_factory.archive())
