@@ -4,6 +4,7 @@ from typing import List
 from v3_0.actions.stage.models.stages_factory import StagesFactory
 from v3_0.commands.command import Command
 from v3_0.commands.delete_posts_command import DeletePostsCommand
+from v3_0.commands.local_sync_command import LocalSyncCommand
 from v3_0.commands.rearrange_command import RearrangeCommand
 from v3_0.commands.stage_command import StageCommand
 from v3_0.commands.upload_command import UploadCommand
@@ -21,7 +22,8 @@ class CommandFactory:
             self.stage(),
             self.upload(),
             self.delete_posts(),
-            self.rearrange()
+            self.rearrange(),
+            self.local_sync(),
         ]
 
     @lru_cache()
@@ -39,3 +41,7 @@ class CommandFactory:
     @lru_cache()
     def delete_posts(self) -> Command:
         return DeletePostsCommand()
+
+    @lru_cache()
+    def local_sync(self) -> Command:
+        return LocalSyncCommand()
