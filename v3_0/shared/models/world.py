@@ -14,7 +14,7 @@ class World:
         super().__init__()
 
         self.__locations_manager = LocationsManager.instance()
-        self.__disks_map = self.__discover_disks(disk_structure)
+        # self.__disks_map = self.__discover_disks(disk_structure)
 
     @property
     def disks(self) -> Iterable[Disk]:
