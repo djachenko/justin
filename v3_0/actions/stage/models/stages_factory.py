@@ -143,7 +143,7 @@ class StagesFactory:
         return self.__stages_by_command[command]
 
     def stage_by_path(self, path: Path) -> Optional[Stage]:
-        for path_part in path.parts:
+        for path_part in path.absolute().parts:
             possible_stage = self.stage_by_folder(path_part)
 
             if possible_stage is not None:

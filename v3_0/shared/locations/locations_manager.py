@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List
 
 from v3_0.shared.helpers.singleton import Singleton
-from v3_0.shared.locations.locations import Locations, MacOSLocations
+from v3_0.shared.locations.locations import Locations, MacOSLocations, WindowsLocations
 
 
 class LocationsManager(Singleton):
@@ -16,6 +16,8 @@ class LocationsManager(Singleton):
 
         if system_name == "Darwin":
             return MacOSLocations()
+        elif system_name == "Windows":
+            return WindowsLocations()
         else:
             assert False
 
