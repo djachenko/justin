@@ -42,3 +42,7 @@ class Justin:
     @property
     def delete_posts(self) -> Callable[[Namespace], None]:
         return self.__build_action(self.__actions_factory.delete_posts())
+
+    @property
+    def local_sync(self):
+        return self.__build_action(self.__actions_factory.local_sync())

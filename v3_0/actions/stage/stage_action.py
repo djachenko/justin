@@ -28,7 +28,7 @@ class StageAction(Action):
         # move
         # prepare
 
-        new_stage: Stage = args.new_stage
+        new_stage = self.__stages_factory.stage_by_command(args.command)
 
         for pattern in args.name:
             for str_path in glob.iglob(pattern):
