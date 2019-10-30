@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from v3_0.actions.action import Action
 from v3_0.actions.delete_posts_action import DeletePostsAction
+from v3_0.actions.local_sync_action import LocalSyncAction
 from v3_0.actions.rearrange.rearrange_action import RearrangeAction
 from v3_0.actions.schedule.schedule_action import ScheduleAction
 from v3_0.actions.stage.models.stages_factory import StagesFactory
@@ -35,3 +36,7 @@ class ActionFactory:
     @lru_cache()
     def delete_posts(self) -> Action:
         return DeletePostsAction()
+
+    @lru_cache()
+    def local_sync(self) -> Action:
+        return LocalSyncAction(self.stage())
