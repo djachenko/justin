@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Iterable
+from typing import List, Iterable, Optional
 
 from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
@@ -77,20 +77,20 @@ class Photoset(Movable):
 
         return sources
 
-    def __subtree_files(self, key: str) -> List[File]:
+    def __subtree_files(self, key: str) -> Optional[List[File]]:
         subtree = self.tree[key]
 
         if subtree is not None:
             return subtree.files
         else:
-            return []
+            return None
 
     @property
-    def photoclub(self) -> List[File]:
+    def photoclub(self) -> Optional[List[File]]:
         return self.__subtree_files(Photoset.__PHOTOCLUB)
 
     @property
-    def selection(self) -> List[File]:
+    def selection(self) -> Optional[List[File]]:
         return self.__subtree_files(Photoset.__SELECTION)
 
     @property
@@ -120,7 +120,10 @@ class Photoset(Movable):
 
         possible_subtrees = [i for i in possible_subtrees if i is not None]
 
-        results_lists = [self.photoclub] + [sub.flatten() for sub in possible_subtrees]
+        results_lists = [sub.flatten() for sub in possible_subtrees]
+
+        if self.photoclub is not None:
+            results_lists.append(self.photoclub)
 
         result = []
 
@@ -131,7 +134,12 @@ class Photoset(Movable):
 
     @property
     def big_jpegs(self) -> List[File]:
-        return self.results + self.selection
+        jpegs = self.results
+
+        if self.selection is not None:
+            jpegs += self.selection
+
+        return jpegs
 
     @property
     def all_jpegs(self) -> List[File]:

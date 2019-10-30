@@ -8,6 +8,7 @@ if __name__ == '__main__':
         "publish D:/photos/stages/stage4.published/*".split()
         "upload -s 1",
         "local_sync",
+        "archive D:/photos/stages/stage4.published/18.04.25.*"
     ]
 
     general_runner.run(
