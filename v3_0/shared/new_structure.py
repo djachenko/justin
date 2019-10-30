@@ -20,7 +20,7 @@ class Structure:
 
     __PHOTOSET_NAME_REGEXP = "\d\d\.\d\d\.\d\d\.\w+"
 
-    def __init__(self, name: str, description: dict, path: Path, next_level_structure: 'Structure' = None) -> None:
+    def __init__(self, name: str, description: dict, path: Path, next_level_structure: dict = None) -> None:
         super().__init__()
 
         self.__name = name

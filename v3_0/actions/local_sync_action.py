@@ -1,5 +1,4 @@
 from argparse import Namespace
-from pathlib import Path
 from typing import Iterable
 
 from pyvko.models.group import Group
@@ -19,12 +18,11 @@ class LocalSyncAction(Action):
         self.__all_published_action = all_published_action
 
     # noinspection PyMethodMayBeStatic
-    def __tree_with_sets(self) -> FolderTree:
-        # todo: won't work on Mac, need to move to generic location
-        ready_path = Path("D:/photos/stages/stage3.schedule")
+    def __tree_with_sets(self, world: World) -> FolderTree:
         # todo: stages_region[stage3.schedule]
+        scheduled_path = world.current_location / "stages/stage3.scheduled"
 
-        stage_tree = SingleFolderTree(ready_path)
+        stage_tree = SingleFolderTree(scheduled_path)
 
         return stage_tree
 
@@ -51,7 +49,7 @@ class LocalSyncAction(Action):
         self.__all_published_action.perform(internal_args, world, group)
 
     def perform(self, args: Namespace, world: World, group: Group) -> None:
-        stage_tree = self.__tree_with_sets()
+        stage_tree = self.__tree_with_sets(world)
 
         photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
 

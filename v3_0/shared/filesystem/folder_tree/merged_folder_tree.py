@@ -5,6 +5,7 @@ from collections import Iterable
 from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
 
 
+# noinspection PyAbstractClass
 class MergedFolderTree(FolderTree):
     def __init__(self, trees: Iterable[FolderTree]) -> None:
         super().__init__()

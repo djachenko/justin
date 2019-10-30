@@ -1,7 +1,7 @@
 import os
 import platform
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from v3_0.shared.helpers.singleton import Singleton
 from v3_0.shared.locations.locations import Locations, MacOSLocations, WindowsLocations
@@ -39,3 +39,14 @@ class LocationsManager(Singleton):
 
     def get_locations(self) -> List[Path]:
         return [location for location in self.__get_all_possible_locations() if self.__validate_location(location)]
+
+    def current_location(self) -> Optional[Path]:
+        current_path = Path.cwd()
+
+        all_locations = self.get_locations()
+
+        for location in all_locations:
+            if location in current_path.parents or current_path in location.parents:
+                return location
+
+        return None
