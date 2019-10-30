@@ -8,10 +8,9 @@ from v3_0.shared.models.photoset import Photoset
 
 
 class Check(AbstractCheck):
-    def __init__(self, name: str, selector: Selector, hook: Optional[Extractor] = None, message: str = "") -> None:
+    def __init__(self, name: str, selector: Optional[Selector] = None, hook: Optional[Extractor] = None,
+                 message: str = "") -> None:
         super().__init__()
-
-        assert selector is not None
 
         self.__selector = selector
         self.__hook = hook
@@ -41,11 +40,11 @@ class Check(AbstractCheck):
         return util.ask_for_permission(self.__message)
 
     def extract(self, photoset: Photoset):
-        if self.__hook is not None:
+        if self.hookable:
             self.__hook.forward(photoset)
 
     def rollback(self, photoset: Photoset):
-        if self.__hook is not None:
+        if self.hookable:
             self.__hook.backwards(photoset)
 
     def __check_inner(self, photoset: Photoset) -> bool:

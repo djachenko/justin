@@ -113,6 +113,7 @@ class StagesFactory:
                 self.__checks_factory.unselected(),
                 self.__checks_factory.missing_gifs(),
                 self.__checks_factory.structure(),
+                self.__checks_factory.metafile(),
             ]
         )
 
@@ -129,10 +130,10 @@ class StagesFactory:
                 self.__checks_factory.structure(),
             ],
             outcoming_checks=[
-                # all was published
+                self.__checks_factory.metafile(),
             ],
             preparation_hooks=[
-                # upload
+                # todo: offer to upload
             ]
         )
 

@@ -5,6 +5,7 @@ from v3_0.actions.stage.logic.factories.extractor_factory import ExtractorFactor
 from v3_0.actions.stage.logic.factories.selector_factory import SelectorFactory
 from v3_0.actions.stage.logic.gif_sources.gif_sources_check import GifSourcesCheck
 from v3_0.actions.stage.logic.metadata.metadata_check import MetadataCheck
+from v3_0.actions.stage.logic.metafile.metafile_check import MetafileCheck
 
 
 class CheckFactory:
@@ -34,7 +35,7 @@ class CheckFactory:
 
     @lru_cache()
     def metadata(self) -> Check:
-        return MetadataCheck(self.__selector_factory)
+        return MetadataCheck(self.__selector_factory.metadata())
 
     @lru_cache()
     def missing_gifs(self) -> Check:
@@ -53,6 +54,7 @@ class CheckFactory:
             message="Not all your sources have gif pair. This ok?"
         )
 
+    @lru_cache()
     def structure(self) -> Check:
         return Check(
             name="structure check",
@@ -60,3 +62,8 @@ class CheckFactory:
             hook=self.__extractor_factory.structure(),
             message="You have some unexpected structures. Extract?"
         )
+
+    @lru_cache()
+    def metafile(self) -> Check:
+        return MetafileCheck()
+
