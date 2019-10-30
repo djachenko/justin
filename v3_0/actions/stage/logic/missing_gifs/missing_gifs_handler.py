@@ -1,7 +1,6 @@
 from v3_0.actions.stage.helpers.gif_maker import GifMaker
-from v3_0.shared.filesystem.file import File
-from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.actions.stage.logic.base.extractor import Extractor
+from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.models.photoset import Photoset
 
 

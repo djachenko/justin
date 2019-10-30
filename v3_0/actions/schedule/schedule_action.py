@@ -1,7 +1,6 @@
 import random
 from argparse import Namespace
 from datetime import time, date, datetime, timedelta
-from pathlib import Path
 from typing import List, Dict
 
 from pyvko.models.group import Group
@@ -20,8 +19,8 @@ class ScheduleAction(Action):
     __STEP = timedelta(days=3)
 
     # noinspection PyMethodMayBeStatic
-    def __tree_with_sets(self) -> FolderTree:
-        ready_path = Path("D:/photos/stages/stage3.schedule")
+    def __tree_with_sets(self, world: World) -> FolderTree:
+        ready_path = world.current_location / "stages/stage3.schedule"
         # todo: stages_region[stage3.schedule]
 
         stage_tree = SingleFolderTree(ready_path)
@@ -79,7 +78,7 @@ class ScheduleAction(Action):
         return upload_hierarchy
 
     def perform(self, args: Namespace, world: World, group: Group) -> None:
-        stage_tree = self.__tree_with_sets()
+        stage_tree = self.__tree_with_sets(world)
 
         photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
 

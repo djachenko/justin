@@ -21,7 +21,7 @@ class Locations:
 
 class WindowsLocations(Locations):
     def main(self) -> Path:
-        return Path("D:")
+        return Path("D:/")
 
     def secondary_locations(self) -> List[Path]:
         return [Path.home()] + \

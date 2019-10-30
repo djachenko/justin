@@ -6,6 +6,7 @@ from typing import List
 SEPARATOR = "/"
 
 
+# noinspection PyUnusedLocal
 def __copy_canceller(src, dst):
     sys.exit("Tried to copy {file_name}, aborting".format(file_name=src))
 

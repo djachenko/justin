@@ -5,7 +5,7 @@ from v3_0.runners import general_runner
 if __name__ == '__main__':
     commands = [
         "schedule D:/photos/stages/stage2.develop/19.03.22.*",
-        "publish D:/photos/stages/stage4.published/*".split()
+        "publish D:/photos/stages/stage4.published/*",
         "upload -s 1",
         "local_sync",
         "archive D:/photos/stages/stage4.published/18.04.25.*"
@@ -13,5 +13,5 @@ if __name__ == '__main__':
 
     general_runner.run(
         Path(__file__).parent.parent.parent,
-        commands[1].split()
+        commands[3].split()
     )
