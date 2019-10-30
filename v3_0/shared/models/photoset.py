@@ -29,11 +29,18 @@ class Photoset(Movable):
     def tree(self) -> FolderTree:
         return self.__tree
 
+    @property
+    def __metafile_path(self) -> Path:
+        return self.tree.path / Photoset.__METAFILE
+
+    def has_metafile(self) -> bool:
+        return self.__metafile_path.exists()
+
     def get_metafile(self) -> PhotosetMetafile:
-        return PhotosetMetafile.read(self.tree.path / Photoset.__METAFILE)
+        return PhotosetMetafile.read(self.__metafile_path)
 
     def save_metafile(self, metafile: PhotosetMetafile):
-        metafile.write(self.tree.path / Photoset.__METAFILE)
+        metafile.write(self.__metafile_path)
 
     @property
     def path(self) -> Path:
