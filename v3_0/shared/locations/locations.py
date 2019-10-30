@@ -24,7 +24,8 @@ class WindowsLocations(Locations):
         return Path("D:")
 
     def secondary_locations(self) -> List[Path]:
-        return [Path.home()] + [Path(disk_letter + ":/") for disk_letter in string.ascii_uppercase if disk_letter != "D"]
+        return [Path.home()] + \
+               [Path(disk_letter + ":/") for disk_letter in string.ascii_uppercase if disk_letter != "D"]
 
 
 class MacOSLocations(Locations):

@@ -16,7 +16,7 @@ class ExtractorFactory:
     def __init__(self, selector_factory: SelectorFactory) -> None:
         super().__init__()
         self.__selector_factory = selector_factory
-        self.__metadata_check = MetadataCheck(selector_factory)
+        self.__metadata_check = MetadataCheck(selector_factory.metadata())
 
     @lru_cache()
     def edited(self) -> Extractor:

@@ -8,7 +8,11 @@ class PhotosetMetafile(Metafile):
     def __init__(self, posts: GroupsMetafile) -> None:
         super().__init__()
 
-        self.posts = posts
+        self.__posts = posts
+
+    @property
+    def posts(self) -> GroupsMetafile:
+        return self.__posts
 
     def to_dict(self) -> dict:
         return {

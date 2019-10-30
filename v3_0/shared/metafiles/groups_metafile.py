@@ -19,6 +19,12 @@ class GroupsMetafile(Metafile):
     def __setitem__(self, url: str, posts: List[PostMetafile]) -> None:
         self.__mapping[url] = posts
 
+    def __iter__(self):
+        return iter(self.__mapping)
+
+    def empty(self) -> bool:
+        return len(self.__mapping) == 0
+
     def to_dict(self) -> dict:
         future_json = {}
 
