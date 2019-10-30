@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from v3_0.actions.action import Action
+from v3_0.actions.archive.archive_action import ArchiveAction
 from v3_0.actions.delete_posts_action import DeletePostsAction
 from v3_0.actions.local_sync_action import LocalSyncAction
 from v3_0.actions.rearrange.rearrange_action import RearrangeAction
@@ -40,3 +41,7 @@ class ActionFactory:
     @lru_cache()
     def local_sync(self) -> Action:
         return LocalSyncAction(self.stage())
+
+    @lru_cache()
+    def archive(self) -> Action:
+        return ArchiveAction()

@@ -8,6 +8,10 @@ from v3_0.shared.models.photoset import Photoset
 class OddSelectionSelector(Selector):
     def select(self, photoset: Photoset) -> List[str]:
         selection = photoset.selection
+
+        if selection is None:
+            return []
+
         results = photoset.results
 
         join = joins.left(
