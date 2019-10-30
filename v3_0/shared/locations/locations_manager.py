@@ -31,6 +31,7 @@ class LocationsManager(Singleton):
 
     @staticmethod
     def __validate_location(path: Path) -> bool:
+        # noinspection PyTypeChecker
         return os.access(path, os.F_OK) and path.exists()
 
     def main_location(self) -> Path:
