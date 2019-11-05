@@ -25,6 +25,25 @@ def ask_for_permission(question: str) -> bool:
             return answer
 
 
+def ask_for_choice(question: str, options: List[Path]) -> Path:
+    print(question)
+
+    for index, option in enumerate(options):
+        print(f"{index}. {option}")
+
+    while True:
+        answer = input("Enter chosen index: ")
+
+        try:
+            option_index = int(answer)
+
+            if 0 <= option_index < len(options):
+                return options[option_index]
+
+        except ValueError:
+            pass
+
+
 def measure_time(name=None):
     if name is None:
         name = "Execution"
@@ -64,6 +83,6 @@ def concat_dictionaries(*dictionaries: Dict[T, Any]) -> Dict[T, Any]:
 def resolve_patterns(patterns: List[str]) -> Generator[Path, None, None]:
     for pattern in patterns:
         for str_path in glob.iglob(pattern):
-            path = Path(str_path)
+            path = Path(str_path).absolute()
 
             yield path

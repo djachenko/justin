@@ -2,13 +2,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
 
-from v3_0.actions.stage.logic.factories.check_factory import CheckFactory
+from v3_0.actions.stage.logic.factories.checks_factory import ChecksFactory
 from v3_0.actions.stage.logic.factories.extractor_factory import ExtractorFactory
 from v3_0.actions.stage.models.stage import Stage
 
 
 class StagesFactory:
-    def __init__(self, checks_factory: CheckFactory, extractors_factory: ExtractorFactory) -> None:
+    def __init__(self, checks_factory: ChecksFactory, extractors_factory: ExtractorFactory) -> None:
         super().__init__()
 
         self.__checks_factory = checks_factory
