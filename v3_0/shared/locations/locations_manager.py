@@ -43,10 +43,15 @@ class LocationsManager(Singleton):
     def current_location(self) -> Optional[Path]:
         current_path = Path.cwd()
 
+        return self.location_of_path(current_path)
+
+    def location_of_path(self, path: Path) -> Optional[Path]:
+        path = path.absolute()
+
         all_locations = self.get_locations()
 
         for location in all_locations:
-            if location in current_path.parents or current_path in location.parents:
+            if location in path.parents or path in location.parents:
                 return location
 
         return None

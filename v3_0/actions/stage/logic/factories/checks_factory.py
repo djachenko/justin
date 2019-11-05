@@ -8,7 +8,7 @@ from v3_0.actions.stage.logic.metadata.metadata_check import MetadataCheck
 from v3_0.actions.stage.logic.metafile.metafile_check import MetafileCheck
 
 
-class CheckFactory:
+class ChecksFactory:
     def __init__(self, selector_factory: SelectorFactory, extractor_factory: ExtractorFactory) -> None:
         super().__init__()
 
@@ -66,4 +66,3 @@ class CheckFactory:
     @lru_cache()
     def metafile(self) -> Check:
         return MetafileCheck()
-

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 from v3_0.actions.archive.archive import Archive
 from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
@@ -21,3 +22,10 @@ class World:
     @property
     def current_location(self) -> Path:
         return self.__locations_manager.current_location()
+
+    @property
+    def all_locations(self) -> List[Path]:
+        return self.__locations_manager.get_locations()
+
+    def location_of_path(self, path: Path) -> Path:
+        return self.__locations_manager.location_of_path(path)
