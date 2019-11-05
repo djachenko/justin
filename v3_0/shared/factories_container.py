@@ -1,5 +1,5 @@
 from v3_0.actions.action_factory import ActionFactory
-from v3_0.actions.stage.logic.factories.check_factory import CheckFactory
+from v3_0.actions.stage.logic.factories.checks_factory import ChecksFactory
 from v3_0.actions.stage.logic.factories.extractor_factory import ExtractorFactory
 from v3_0.actions.stage.logic.factories.selector_factory import SelectorFactory
 from v3_0.actions.stage.models.stages_factory import StagesFactory
@@ -15,7 +15,7 @@ class FactoriesContainer:
 
         extractor_factory = ExtractorFactory(selector_factory)
 
-        checks_factory = CheckFactory(
+        checks_factory = ChecksFactory(
             selector_factory,
             extractor_factory
         )
@@ -26,7 +26,8 @@ class FactoriesContainer:
         )
 
         self.__actions_factory = ActionFactory(
-            stages_factory
+            stages_factory,
+            checks_factory
         )
 
         self.__commands_factory = CommandFactory(stages_factory)
