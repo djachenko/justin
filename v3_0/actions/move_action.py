@@ -1,5 +1,4 @@
 from argparse import Namespace
-from pathlib import Path
 from typing import List
 
 from pyvko.models.group import Group
@@ -39,7 +38,7 @@ class MoveAction(Action):
 
                     continue
 
-                chosen_location = ask_for_choice("Where would you like to move photoset?", new_locations)
+                chosen_location = util.ask_for_choice("Where would you like to move photoset?", new_locations)
 
                 print(chosen_location)
                 print(photoset.path.parent)
