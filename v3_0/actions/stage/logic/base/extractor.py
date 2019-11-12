@@ -80,6 +80,7 @@ class Extractor:
                 raise ExtractorError(f"Failed prechecks while running {self.__name} extractor forward on {part.name}")
 
             files_to_move = self.files_to_extract(part)
+            files_to_move = list(set(files_to_move))
 
             virtual_set = RelativeFileset(part.path, files_to_move)
 
