@@ -69,9 +69,7 @@ def main():
             os.rename(path + filename, new_path + filename)
         else:
             with open(path + "unfound.txt", "a") as copies:
-                copies.write(filename + "\t"  + new_path + "\n")
-
-
+                copies.write(filename + "\t" + new_path + "\n")
 
     a = 7
 

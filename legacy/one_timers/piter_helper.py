@@ -25,5 +25,6 @@ def main():
 
             shutil.move(fs.build_path(subfolder.path, "our_people"), fs.build_path(MAIN_FOLDER, "ann", subfolder.name))
 
+
 if __name__ == '__main__':
     main()
