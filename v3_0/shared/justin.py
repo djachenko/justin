@@ -50,3 +50,7 @@ class Justin:
     @property
     def archive(self):
         return self.__build_action(self.__actions_factory.archive())
+
+    @property
+    def move(self):
+        return self.__build_action(self.__actions_factory.move())
