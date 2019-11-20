@@ -6,6 +6,7 @@ from v3_0.commands.archive_command import ArchiveCommand
 from v3_0.commands.command import Command
 from v3_0.commands.delete_posts_command import DeletePostsCommand
 from v3_0.commands.local_sync_command import LocalSyncCommand
+from v3_0.commands.move_command import MoveCommand
 from v3_0.commands.rearrange_command import RearrangeCommand
 from v3_0.commands.stage_command import StageCommand
 from v3_0.commands.upload_command import UploadCommand
@@ -26,4 +27,5 @@ class CommandFactory:
             RearrangeCommand(),
             LocalSyncCommand(),
             ArchiveCommand(),
+            MoveCommand(),
         ]

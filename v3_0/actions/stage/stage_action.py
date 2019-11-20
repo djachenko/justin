@@ -3,6 +3,7 @@ from argparse import Namespace
 from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
+from v3_0.actions.checks_runner import ChecksRunner
 from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
 from v3_0.actions.stage.logic.exceptions.extractor_error import ExtractorError
 from v3_0.actions.stage.models.stages_factory import StagesFactory
@@ -45,22 +46,11 @@ class StageAction(Action):
                 for check in transfer_checks:
                     check.rollback(photoset)
 
+                checks_runner = ChecksRunner.instance()
+
                 print("Running checks")
 
-                for check in transfer_checks:
-                    print(f"Running {check.name} for {photoset.name}... ", end="")
-
-                    result = check.is_good(photoset)
-
-                    if result:
-                        print("passed")
-                    else:
-                        print("not passed")
-
-                        if check.ask_for_extract():
-                            check.extract(photoset)
-
-                        raise CheckFailedError(f"Failed {check.name}")
+                checks_runner.run(photoset, transfer_checks)
 
                 if new_stage != current_stage:
                     new_stage.transfer(photoset)
