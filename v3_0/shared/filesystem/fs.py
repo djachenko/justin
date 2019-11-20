@@ -1,15 +1,16 @@
 import platform
 import shutil
-import sys
 from pathlib import Path
 from typing import List
+
+from v3_0.shared.exceptions.tried_copy_error import TriedCopyError
 
 SEPARATOR = "/"
 
 
 # noinspection PyUnusedLocal
 def __copy_canceller(src, dst):
-    sys.exit("Tried to copy {file_name}, aborting".format(file_name=src))
+    raise TriedCopyError(f"Tried to copy {src}")
 
 
 def __get_unix_mount(path: Path) -> Path:
@@ -24,11 +25,12 @@ def __get_unix_mount(path: Path) -> Path:
 def __get_windows_mount(path: Path) -> Path:
     path = path.absolute()
 
-    return path.parents[-1]
+    return list(path.parents)[-1]
 
 
 def __get_mount(path: Path) -> Path:
     system_name = platform.system()
+    path = path.resolve().absolute()
 
     if system_name == "Darwin":
         return __get_unix_mount(path)
@@ -50,46 +52,48 @@ def __flatten(path: Path) -> List[Path]:
     return files
 
 
+def __move_file(file_path: Path, new_path: Path):
+    new_path = new_path.resolve()
+
+    assert not new_path.exists()
+
+    new_path.parent.mkdir(parents=True, exist_ok=True)
+
+    assert new_path.parent.exists()
+    assert new_path.parent.is_dir()
+
+    # noinspection PyTypeChecker
+    shutil.copy2(file_path, new_path)
+    file_path.unlink()
+
+
 def __move_tree(src_path: Path, dst_path: Path):
     dst_path = dst_path.resolve()
-    dst_path = dst_path / src_path.name
 
     files = __flatten(src_path)
 
-    total_size = sum(file.stat().st_size for file in files)
+    total_size = sum(file.stat().st_size for file in files) / 1024.0
     total_copied = 0
 
     for index, file in enumerate(files):
         assert file.is_file()
 
         relative_path = file.relative_to(src_path)
+        file_size = file.stat().st_size
 
-        log_string = f"Moving {relative_path} ({index}/{len(files)}) ({total_copied}/{total_size})"
+        log_string = f"Moving {relative_path} ({index}/{len(files)}) ({total_copied:.2f}/{total_size:.2f})"
 
-        print(log_string)
+        print(log_string, flush=True)
 
-        new_path = dst_path / relative_path
-        new_path = new_path.resolve()
+        __move_file(file, dst_path / relative_path)
 
-        assert not new_path.exists()
-
-        new_path.parent.mkdir(parents=True, exist_ok=True)
-
-        assert new_path.parent.exists()
-        assert new_path.parent.is_dir()
-
-        # noinspection PyTypeChecker
-        shutil.copy2(file, new_path)
-
-        total_copied += file.stat().st_size
-
-        file.unlink()
+        total_copied += file_size / 1024.0
 
     assert __tree_is_empty(src_path)
 
     remove_tree(src_path)
 
-    print(f"Finished. Copied {len(files)}/{len(files)} files, {total_copied}/{total_size} bytes.")
+    print(f"Copied {len(files)}/{len(files)} files, {total_copied:.2}/{total_size:.2f} bytes.")
 
 
 def move(src_path: Path, dst_path: Path):
@@ -101,27 +105,20 @@ def move(src_path: Path, dst_path: Path):
 
     assert src_path.exists()
 
-    if not dst_path.exists():
-        dst_path.mkdir(parents=True, exist_ok=True)
-
-    assert dst_path.is_dir()
-
     new_file_path = dst_path / src_path.name
 
-    if new_file_path.exists():
-        assert new_file_path.is_dir()
-        assert src_path.is_dir()
+    print(f"Moving {src_path.name} from {src_path.parent} to {dst_path}...")
 
-        for item in src_path.iterdir():
-            move(item, new_file_path)
-
-        if __tree_is_empty(src_path):
-            remove_tree(src_path)
+    if __get_mount(src_path) == __get_mount(dst_path):
+        shutil.move(str(src_path), str(new_file_path), __copy_canceller)
+    elif src_path.is_dir():
+        __move_tree(src_path, new_file_path)
+    elif src_path.is_file():
+        __move_file(src_path, new_file_path)
     else:
-        if __get_mount(src_path) == __get_mount(dst_path):
-            shutil.move(str(src_path), str(dst_path), __copy_canceller)
-        else:
-            __move_tree(src_path, dst_path)
+        assert False
+
+    print("Finished")
 
 
 def remove_tree(path: Path) -> None:
