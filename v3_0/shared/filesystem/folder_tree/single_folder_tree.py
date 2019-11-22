@@ -67,7 +67,10 @@ class SingleFolderTree(FolderTree):
                     child.rmdir()
 
             elif child.is_file():
-                self.files.append(File(child))
+                if child.name.lower() == ".DS_store".lower():
+                    child.unlink()
+                else:
+                    self.files.append(File(child))
             else:
                 print("Path is neither file nor dir")
 
