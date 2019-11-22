@@ -4,3 +4,9 @@
 *_pycache__*
 
 v3_0/config\.py
+
+.justin_configs
+
+venv/
+
+justin.egg-info/
