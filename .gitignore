@@ -5,8 +5,14 @@
 
 v3_0/config\.py
 
-.justin_configs
+venv
 
-venv/
+configs/
 
-justin.egg-info/
+dist/
+
+justin\.egg-info/
+
+build/
+
+.justin_configs/*
