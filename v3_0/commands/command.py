@@ -1,10 +1,12 @@
 from abc import abstractmethod
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
+
+from v3_0.shared.justin import Justin
 
 
 class Command:
     @abstractmethod
-    def run(self, args):
+    def run(self, args: Namespace, justin: Justin) -> None:
         pass
 
     @abstractmethod
@@ -13,4 +15,3 @@ class Command:
 
     def setup_callback(self, parser: ArgumentParser):
         parser.set_defaults(func=self.run)
-
