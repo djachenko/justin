@@ -75,6 +75,8 @@ def __move_tree(src_path: Path, dst_path: Path):
     total_size = sum(file.stat().st_size for file in files) / 1024.0
     total_copied = 0
 
+    print(f"Moving {src_path.name} from {src_path.parent} to {dst_path}...")
+
     for index, file in enumerate(files):
         assert file.is_file()
 
@@ -95,6 +97,8 @@ def __move_tree(src_path: Path, dst_path: Path):
 
     print(f"Copied {len(files)}/{len(files)} files, {total_copied:.2}/{total_size:.2f} bytes.")
 
+    print("Finished")
+
 
 def move(src_path: Path, dst_path: Path):
     assert isinstance(src_path, Path)
@@ -107,18 +111,16 @@ def move(src_path: Path, dst_path: Path):
 
     new_file_path = dst_path / src_path.name
 
-    print(f"Moving {src_path.name} from {src_path.parent} to {dst_path}...")
-
     if __get_mount(src_path) == __get_mount(dst_path):
-        shutil.move(str(src_path), str(new_file_path), __copy_canceller)
+        new_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        src_path.rename(new_file_path)
     elif src_path.is_dir():
         __move_tree(src_path, new_file_path)
     elif src_path.is_file():
         __move_file(src_path, new_file_path)
     else:
         assert False
-
-    print("Finished")
 
 
 def remove_tree(path: Path) -> None:
