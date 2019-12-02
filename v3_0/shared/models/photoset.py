@@ -91,7 +91,12 @@ class Photoset(Movable):
 
     @property
     def selection(self) -> Optional[List[File]]:
-        return self.__subtree_files(Photoset.__SELECTION)
+        result = self.__subtree_files(Photoset.__SELECTION)
+
+        if result is None:
+            return []
+
+        return result
 
     @property
     def selection_folder_name(self) -> str:

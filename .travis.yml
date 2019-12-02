@@ -1,9 +1,26 @@
 language: python
+
+branches:
+  only:
+  - master
+  - feature/travis-ci_support
+
 script:
 - echo "skipping tests"
+
 deploy:
-  provider: pypi
-  user: "djachenko"
-  password:
-    secure: "IZkFD72clDeb3Xhe84rCgG0WEQokYPJM9pDM5wNGZshdwtSsr2ktM5BKwQMMvo1UeC25lD+LxGqxdyn5OxhY5UdhDL1YEVkwQwzYKPK8gyCd/sM/hrr7eVwgbZKopQ7U2dCz1yTk5VhbCI10asdMUXDaPlr93/zfrOfd/f5iZWBOX69Ab32bYXLRltJIQOLYn73MjaEu2h7m6yl5jwTFQ3hJMSEQh4cRy8HEBjMBmJz1i+2abTQD4rtltkbEkfMPTxuuicTCluPMpl4bdYN97K08vN11EamhjcsNJydnnh4hzUqhpJGzeGslrb21lHYXkGk02pADhCv6prjN1BN0rWMOT9RVlkj4/IemtAcZ7tAKpg95EtRKBxoPGBMI4Nyk7Eihwg83jP9VN8fTNu03s4XfAzB0LeM0StoG5iaYukMvj4YCGrcSVeLk9qL3LCmhDJXtUvTUGapOlO1NiEQ2UWYSKPPMn+iIX4PDHykepqVmLwQ0s5x2bI63p09Lpvi4us5DTIYrdPhV/Dv7Fzns232Uo2vjXA0cvDWkSx66OVezTHmFC3mOOBkTxm/Z1tGZGQDBiC71ni3zn7lVuFinTIi71k4Eksa3MOHdrEHLYcATb6Ow/maaTlcZi1waLHHL9faO+WDF51GWfWkK/SkDmMHYccsdcJVNgenxa3wX/Gg="
-  skip_existing: true
+  - provider: pypi
+    user: "__token__"
+    password:
+      secure: "ANcr+5xE1qm73mkyz6DNRLNlgROyhQlA/qNbvsDEFGRsJbrMbJnFBXCSQHPVyD5YMx2NPDAGO4QzMBnCxewreyl9lc+D3kDCX3Kda84EUlfOLrJ1Jbvh10wsc1F15UAmlgsgKDptflcmLSe2GljqB7pbQYfmUIx1+7yHR9VxwIzZaXPW8nj6tkV9pyCTC/8/s70Uz0O33J2BOFzFOstu9fmVDR0np69EJ1DfhZU2s6XuR9E9USPCCkSFFbWCHz2rw0P4zVmmNzYIPcjjStqNNrWD1JKwK8nJGWmtff8LHEFbpj5WKQvG8yA2N/5vGQUTypXKXRkCFPO41w45mP/7Fqp/FPpTxsoeH/hKdOCbD3q56Fy824zxTE7XjlcktuTqbGsBREMOSRNu67w1zJpqPUToaTgdmiZBH0nH/CRVWY/5ydIE6h1h75G+StU38XGhY/RdCHEmXoJ2sqzxfbOKrI9NP0hbMJiVL7oMTImhFUxiktHa++qCHWw8wnkaSzP5cxVgSmMedzp3zf/eJLorK3hqWmunDF9cV7ftrIo/RFj6LmtCJZ84MBMNSFBFxiJo5vwiZqCJNGbOf83uwaz4OgFm06XS335kH6C+yxSf8MAYdFrrOzHZdoraPLYnCMKUkpPt7m9A8ugo/NVIb0hjqAsFz0NObssMA77lHa/TIMA="
+    skip_existing: true
+    on:
+      branch: master
+
+  - provider: pypi
+    user: "__token__"
+    password:
+      secure: "ANcr+5xE1qm73mkyz6DNRLNlgROyhQlA/qNbvsDEFGRsJbrMbJnFBXCSQHPVyD5YMx2NPDAGO4QzMBnCxewreyl9lc+D3kDCX3Kda84EUlfOLrJ1Jbvh10wsc1F15UAmlgsgKDptflcmLSe2GljqB7pbQYfmUIx1+7yHR9VxwIzZaXPW8nj6tkV9pyCTC/8/s70Uz0O33J2BOFzFOstu9fmVDR0np69EJ1DfhZU2s6XuR9E9USPCCkSFFbWCHz2rw0P4zVmmNzYIPcjjStqNNrWD1JKwK8nJGWmtff8LHEFbpj5WKQvG8yA2N/5vGQUTypXKXRkCFPO41w45mP/7Fqp/FPpTxsoeH/hKdOCbD3q56Fy824zxTE7XjlcktuTqbGsBREMOSRNu67w1zJpqPUToaTgdmiZBH0nH/CRVWY/5ydIE6h1h75G+StU38XGhY/RdCHEmXoJ2sqzxfbOKrI9NP0hbMJiVL7oMTImhFUxiktHa++qCHWw8wnkaSzP5cxVgSmMedzp3zf/eJLorK3hqWmunDF9cV7ftrIo/RFj6LmtCJZ84MBMNSFBFxiJo5vwiZqCJNGbOf83uwaz4OgFm06XS335kH6C+yxSf8MAYdFrrOzHZdoraPLYnCMKUkpPt7m9A8ugo/NVIb0hjqAsFz0NObssMA77lHa/TIMA="
+    skip_existing: true
+    on:
+      branch: feature/travis-ci_support
