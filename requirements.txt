@@ -1,0 +1,3 @@
+Pillow
+pyvko
+lazy-object-proxy
