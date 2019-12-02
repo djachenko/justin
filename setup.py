@@ -2,11 +2,12 @@ from setuptools import setup, find_packages
 
 setup(
     name='justin',
-    version='0.0.8',
+    version='0.0.9',
     packages=find_packages(),
     install_requires=[
         'pyvko',
         'Pillow',
+        'lazy-object-proxy',
     ],
     url='',
     license='MIT',
