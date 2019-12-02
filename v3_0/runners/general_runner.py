@@ -2,13 +2,13 @@ import argparse
 from pathlib import Path
 from typing import Tuple
 
+from lazy_object_proxy import Proxy
 from pyvko.config.config import Config as PyvkoConfig
 from pyvko.pyvko_main import Pyvko
 
 from v3_0.shared.configuration.config import Config
 from v3_0.shared.factories_container import FactoriesContainer
 from v3_0.shared.justin import Justin
-from v3_0.shared.lazy_proxy import LazyProxy
 from v3_0.shared.models.world import World
 
 __CONFIGS_FOLDER = ".justin_configs"
@@ -47,7 +47,7 @@ def run(config_path: Path, args=None):
 
     if hasattr(name, "func") and name.func:
         url = config[Config.Keys.GROUP_URL]
-        group = LazyProxy(lambda: pyvko.get(url))
+        group = Proxy(lambda: pyvko.get(url))
 
         world = World(config[Config.Keys.DISK_STRUCTURE])
 
