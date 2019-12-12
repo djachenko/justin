@@ -64,6 +64,9 @@ class StagesFactory:
                 self.__checks_factory.unselected(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.metadata(),
+            ],
+            preparation_hooks=[
+                self.__extractors_factory.progress()
             ]
         )
 

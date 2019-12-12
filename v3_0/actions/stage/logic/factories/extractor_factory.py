@@ -4,6 +4,7 @@ from v3_0.actions.stage.logic.base.extractor import Extractor
 from v3_0.actions.stage.logic.factories.selector_factory import SelectorFactory
 from v3_0.actions.stage.logic.metadata.metadata_check import MetadataCheck
 from v3_0.actions.stage.logic.missing_gifs.missing_gifs_handler import MissingGifsHandler
+from v3_0.actions.stage.logic.progress.progress_extractor import ProgressExtractor
 from v3_0.actions.stage.logic.structure.structure_extractor import StructureExtractor
 
 
@@ -70,3 +71,7 @@ class ExtractorFactory:
                 self.__metadata_check
             ]
         )
+
+    @lru_cache()
+    def progress(self) -> Extractor:
+        return ProgressExtractor()
