@@ -47,9 +47,9 @@ def run(config_path: Path, args=None):
 
     if hasattr(name, "func") and name.func:
         url = config[Config.Keys.GROUP_URL]
-        group = Proxy(lambda: pyvko.get(url))
 
-        world = World(config[Config.Keys.DISK_STRUCTURE])
+        group = Proxy(lambda: pyvko.get(url))
+        world = Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE]))
 
         justin = Justin(group, world, factories_container.actions_factory)
 
