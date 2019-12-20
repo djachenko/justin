@@ -53,6 +53,22 @@ class SingleFolderTree(FolderTree):
 
         return result
 
+    def empty(self) -> bool:
+        return len(self.files) == 0 and all((subtree.empty() for subtree in self.subtrees))
+
+    def cleanup(self):
+        for subtree in self.subtrees:
+            if subtree.empty():
+                subtree.path.rmdir()
+
+                modified = True
+
+        for file in self.files:
+            if file.name.lower() == ".DS_store".lower():
+                file.path.unlink()
+
+                modified = True
+
     def refresh(self):
         self.__backing_subtrees = {}
         self.__files = []
@@ -61,16 +77,10 @@ class SingleFolderTree(FolderTree):
             if child.is_dir():
                 child_tree = SingleFolderTree(child)
 
-                if len(child_tree.flatten()) > 0:
-                    self.__subtrees[child.name] = child_tree
-                else:
-                    child.rmdir()
+                self.__subtrees[child.name] = child_tree
 
             elif child.is_file():
-                if child.name.lower() == ".DS_store".lower():
-                    child.unlink()
-                else:
-                    self.files.append(File(child))
+                self.files.append(File(child))
             else:
                 print("Path is neither file nor dir")
 
