@@ -40,6 +40,14 @@ class FolderTree(PathBased):
         pass
 
     @abstractmethod
+    def empty(self) -> bool:
+        pass
+
+    @abstractmethod
+    def cleanup(self):
+        pass
+
+    @abstractmethod
     def refresh(self):
         pass
 
@@ -47,15 +55,3 @@ class FolderTree(PathBased):
         super().move(path)
 
         self.refresh()
-
-    def move_down(self, subfolder: str) -> None:
-        super().move_down(subfolder)
-
-        self.refresh()
-
-    def move_up(self) -> None:
-        super().move_up()
-
-        self.refresh()
-
-

@@ -1,19 +1,19 @@
 from argparse import ArgumentParser
 
 from v3_0.actions.rearrange.rearrange_action import RearrangeAction
-from v3_0.commands.command import Command
+from v3_0.commands.single.single_subparser_command import SingleSubparserCommand
 from v3_0.shared.justin import Justin
 
 
-class RearrangeCommand(Command):
-    __COMMAND = "rearrange"
+class RearrangeCommand(SingleSubparserCommand):
+    @classmethod
+    def command(cls) -> str:
+        return "rearrange"
 
-    def configure_parser(self, parser_adder):
-        subparser: ArgumentParser = parser_adder.add_parser(RearrangeCommand.__COMMAND)
+    def configure_subparser(self, subparser: ArgumentParser):
+        super().configure_subparser(subparser)
 
         subparser.add_argument("-s", "--step", default=RearrangeAction.DEFAULT_STEP, type=int)
-
-        self.setup_callback(subparser)
 
     def run(self, args, justin: Justin) -> None:
         justin.rearrange(args)
