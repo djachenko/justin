@@ -15,7 +15,7 @@ class ArchiveAction(Action):
         adder = ArchiveAdder.instance()
         archive = world.archive
 
-        for path in util.resolve_patterns(args.patterns):
+        for path in util.resolve_patterns(args.name):
             photoset = Photoset(SingleFolderTree(path))
 
             adder.add(photoset, archive)
