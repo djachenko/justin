@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 
 from v3_0.shared.exceptions.tried_copy_error import TriedCopyError
+from v3_0.shared.helpers.data_size_formatter import DataSizeFormatter
 
 SEPARATOR = "/"
 
@@ -62,9 +63,17 @@ def __move_file(file_path: Path, new_path: Path):
     assert new_path.parent.exists()
     assert new_path.parent.is_dir()
 
-    # noinspection PyTypeChecker
-    shutil.copy2(file_path, new_path)
-    file_path.unlink()
+    def __move():
+        # noinspection PyTypeChecker
+        shutil.copy2(file_path, new_path)
+        file_path.unlink()
+
+    try:
+        __move()
+    except KeyboardInterrupt:
+        __move()
+
+        raise
 
 
 def __move_tree(src_path: Path, dst_path: Path):
@@ -72,8 +81,9 @@ def __move_tree(src_path: Path, dst_path: Path):
 
     files = __flatten(src_path)
 
-    total_size = sum(file.stat().st_size for file in files) / 1024.0
+    total_size = sum(file.stat().st_size for file in files)
     total_copied = 0
+    total_size_formatted = DataSizeFormatter.from_bytes(total_size)
 
     print(f"Moving {src_path.name} from {src_path.parent} to {dst_path}...")
 
@@ -83,19 +93,21 @@ def __move_tree(src_path: Path, dst_path: Path):
         relative_path = file.relative_to(src_path)
         file_size = file.stat().st_size
 
-        log_string = f"Moving {relative_path} ({index}/{len(files)}) ({total_copied:.2f}/{total_size:.2f})"
+        copied_size_formatted = DataSizeFormatter.from_bytes(total_copied)
+
+        log_string = f"Moving {relative_path} ({index}/{len(files)}) ({copied_size_formatted} / {total_size_formatted})"
 
         print(log_string, flush=True)
 
         __move_file(file, dst_path / relative_path)
 
-        total_copied += file_size / 1024.0
+        total_copied += file_size
 
     assert __tree_is_empty(src_path)
 
     remove_tree(src_path)
 
-    print(f"Copied {len(files)}/{len(files)} files, {total_copied:.2}/{total_size:.2f} bytes.")
+    print(f"Copied {len(files)}/{len(files)} files, {DataSizeFormatter.from_bytes(total_copied)} / {total_size_formatted}")
 
     print("Finished")
 
