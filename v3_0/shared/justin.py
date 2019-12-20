@@ -44,13 +44,17 @@ class Justin:
         return self.__build_action(self.__actions_factory.delete_posts())
 
     @property
-    def local_sync(self):
+    def local_sync(self) -> Callable[[Namespace], None]:
         return self.__build_action(self.__actions_factory.local_sync())
 
     @property
-    def archive(self):
+    def archive(self) -> Callable[[Namespace], None]:
         return self.__build_action(self.__actions_factory.archive())
 
     @property
-    def move(self):
+    def move(self) -> Callable[[Namespace], None]:
         return self.__build_action(self.__actions_factory.move())
+
+    @property
+    def make_gif(self) -> Callable[[Namespace], None]:
+        return self.__build_action(self.__actions_factory.make_gif())
