@@ -4,6 +4,7 @@ from v3_0.actions.action import Action
 from v3_0.actions.archive.archive_action import ArchiveAction
 from v3_0.actions.delete_posts_action import DeletePostsAction
 from v3_0.actions.local_sync_action import LocalSyncAction
+from v3_0.actions.make_gif.make_gifs_action import MakeGifAction
 from v3_0.actions.move_action import MoveAction
 from v3_0.actions.rearrange.rearrange_action import RearrangeAction
 from v3_0.actions.schedule.schedule_action import ScheduleAction
@@ -54,3 +55,7 @@ class ActionFactory:
         return MoveAction([
             self.__checks_factory.metadata(),
         ])
+
+    @lru_cache()
+    def make_gif(self) -> Action:
+        return MakeGifAction()
