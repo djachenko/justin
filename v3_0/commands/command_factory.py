@@ -6,7 +6,6 @@ from v3_0.commands.single.named.archive_command import ArchiveCommand
 from v3_0.commands.command import Command
 from v3_0.commands.single.delete_posts_command import DeletePostsCommand
 from v3_0.commands.single.local_sync_command import LocalSyncCommand
-from v3_0.commands.move_command import MoveCommand
 from v3_0.commands.single.named.move_command import MoveCommand
 from v3_0.commands.single.rearrange_command import RearrangeCommand
 from v3_0.commands.stage_command import StageCommand
