@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from PIL import Image
 
@@ -14,15 +14,23 @@ class GifMaker:
     __MIN_DESIRED_SIZE = 195 * __MB
 
     @staticmethod
+    def __thumbnail(path: Path, size: int) -> Image:
+        frame = Image.open(path)
+
+        frame.thumbnail((size, size), Image.LANCZOS)
+
+        return frame
+
+    @staticmethod
     def __make_gif(sources: Path, name: str, size: int):
-        frames_paths = [i for i in sources.iterdir() if i.suffix == ".jpg"]
 
         frames: List[Image] = []
 
-        for index, frame_path in enumerate(frames_paths):
-            frame = Image.open(frame_path)
+        for frame_path in sources.iterdir():
+            if frame_path.suffix != ".jpg":
+                continue
 
-            frame.thumbnail((size, size), Image.ANTIALIAS)
+            frame = GifMaker.__thumbnail(frame_path, size)
 
             frames.append(frame)
 
@@ -34,6 +42,40 @@ class GifMaker:
             duration=10,
             loop=0
         )
+
+    @staticmethod
+    def __sources_size(sources_path: Path) -> Tuple[int, int]:
+        gif_sources_paths = filter(lambda x: x.suffix.lower() == ".jpg", sources_path.iterdir())
+
+        first_image = Image.open(next(gif_sources_paths))
+
+        width, height = first_image.size
+
+        return width, height
+
+    @staticmethod
+    def __long_side(sources_path: Path) -> int:
+        width, height = GifMaker.__sources_size(sources_path)
+
+        return max(width, height)
+
+    @staticmethod
+    def __resize_sources(sources: Path):
+        current_size = GifMaker.__long_side(sources)
+        new_size = int(current_size * 0.2)
+
+        resized_name = f"resized_{new_size}"
+        resized_path: Path = sources.parent / resized_name
+
+        resized_path.mkdir(parents=True, exist_ok=True)
+
+        for index, frame_path in enumerate(sources.iterdir()):
+            if frame_path.suffix != ".jpg":
+                continue
+
+            frame = GifMaker.__thumbnail(frame_path, new_size)
+
+            frame.save(resized_path / frame_path.name, "JPEG")
 
     @staticmethod
     def __gif_has_good_size(gif_path: Path) -> bool:
@@ -53,14 +95,19 @@ class GifMaker:
             return
 
         min_size = GifMaker.__START_MIN_SIZE
-        max_size = GifMaker.__START_MAX_SIZE
+        max_size = min(GifMaker.__START_MAX_SIZE, GifMaker.__long_side(sources_path))
 
         while True:
             iteration_size = round((min_size + max_size) / 2)
 
             print(f"Starting iteration with size {iteration_size}... ", end="")
 
-            self.__make_gif(sources_path, name, iteration_size)
+            try:
+                self.__make_gif(sources_path, name, iteration_size)
+            except MemoryError:
+                print("\nOut of memory, resizing")
+
+                self.__resize_sources(sources_path)
 
             gif_size = gif_path.stat().st_size
 
@@ -69,6 +116,7 @@ class GifMaker:
             if GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE or \
                     iteration_size == GifMaker.__START_MAX_SIZE:
                 print(f"successful\nFinal result lies at {gif_path.name}")
+                print(f"Scale rate: {GifMaker.__long_side(sources_path)/iteration_size:.2f}")
 
                 break
             elif gif_size > GifMaker.__MAX_DESIRED_SIZE:
