@@ -4,8 +4,7 @@ from pathlib import Path
 from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
-from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.metafiles.post_metafile import PostStatus
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
@@ -17,7 +16,7 @@ class SyncPostsStatusAction(Action):
         ready_path = Path("D:/photos/stages/stage3.schedule")
         # todo: stages_region[stage3.schedule]
 
-        stage_tree = SingleFolderTree(ready_path)
+        stage_tree = FolderTree(ready_path)
 
         return stage_tree
 
