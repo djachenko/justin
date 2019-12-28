@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import List, Optional, Dict
 
 from v3_0.shared.filesystem.file import File
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
+from v3_0.shared.filesystem.path_based import PathBased
 
 
-class SingleFolderTree(FolderTree):
+class FolderTree(PathBased):
     # noinspection PyTypeChecker
     def __init__(self, path: Path) -> None:
         super().__init__(path)
@@ -14,7 +14,7 @@ class SingleFolderTree(FolderTree):
         self.__files: List[File] = None
 
     @property
-    def __subtrees(self) -> Dict[str, FolderTree]:
+    def __subtrees(self) -> Dict[str, 'FolderTree']:
         if self.__backing_subtrees is None:
             self.refresh()
 
@@ -36,10 +36,10 @@ class SingleFolderTree(FolderTree):
         return list(self.__subtrees.keys())
 
     @property
-    def subtrees(self) -> List[FolderTree]:
+    def subtrees(self) -> List['FolderTree']:
         return list(self.__subtrees.values())
 
-    def __getitem__(self, key: str) -> Optional[FolderTree]:
+    def __getitem__(self, key: str) -> Optional['FolderTree']:
         return self.__subtrees.get(key)
 
     def __contains__(self, key: str) -> bool:
@@ -56,18 +56,13 @@ class SingleFolderTree(FolderTree):
     def empty(self) -> bool:
         return len(self.files) == 0 and all((subtree.empty() for subtree in self.subtrees))
 
-    def cleanup(self):
+    def remove(self):
+        assert len(self.files) == 0
+
         for subtree in self.subtrees:
-            if subtree.empty():
-                subtree.path.rmdir()
+            subtree.remove()
 
-                modified = True
-
-        for file in self.files:
-            if file.name.lower() == ".DS_store".lower():
-                file.path.unlink()
-
-                modified = True
+        self.path.rmdir()
 
     def refresh(self):
         self.__backing_subtrees = {}
@@ -75,13 +70,25 @@ class SingleFolderTree(FolderTree):
 
         for child in self.path.iterdir():
             if child.is_dir():
-                child_tree = SingleFolderTree(child)
+                child_tree = FolderTree(child)
 
-                self.__subtrees[child.name] = child_tree
+                if not child_tree.empty():
+                    self.__subtrees[child.name] = child_tree
+                else:
+                    child_tree.remove()
 
             elif child.is_file():
-                self.files.append(File(child))
+                if child.name.lower() == ".DS_store".lower():
+                    child.unlink()
+                else:
+                    self.files.append(File(child))
+
             else:
                 print("Path is neither file nor dir")
 
                 exit(1)
+
+    def move(self, path: Path):
+        super().move(path)
+
+        self.refresh()

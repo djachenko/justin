@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.new_structure import Structure
