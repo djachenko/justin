@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List, Iterable, Optional
 
 from v3_0.shared.filesystem.file import File
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.filesystem.movable import Movable
 from v3_0.shared.helpers import joins
 from v3_0.shared.helpers.parting_helper import PartingHelper

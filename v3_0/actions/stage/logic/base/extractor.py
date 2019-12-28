@@ -86,7 +86,6 @@ class Extractor:
 
             virtual_set.move_down(self.__filter_folder)
 
-        photoset.tree.cleanup()
         photoset.tree.refresh()
 
     def backwards(self, photoset: Photoset):
@@ -109,5 +108,4 @@ class Extractor:
 
             filtered_set.move_up()
 
-        photoset.tree.cleanup()
         photoset.tree.refresh()
