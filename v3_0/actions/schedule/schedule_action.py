@@ -7,8 +7,7 @@ from pyvko.models.group import Group
 from pyvko.models.post import Post
 
 from v3_0.actions.action import Action
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
-from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.metafiles.post_metafile import PostMetafile, PostStatus
 from v3_0.shared.models.photoset import Photoset
@@ -23,7 +22,7 @@ class ScheduleAction(Action):
         ready_path = world.current_location / "stages/stage3.schedule"
         # todo: stages_region[stage3.schedule]
 
-        stage_tree = SingleFolderTree(ready_path)
+        stage_tree = FolderTree(ready_path)
 
         return stage_tree
 

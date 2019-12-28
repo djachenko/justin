@@ -1,7 +1,7 @@
 from typing import List
 
 from v3_0.actions.archive.archive import Archive
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers.singleton import Singleton
 from v3_0.shared.models.photoset import Photoset
 

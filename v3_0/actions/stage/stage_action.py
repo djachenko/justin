@@ -7,7 +7,7 @@ from v3_0.actions.checks_runner import ChecksRunner
 from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
 from v3_0.actions.stage.logic.exceptions.extractor_error import ExtractorError
 from v3_0.actions.stage.models.stages_factory import StagesFactory
-from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers import util
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
@@ -30,7 +30,7 @@ class StageAction(Action):
         new_stage = self.__stages_factory.stage_by_command(args.command)
 
         for path in util.resolve_patterns(args.name):
-            photoset = Photoset(SingleFolderTree(path))
+            photoset = Photoset(FolderTree(path))
 
             current_stage = self.__stages_factory.stage_by_path(photoset.path)
 

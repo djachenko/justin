@@ -4,8 +4,7 @@ from typing import Iterable
 from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
-from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.metafiles.post_metafile import PostStatus
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
@@ -22,7 +21,7 @@ class LocalSyncAction(Action):
         # todo: stages_region[stage3.schedule]
         scheduled_path = world.current_location / "stages/stage3.scheduled"
 
-        stage_tree = SingleFolderTree(scheduled_path)
+        stage_tree = FolderTree(scheduled_path)
 
         return stage_tree
 

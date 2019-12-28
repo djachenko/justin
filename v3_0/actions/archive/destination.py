@@ -1,7 +1,7 @@
 from typing import Optional
 
 from v3_0.actions.archive.tree_based import TreeBased
-from v3_0.shared.filesystem.folder_tree.folder_tree import FolderTree
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.new_structure import Structure
 
 
