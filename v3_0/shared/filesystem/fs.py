@@ -4,7 +4,11 @@ from pathlib import Path
 from typing import List
 
 from v3_0.shared.exceptions.tried_copy_error import TriedCopyError
-from v3_0.shared.helpers.data_size_formatter import DataSizeFormatter
+
+from v3_0.shared.helpers.data_size import DataSize
+from v3_0.shared.helpers.transfer_speed_meter import TransferSpeedMeter
+from v3_0.shared.helpers.transfer_time_estimator import TransferTimeEstimator
+from v3_0.shared.helpers.time_formatter import format_time
 
 SEPARATOR = "/"
 
@@ -81,11 +85,14 @@ def __move_tree(src_path: Path, dst_path: Path):
 
     files = __flatten(src_path)
 
-    total_size = sum(file.stat().st_size for file in files)
-    total_copied = 0
-    total_size_formatted = DataSizeFormatter.from_bytes(total_size)
+    total_size = DataSize.from_bytes(sum(file.stat().st_size for file in files))
+    total_copied = DataSize.from_bytes(0)
+
+    speed_meter = TransferSpeedMeter()
 
     print(f"Moving {src_path.name} from {src_path.parent} to {dst_path}...")
+
+    speed_meter.start()
 
     for index, file in enumerate(files):
         assert file.is_file()
@@ -93,21 +100,29 @@ def __move_tree(src_path: Path, dst_path: Path):
         relative_path = file.relative_to(src_path)
         file_size = file.stat().st_size
 
-        copied_size_formatted = DataSizeFormatter.from_bytes(total_copied)
+        speed_meter.feed(file_size)
 
-        log_string = f"Moving {relative_path} ({index}/{len(files)}) ({copied_size_formatted} / {total_size_formatted})"
+        current_speed = speed_meter.current_value
+
+        log_string = f"Moving {relative_path} ({index}/{len(files)}) ({total_copied} / {total_size}) {current_speed}."
+
+        estimated_time = TransferTimeEstimator.estimate(current_speed, total_size - total_copied)
+
+        if estimated_time is not None:
+            log_string += f" {format_time(estimated_time)} remaining."
 
         print(log_string, flush=True)
+        # print(f"avg {speed_meter.current_value} {DataSize.from_bytes(file_size)} {file.name}")
 
         __move_file(file, dst_path / relative_path)
 
-        total_copied += file_size
+        total_copied.add_bytes(file_size)
 
     assert __tree_is_empty(src_path)
 
     remove_tree(src_path)
 
-    print(f"Copied {len(files)}/{len(files)} files, {DataSizeFormatter.from_bytes(total_copied)} / {total_size_formatted}")
+    print(f"Copied {len(files)}/{len(files)} files, ({total_copied} / {total_size}) {speed_meter.average_value}")
 
     print("Finished")
 
@@ -137,8 +152,12 @@ def move(src_path: Path, dst_path: Path):
 
 def remove_tree(path: Path) -> None:
     assert isinstance(path, Path)
+    assert path.is_dir()
 
-    shutil.rmtree(path)
+    for entry in path.iterdir():
+        remove_tree(entry)
+
+    path.rmdir()
 
 
 def __subfolders(path: Path) -> List[Path]:
