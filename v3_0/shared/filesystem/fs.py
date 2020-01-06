@@ -4,7 +4,10 @@ from functools import partial
 from pathlib import Path
 from typing import List, Callable
 
-from v3_0.shared.helpers.data_size_formatter import DataSizeFormatter
+from v3_0.shared.helpers.data_size import DataSize
+from v3_0.shared.helpers.time_formatter import format_time
+from v3_0.shared.helpers.transfer_speed_meter import TransferSpeedMeter
+from v3_0.shared.helpers.transfer_time_estimator import TransferTimeEstimator
 
 
 # region helpers
@@ -88,11 +91,14 @@ def __handle_tree(src_path: Path, dst_path: Path, file_handler: Callable[[Path, 
 
     files = __flatten(src_path)
 
-    total_size = sum(file.stat().st_size for file in files)
-    total_copied = 0
-    total_size_formatted = DataSizeFormatter.from_bytes(total_size)
+    total_size = DataSize.from_bytes(sum(file.stat().st_size for file in files))
+    total_copied = DataSize.from_bytes(0)
+
+    speed_meter = TransferSpeedMeter()
 
     print(f"{action_name} {src_path.name} from {src_path.parent} to {dst_path}...")
+
+    speed_meter.start()
 
     for index, file in enumerate(files):
         assert file.is_file()
@@ -100,23 +106,29 @@ def __handle_tree(src_path: Path, dst_path: Path, file_handler: Callable[[Path, 
         relative_path = file.relative_to(src_path)
         file_size = file.stat().st_size
 
-        copied_size_formatted = DataSizeFormatter.from_bytes(total_copied)
+        speed_meter.feed(file_size)
+
+        current_speed = speed_meter.current_value
 
         log_string = f"{action_name} {relative_path} ({index}/{len(files)})" \
-                     f" ({copied_size_formatted} / {total_size_formatted})"
+                     f" ({total_copied} / {total_size}) {current_speed}."
+
+        estimated_time = TransferTimeEstimator.estimate(current_speed, total_size - total_copied)
+
+        if estimated_time is not None:
+            log_string += f" {format_time(estimated_time)} remaining."
 
         print(log_string, flush=True)
 
         file_handler(file, dst_path / relative_path)
 
-        total_copied += file_size
+        total_copied.add_bytes(file_size)
 
     assert __tree_is_empty(src_path)
 
     __remove_tree(src_path)
 
-    print(f"Processed {len(files)}/{len(files)} files, "
-          f"{DataSizeFormatter.from_bytes(total_copied)} / {total_size_formatted}")
+    print(f"Processed {len(files)}/{len(files)} files, {total_copied} / {total_size}, {speed_meter.average_value}")
 
     print("Finished")
 
@@ -204,7 +216,11 @@ def __remove_file(file_path: Path):
 
 def __remove_tree(path: Path) -> None:
     assert isinstance(path, Path)
+    assert path.is_dir()
 
-    shutil.rmtree(path)
+    for entry in path.iterdir():
+        __remove_tree(entry)
+
+    path.rmdir()
 
 # endregion
