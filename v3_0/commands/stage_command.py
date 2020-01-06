@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 
+from v3_0.actions.action_id import ActionId
 from v3_0.actions.stage.models.stages_factory import StagesFactory
 from v3_0.commands.command import Command
 from v3_0.shared.justin import Justin
@@ -23,4 +24,4 @@ class StageCommand(Command):
             self.setup_callback(subparser)
 
     def run(self, args: Namespace, justin: Justin) -> None:
-        justin.stage(args)
+        justin[ActionId.STAGE](args)

@@ -30,3 +30,12 @@ class RelativeFileset(Movable):
 
     def move_up(self) -> None:
         self.move(self.__root.parent)
+
+    def copy(self, path: Path) -> None:
+        for file in self.__files:
+            file_parent_path = file.path.parent
+            file_relative_path = file_parent_path.relative_to(self.__root)
+
+            new_path = path / file_relative_path
+
+            file.copy(new_path)
