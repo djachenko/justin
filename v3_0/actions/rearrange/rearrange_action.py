@@ -8,7 +8,7 @@ from v3_0.shared.models.world import World
 
 
 class RearrangeAction(Action):
-    DEFAULT_STEP = 3
+    DEFAULT_STEP = 1
 
     def perform(self, args: Namespace, world: World, group: Group) -> None:
         print("Performing rearrange... ", end="")

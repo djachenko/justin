@@ -32,6 +32,10 @@ class Source(Movable):
         for file in self.files():
             file.move_up()
 
+    def copy(self, path: Path) -> None:
+        for file in self.files():
+            file.copy(path)
+
     @property
     def size(self):
         return sum([f.size for f in self.files()])
