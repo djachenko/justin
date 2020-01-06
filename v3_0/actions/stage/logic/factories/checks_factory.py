@@ -5,7 +5,7 @@ from v3_0.actions.stage.logic.factories.extractor_factory import ExtractorFactor
 from v3_0.actions.stage.logic.factories.selector_factory import SelectorFactory
 from v3_0.actions.stage.logic.gif_sources.gif_sources_check import GifSourcesCheck
 from v3_0.actions.stage.logic.metadata.metadata_check import MetadataCheck
-from v3_0.actions.stage.logic.metafile.metafile_check import MetafileCheck
+from v3_0.actions.stage.logic.metafile.metafile_state_check import MetafileStateCheck
 
 
 class ChecksFactory:
@@ -65,4 +65,4 @@ class ChecksFactory:
 
     @lru_cache()
     def metafile(self) -> Check:
-        return MetafileCheck()
+        return MetafileStateCheck()

@@ -24,18 +24,10 @@ class File(PathBased):
     def mtime(self):
         return self.path.stat().st_mtime
 
-    @staticmethod
-    def remove(path: Path):
-        if path.is_dir():
-            fs.remove_tree(path)
-        elif path.is_file():
-            path.unlink()
-        else:
-            assert False
-
     def stem(self) -> str:
         name = self.path.stem
 
+        # todo: extract this from File
         if "-" in name:
             name_and_modifier = name.rsplit("-", 1)
 
@@ -52,3 +44,12 @@ class File(PathBased):
 
     def __str__(self) -> str:
         return "File {name}".format(name=self.name)
+
+    def __hash__(self):
+        return hash(self.path)
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, File):
+            return False
+
+        return o.path == self.path
