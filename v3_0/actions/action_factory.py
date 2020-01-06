@@ -9,6 +9,7 @@ from v3_0.actions.make_gif.make_gifs_action import MakeGifAction
 from v3_0.actions.move_action import MoveAction
 from v3_0.actions.rearrange.rearrange_action import RearrangeAction
 from v3_0.actions.schedule.schedule_action import ScheduleAction
+from v3_0.actions.split_action import SplitAction
 from v3_0.actions.stage.logic.factories.checks_factory import ChecksFactory
 from v3_0.actions.stage.models.stages_factory import StagesFactory
 from v3_0.actions.stage.stage_action import StageAction
@@ -26,6 +27,7 @@ class ActionFactory:
         ActionId.SCHEDULE: ScheduleAction,
         ActionId.STAGE: StageAction,
         ActionId.SYNC_POSTS_STATUS: SyncPostsStatusAction,
+        ActionId.SPLIT: SplitAction,
     }
 
     def __init__(self, stages_factory: StagesFactory, checks_factory: ChecksFactory) -> None:

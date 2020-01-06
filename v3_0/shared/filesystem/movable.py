@@ -4,11 +4,6 @@ from pathlib import Path
 
 
 class Movable(ABC):
-    # @property
-    # @abstractmethod
-    # def name(self):
-    #     pass
-
     @abstractmethod
     def move(self, path: Path):
         pass
@@ -21,3 +16,6 @@ class Movable(ABC):
     def move_up(self) -> None:
         pass
 
+    @abstractmethod
+    def copy(self, path: Path) -> None:
+        pass

@@ -25,7 +25,7 @@ def ask_for_permission(question: str) -> bool:
             return answer
 
 
-def ask_for_choice(question: str, options: List[Path]) -> Path:
+def ask_for_choice(question: str, options: List[T]) -> T:
     print(question)
 
     for index, option in enumerate(options):
@@ -86,3 +86,11 @@ def resolve_patterns(patterns: List[str]) -> Generator[Path, None, None]:
             path = Path(str_path).absolute()
 
             yield path
+
+
+def flatten(list_of_lists: Iterable[List[T]]) -> List[T]:
+    return [item for sublist in list_of_lists for item in sublist]
+
+
+def distinct(items: Iterable[T]) -> List[T]:
+    return list(set(items))
