@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from v3_0.actions.action import Action
+from v3_0.actions.action_id import ActionId
 from v3_0.actions.archive.archive_action import ArchiveAction
 from v3_0.actions.delete_posts_action import DeletePostsAction
 from v3_0.actions.local_sync_action import LocalSyncAction
@@ -15,47 +16,38 @@ from v3_0.actions.sync_posts_status_action import SyncPostsStatusAction
 
 
 class ActionFactory:
+    __TYPES_MAPPING = {
+        ActionId.ARCHIVE: ArchiveAction,
+        ActionId.DELETE_POSTS: DeletePostsAction,
+        ActionId.LOCAL_SYNC: LocalSyncAction,
+        ActionId.MAKE_GIF: MakeGifAction,
+        ActionId.MOVE: MoveAction,
+        ActionId.REARRANGE: RearrangeAction,
+        ActionId.SCHEDULE: ScheduleAction,
+        ActionId.STAGE: StageAction,
+        ActionId.SYNC_POSTS_STATUS: SyncPostsStatusAction,
+    }
 
     def __init__(self, stages_factory: StagesFactory, checks_factory: ChecksFactory) -> None:
         super().__init__()
 
-        self.__stages_factory = stages_factory
-        self.__checks_factory = checks_factory
+        self.__parameters_mapping = {
+            ActionId.STAGE: lambda: [stages_factory],
+            ActionId.LOCAL_SYNC: lambda: [self.__get(ActionId.STAGE)],
+            ActionId.MOVE: lambda: [[checks_factory.metadata()]],
+        }
 
-    @lru_cache()
-    def stage(self) -> Action:
-        return StageAction(self.__stages_factory)
+    # noinspection PyTypeChecker
+    @lru_cache(len(ActionId))
+    def __get(self, identifier: ActionId) -> Action:
+        action_type = ActionFactory.__TYPES_MAPPING[identifier]
+        parameters_generator = self.__parameters_mapping.get(identifier, lambda: [])
 
-    @lru_cache()
-    def schedule(self) -> Action:
-        return ScheduleAction()
+        parameters = parameters_generator()
 
-    @lru_cache()
-    def rearrange(self) -> Action:
-        return RearrangeAction()
+        action = action_type(*parameters)
 
-    @lru_cache()
-    def sync_posts_status(self) -> Action:
-        return SyncPostsStatusAction()
+        return action
 
-    @lru_cache()
-    def delete_posts(self) -> Action:
-        return DeletePostsAction()
-
-    @lru_cache()
-    def local_sync(self) -> Action:
-        return LocalSyncAction(self.stage())
-
-    @lru_cache()
-    def archive(self) -> Action:
-        return ArchiveAction()
-
-    @lru_cache()
-    def move(self) -> Action:
-        return MoveAction([
-            self.__checks_factory.metadata(),
-        ])
-
-    @lru_cache()
-    def make_gif(self) -> Action:
-        return MakeGifAction()
+    def __getitem__(self, item: ActionId) -> Action:
+        return self.__get(item)

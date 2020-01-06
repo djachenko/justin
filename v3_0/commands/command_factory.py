@@ -1,16 +1,15 @@
 from functools import lru_cache
 from typing import List
 
+from v3_0.actions.action_id import ActionId
 from v3_0.actions.stage.models.stages_factory import StagesFactory
-from v3_0.commands.single.named.archive_command import ArchiveCommand
 from v3_0.commands.command import Command
-from v3_0.commands.single.delete_posts_command import DeletePostsCommand
-from v3_0.commands.single.local_sync_command import LocalSyncCommand
-from v3_0.commands.single.named.make_gifs_command import MakeGifCommand
-from v3_0.commands.single.named.move_command import MoveCommand
-from v3_0.commands.single.rearrange_command import RearrangeCommand
+from v3_0.commands.single_subparser_commands.single_action_command import SingleActionCommand
+from v3_0.commands.single_subparser_commands.delete_posts_command import DeletePostsCommand
+from v3_0.commands.single_subparser_commands.named_command import NamedCommand
+from v3_0.commands.single_subparser_commands.rearrange_command import RearrangeCommand
+from v3_0.commands.single_subparser_commands.upload_command import UploadCommand
 from v3_0.commands.stage_command import StageCommand
-from v3_0.commands.single.upload_command import UploadCommand
 
 
 class CommandFactory:
@@ -26,8 +25,8 @@ class CommandFactory:
             UploadCommand(),
             DeletePostsCommand(),
             RearrangeCommand(),
-            LocalSyncCommand(),
-            ArchiveCommand(),
-            MoveCommand(),
-            MakeGifCommand(),
+            SingleActionCommand("local_sync", ActionId.LOCAL_SYNC),
+            NamedCommand("archive", ActionId.ARCHIVE),
+            NamedCommand("move", ActionId.MOVE),
+            NamedCommand("make_gif", ActionId.MAKE_GIF),
         ]
