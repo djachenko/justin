@@ -2,15 +2,14 @@ from argparse import Namespace
 
 from pyvko.models.group import Group
 
-from v3_0.actions.action import Action
+from v3_0.actions.named_action import NamedAction
 from v3_0.shared.helpers.gif_maker import GifMaker
-from v3_0.shared.helpers import util
+from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
 
 
-class MakeGifAction(Action):
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+class MakeGifAction(NamedAction):
+    def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
         maker = GifMaker()
 
-        for path in util.resolve_patterns(args.name):
-            maker.make_gif(path / "gif", path.name)
+        maker.make_gif(photoset.path / "gif", photoset.name)
