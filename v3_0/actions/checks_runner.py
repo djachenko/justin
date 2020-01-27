@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable
 
 from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
 from v3_0.actions.stage.logic.base.check import Check
@@ -8,7 +8,7 @@ from v3_0.shared.models.photoset import Photoset
 
 class ChecksRunner(Singleton):
     # noinspection PyMethodMayBeStatic
-    def run(self, photoset: Photoset, checks: List[Check]):
+    def run(self, photoset: Photoset, checks: Iterable[Check]):
         for check in checks:
             print(f"Running {check.name} for {photoset.name}... ", end="")
 

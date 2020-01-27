@@ -1,25 +1,28 @@
 from argparse import Namespace
-from typing import Iterable
+from typing import Iterable, List
 
 from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
+from v3_0.actions.checks_runner import ChecksRunner
+from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
+from v3_0.actions.stage.logic.base.check import Check
 from v3_0.shared.filesystem.folder_tree import FolderTree
-from v3_0.shared.metafiles.post_metafile import PostStatus
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
 
 
 class LocalSyncAction(Action):
-    def __init__(self, all_published_action: Action) -> None:
+    def __init__(self, prechecks: List[Check], all_published_action: Action) -> None:
         super().__init__()
 
+        self.__prechecks = prechecks
         self.__all_published_action = all_published_action
 
     # noinspection PyMethodMayBeStatic
     def __tree_with_sets(self, world: World) -> FolderTree:
         # todo: stages_region[stage3.schedule]
-        scheduled_path = world.current_location / "stages/stage3.scheduled"
+        scheduled_path = world.current_location / "stages/stage3.schedule"
 
         stage_tree = FolderTree(scheduled_path)
 
@@ -29,14 +32,22 @@ class LocalSyncAction(Action):
         paths_of_published_sets = []
 
         for photoset in photosets:
-            metafile = photoset.get_metafile()
+            print(f"Syncing post {photoset.name}...")
 
-            post_metafiles = metafile.posts[group.url]
+            try:
+                ChecksRunner.instance().run(photoset, self.__prechecks)
 
-            if not all(post_metafile.status == PostStatus.PUBLISHED for post_metafile in post_metafiles):
-                continue
+                paths_of_published_sets.append(photoset.path)
 
-            paths_of_published_sets.append(photoset.path)
+                print("Scheduled to publish.")
+
+            except CheckFailedError:
+                print("Left as is.")
+
+            print()
+
+        if len(paths_of_published_sets) == 0:
+            return
 
         str_paths = [str(path.absolute()) for path in paths_of_published_sets]
 

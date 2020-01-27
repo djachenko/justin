@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from v3_0.actions.stage.logic.base.selector import Selector
 from v3_0.actions.stage.logic.edited.edited_selector import EditedSelector
+from v3_0.actions.stage.logic.everything_is_published_selector import EverythingIsPublishedSelector
 from v3_0.actions.stage.logic.gif_sources.gif_sources_selector import GifSourcesSelector
 from v3_0.actions.stage.logic.metadata.metadata_selector import MetadataSelector
 from v3_0.actions.stage.logic.missing_gifs.missing_gifs_selector import MissingGifsSelector
@@ -45,3 +46,7 @@ class SelectorFactory:
     @lru_cache()
     def structure(self) -> Selector:
         return StructureSelector(self.__photoset_structure)
+
+    @lru_cache()
+    def everything_is_published(self) -> Selector:
+        return EverythingIsPublishedSelector()

@@ -26,7 +26,7 @@ class ExtractorFactory:
             selector=self.__selector_factory.edited(),
             filter_folder=ExtractorFactory.__EDITED_FOLDER,
             prechecks=[
-                self.__metadata_check
+                self.__metadata_check,
             ]
         )
 
@@ -37,7 +37,7 @@ class ExtractorFactory:
             selector=self.__selector_factory.unselected(),
             filter_folder=ExtractorFactory.__TO_SELECT_FOLDER,
             prechecks=[
-                self.__metadata_check
+                self.__metadata_check,
             ]
         )
 
@@ -48,7 +48,7 @@ class ExtractorFactory:
             selector=self.__selector_factory.odd_selection(),
             filter_folder=ExtractorFactory.__ODD_SELECTION_FOLDER,
             prechecks=[
-                self.__metadata_check
+                self.__metadata_check,
             ]
         )
 
@@ -68,10 +68,12 @@ class ExtractorFactory:
             selector=self.__selector_factory.structure(),
             filter_folder=ExtractorFactory.__UNEXPECTED_STRUCTURES,
             prechecks=[
-                self.__metadata_check
+                self.__metadata_check,
             ]
         )
 
     @lru_cache()
     def progress(self) -> Extractor:
-        return ProgressExtractor()
+        return ProgressExtractor(prechecks=[
+            self.__metadata_check,
+        ])

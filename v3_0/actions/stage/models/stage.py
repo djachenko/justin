@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import List, Iterable
 
+from v3_0.actions.checks_runner import ChecksRunner
+from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
 from v3_0.actions.stage.logic.base.check import Check
 from v3_0.actions.stage.logic.base.extractor import Extractor
 from v3_0.shared.models.photoset import Photoset
@@ -55,22 +57,12 @@ class Stage:
 
     @staticmethod
     def __run_checks(photoset: Photoset, checks: Iterable[Check]) -> bool:
-        for check in checks:
-            print(f"Running {check.name} for {photoset.name}... ", end="")
+        try:
+            ChecksRunner.instance().run(photoset, checks)
 
-            result = check.is_good(photoset)
-
-            if result:
-                print("passed")
-            else:
-                print("not passed")
-
-                if check.ask_for_extract():
-                    check.extract(photoset)
-
-                return False
-
-        return True
+            return True
+        except CheckFailedError:
+            return False
 
     def able_to_come_out(self, photoset: Photoset) -> bool:
         print("Running outcoming checks")

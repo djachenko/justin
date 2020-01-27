@@ -37,7 +37,7 @@ class ActionFactory:
 
         self.__parameters_mapping = {
             ActionId.STAGE: lambda: [stages_factory],
-            ActionId.LOCAL_SYNC: lambda: [self.__get(ActionId.STAGE)],
+            ActionId.LOCAL_SYNC: lambda: [[checks_factory.metafile()], self.__get(ActionId.STAGE)],
             ActionId.MOVE: lambda: [[checks_factory.metadata()]],
         }
 
