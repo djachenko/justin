@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import List, Iterable, Optional
+from typing import List, Optional
 
 from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.filesystem.movable import Movable
-from v3_0.shared.helpers import joins
+from v3_0.shared.helpers import util
 from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.metafiles.photoset_metafile import PhotosetMetafile
 from v3_0.shared.models.source.source import Source
@@ -57,7 +57,7 @@ class Photoset(Movable):
         return "Photoset: " + self.tree.name
 
     @property
-    def instagram(self) -> FolderTree:
+    def instagram(self) -> Optional[FolderTree]:
         return self.tree[Photoset.__INSTAGRAM]
 
     @property
@@ -68,7 +68,7 @@ class Photoset(Movable):
         return parts
 
     @property
-    def our_people(self) -> FolderTree:
+    def our_people(self) -> Optional[FolderTree]:
         return self.tree[Photoset.__OUR_PEOPLE]
 
     @property
@@ -87,7 +87,7 @@ class Photoset(Movable):
 
     @property
     def photoclub(self) -> Optional[List[File]]:
-        return self.__subtree_files(Photoset.__PHOTOCLUB)
+        return self.tree[Photoset.__PHOTOCLUB]
 
     @property
     def selection(self) -> Optional[List[File]]:
@@ -103,7 +103,7 @@ class Photoset(Movable):
         return Photoset.__SELECTION
 
     @property
-    def justin(self) -> FolderTree:
+    def justin(self) -> Optional[FolderTree]:
         return self.tree[Photoset.__JUSTIN]
 
     @property
@@ -111,7 +111,7 @@ class Photoset(Movable):
         return self.tree[Photoset.__GIF]
 
     @property
-    def closed(self) -> FolderTree:
+    def closed(self) -> Optional[FolderTree]:
         return self.tree[Photoset.__CLOSED]
 
     @property
@@ -120,20 +120,15 @@ class Photoset(Movable):
             self.instagram,
             self.our_people,
             self.justin,
-            self.closed
+            self.closed,
+            self.photoclub,
         ]
 
         possible_subtrees = [i for i in possible_subtrees if i is not None]
 
         results_lists = [sub.flatten() for sub in possible_subtrees]
 
-        if self.photoclub is not None:
-            results_lists.append(self.photoclub)
-
-        result = []
-
-        for results_list in results_lists:
-            result += results_list
+        result = util.flatten(results_lists)
 
         return result
 
@@ -159,57 +154,5 @@ class Photoset(Movable):
     def move_up(self) -> None:
         self.tree.move_up()
 
-    def split_bases(self) -> List[Iterable[File]]:
-        mandatory_trees = [
-            self.justin,
-            self.our_people,
-            self.closed,
-        ]
-
-        optional_trees = [
-            self.gif,
-            self.instagram,
-        ]
-
-        mandatory_bases = [tree.files for tree in mandatory_trees]
-        optional_bases = [tree.files for tree in optional_trees if len(tree.subtree_names) > 0]
-
-        all_bases = mandatory_bases + optional_bases
-
-        non_empty_bases = [i for i in all_bases if len(i) > 0]
-
-        return non_empty_bases
-
-    # def split_backwards(self, base: Iterable[File], new_path: AbsolutePath)):
-
-    def split_forward(self, base: Iterable[File], new_path: Path):
-        sources = self.sources
-        results = self.big_jpegs
-
-        sources_join = joins.inner(
-            base,
-            sources,
-            lambda x, s: x.stem() == s.name
-        )
-
-        results_join = joins.inner(
-            base,
-            results,
-            lambda a, b: a.name == b.name
-        )
-
-        sources_to_move = [i[1] for i in sources_join]
-        results_to_move = [i[1] for i in results_join]
-
-        new_path = new_path / self.name
-
-        for source in sources_to_move:
-            source.move(new_path)
-
-        # for result in results_to_move:
-        #     result_relative_path: RelativePath = result.path - self.path
-        #     result_absolute_path = new_path + result_relative_path
-        #
-        #     result_folder_absolute_path = result_absolute_path.parent()
-        #
-        #     result.move(result_folder_absolute_path)
+    def copy(self, path: Path) -> None:
+        self.tree.copy(path)

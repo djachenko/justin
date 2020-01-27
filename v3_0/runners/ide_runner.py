@@ -11,6 +11,7 @@ if __name__ == '__main__':
         "archive",   # 4
         "move",      # 5
         "make_gif",  # 6
+        "split",     # 7
     ]
 
     locations = [
@@ -32,7 +33,7 @@ if __name__ == '__main__':
 
 
     commands = [
-        build_command(6, 1, 0, "19.12.19*"),
+        build_command(7, 0, 1, "20.*"),
         "upload -s 1",
         "local_sync",
         "rearrange -s 1",
