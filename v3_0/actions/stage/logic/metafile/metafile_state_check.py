@@ -3,7 +3,7 @@ from v3_0.shared.metafiles.post_metafile import PostStatus
 from v3_0.shared.models.photoset import Photoset
 
 
-class MetafileCheck(Check):
+class MetafileStateCheck(Check):
     def __init__(self) -> None:
         super().__init__("metafile check")
 
