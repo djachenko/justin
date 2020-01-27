@@ -12,3 +12,4 @@ class ActionId(Enum):
     STAGE = auto()
     SYNC_POSTS_STATUS = auto()
     SPLIT = auto()
+    FIX_METAFILE = auto()
