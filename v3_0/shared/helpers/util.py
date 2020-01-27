@@ -94,3 +94,13 @@ def flatten(list_of_lists: Iterable[List[T]]) -> List[T]:
 
 def distinct(items: Iterable[T]) -> List[T]:
     return list(set(items))
+
+
+def is_distinct(seq: List[T], key: Callable[[T], None] = None) -> bool:
+    if key is None:
+        def identity(x):
+            return x
+
+        key = identity
+
+    return len(set(key(item) for item in seq)) == len(seq)

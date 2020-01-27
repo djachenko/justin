@@ -44,7 +44,7 @@ class StagesFactory:
             path=Path("stage0.gif"),
             command="gif",
             outcoming_checks=[
-                self.__checks_factory.gif_sources()
+                self.__checks_factory.gif_sources(),
             ]
         )
 
@@ -66,7 +66,7 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
             ],
             preparation_hooks=[
-                self.__extractors_factory.progress()
+                self.__extractors_factory.progress(),
             ]
         )
 
@@ -81,7 +81,8 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
             ],
             preparation_hooks=[
-                self.__extractors_factory.edited()
+                self.__extractors_factory.edited(),
+                self.__extractors_factory.progress(),
             ]
         )
 
@@ -117,6 +118,7 @@ class StagesFactory:
                 self.__checks_factory.missing_gifs(),
                 self.__checks_factory.structure(),
                 self.__checks_factory.metafile(),
+                self.__checks_factory.everything_is_published(),
             ]
         )
 
@@ -134,9 +136,6 @@ class StagesFactory:
             ],
             outcoming_checks=[
                 self.__checks_factory.metafile(),
-            ],
-            preparation_hooks=[
-                # todo: offer to upload
             ]
         )
 

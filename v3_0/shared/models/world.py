@@ -13,7 +13,7 @@ class World:
         super().__init__()
 
         self.__locations_manager = LocationsManager.instance()
-        self.__archive = Archive(FolderTree(self.__locations_manager.main_location()), disk_structure)
+        self.__archive = Archive(FolderTree(self.current_location), disk_structure)
 
     @property
     def archive(self) -> Archive:
