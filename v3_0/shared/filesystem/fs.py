@@ -1,5 +1,6 @@
 import platform
 import shutil
+import webbrowser
 from functools import partial
 from pathlib import Path
 from typing import List, Callable
@@ -47,6 +48,10 @@ def __check_paths(src_path: Path, dst_path: Path):
         return
 
     assert src_path.exists()
+
+
+def open_file_manager(path: Path):
+    webbrowser.open(path)
 
 
 # endregion
