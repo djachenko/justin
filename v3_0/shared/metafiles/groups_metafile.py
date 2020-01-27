@@ -12,7 +12,7 @@ class GroupsMetafile(Metafile):
 
     def __getitem__(self, url: str) -> List[PostMetafile]:
         if url not in self.__mapping:
-            return []
+            self.__mapping[url] = []
 
         return self.__mapping[url]
 
