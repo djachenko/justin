@@ -47,11 +47,6 @@ class Check(AbstractCheck):
         if self.hookable:
             self.__hook.backwards(photoset)
 
-    def __check_inner(self, photoset: Photoset) -> bool:
-        select = self.__selector.select(photoset)
-
-        return not any(select)
-
     @property
     def name(self):
         return self.__name
