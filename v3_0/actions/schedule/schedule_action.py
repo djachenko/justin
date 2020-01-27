@@ -27,7 +27,7 @@ class ScheduleAction(Action):
         return stage_tree
 
     @staticmethod
-    def date_generator(start_date: date):
+    def __date_generator(start_date: date):
         counter = 1
 
         while True:
@@ -83,8 +83,8 @@ class ScheduleAction(Action):
 
         scheduled_posts = group.get_scheduled_posts()
 
-        last_date = ScheduleAction.get_start_date(scheduled_posts)
-        date_generator = ScheduleAction.date_generator(last_date)
+        last_date = ScheduleAction.__get_start_date(scheduled_posts)
+        date_generator = ScheduleAction.__date_generator(last_date)
 
         print("Performing scheduling... ", end="")
 
@@ -138,7 +138,7 @@ class ScheduleAction(Action):
                     print(f"successful, new post has id {post_id}")
 
     @staticmethod
-    def get_start_date(scheduled_posts: List[Post]) -> date:
+    def __get_start_date(scheduled_posts: List[Post]) -> date:
         scheduled_dates = [post.date for post in scheduled_posts]
 
         scheduled_dates.sort(reverse=True)
