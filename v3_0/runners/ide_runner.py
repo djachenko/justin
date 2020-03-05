@@ -3,18 +3,47 @@ from pathlib import Path
 from v3_0.runners import general_runner
 
 if __name__ == '__main__':
+    stage_commands = [
+        "develop",             # 0
+        "ourate",              # 1
+        "ready",               # 2
+        "publish",             # 3
+        "archive",             # 4
+        "move",                # 5
+        "make_gif",            # 6
+        "split",               # 7
+        "fix_metafile",        # 8
+        "resize_gif_sources",  # 9
+    ]
+
+    locations = [
+        "D:/",                   # 0
+        "H:/",                   # 1
+        "/Volumes/pestilence/",  # 2
+    ]
+
+    stages = [
+        "stage0.gif",        # 0
+        "stage2.develop",    # 1
+        "stage2.ourate",     # 2
+        "stage3.ready",      # 3
+        "stage4.published",  # 4
+    ]
+
+
+    def build_command(command, location, stage, name):
+        return f"{stage_commands[command]} {locations[location]}photos/stages/{stages[stage]}/{name}"
+
+
     commands = [
-        "schedule D:/photos/stages/stage2.develop/19.03.22.*",
-        "publish D:/photos/stages/stage0.gif/17.06.29.nsu_holi",
-        "ourate /Volumes/pestilence/photos/stages/stage2.ourate/19.11.17*",
+        build_command(9, 1, 0, "20*"),
         "upload -s 1",
         "local_sync",
         "rearrange -s 1",
-        "archive D:/photos/stages/stage4.published/18.04.25.*",
-        "move H:/photos/stages/stage2.develop/19.11.02.photonight",
+        "delay"
     ]
 
     general_runner.run(
         Path(__file__).parent.parent.parent,
-        commands[2].split()
+        commands[0].split()
     )

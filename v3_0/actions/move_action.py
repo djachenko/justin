@@ -5,9 +5,9 @@ from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
 from v3_0.actions.checks_runner import ChecksRunner
-from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
-from v3_0.actions.stage.logic.base.check import Check
-from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.actions.named.stage.exceptions.check_failed_error import CheckFailedError
+from v3_0.actions.named.stage.logic.base.check import Check
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers import util
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
@@ -43,7 +43,7 @@ class MoveAction(Action):
             move_mappings.append((path, path_location, chosen_location))
 
         for path, from_location, to_location in move_mappings:
-            photoset = Photoset(SingleFolderTree(path))
+            photoset = Photoset(FolderTree(path))
 
             try:
                 ChecksRunner.instance().run(photoset, self.__prechecks)
