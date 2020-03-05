@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, Namespace
 
 from v3_0.actions.action_id import ActionId
-from v3_0.actions.stage.models.stages_factory import StagesFactory
+from v3_0.actions.named.stage.models.stages_factory import StagesFactory
 from v3_0.commands.command import Command
 from v3_0.shared.justin import Justin
 
