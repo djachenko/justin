@@ -1,6 +1,3 @@
-from pathlib import Path
-
-from v3_0.shared.filesystem import fs
 from v3_0.shared.filesystem.path_based import PathBased
 
 
