@@ -5,8 +5,8 @@ from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
 from v3_0.actions.checks_runner import ChecksRunner
-from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
-from v3_0.actions.stage.logic.base.check import Check
+from v3_0.actions.named.stage.exceptions.check_failed_error import CheckFailedError
+from v3_0.actions.named.stage.logic.base.check import Check
 from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers import util
 from v3_0.shared.models.photoset import Photoset
