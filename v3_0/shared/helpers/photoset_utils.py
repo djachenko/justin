@@ -1,7 +1,7 @@
 from enum import Flag, auto
 from typing import Iterable, Tuple, Any, List
 
-from v3_0.actions.stage.exceptions.no_files_for_name_error import NoFilesForNameError
+from v3_0.actions.named.stage.exceptions.no_files_for_name_error import NoFilesForNameError
 from v3_0.shared.filesystem.path_based import PathBased
 from v3_0.shared.helpers import joins, util
 from v3_0.shared.models.photoset import Photoset

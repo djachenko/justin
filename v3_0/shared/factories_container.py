@@ -1,8 +1,8 @@
 from v3_0.actions.action_factory import ActionFactory
-from v3_0.actions.stage.logic.factories.checks_factory import ChecksFactory
-from v3_0.actions.stage.logic.factories.extractor_factory import ExtractorFactory
-from v3_0.actions.stage.logic.factories.selector_factory import SelectorFactory
-from v3_0.actions.stage.models.stages_factory import StagesFactory
+from v3_0.actions.named.stage.logic.factories.checks_factory import ChecksFactory
+from v3_0.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
+from v3_0.actions.named.stage.logic.factories.selector_factory import SelectorFactory
+from v3_0.actions.named.stage.models.stages_factory import StagesFactory
 from v3_0.commands.command_factory import CommandFactory
 from v3_0.shared.configuration.config import Config
 
