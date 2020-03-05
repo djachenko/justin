@@ -6,7 +6,7 @@ from typing import List, Dict
 from pyvko.models.group import Group
 from pyvko.models.post import Post
 
-from v3_0.actions.action import Action
+from v3_0.actions.scheduled.scheduled_action import ScheduledAction
 from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.metafiles.post_metafile import PostMetafile, PostStatus
@@ -14,17 +14,8 @@ from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
 
 
-class ScheduleAction(Action):
+class ScheduleAction(ScheduledAction):
     __STEP = timedelta(days=3)
-
-    # noinspection PyMethodMayBeStatic
-    def __tree_with_sets(self, world: World) -> FolderTree:
-        ready_path = world.current_location / "stages/stage3.schedule"
-        # todo: stages_region[stage3.schedule]
-
-        stage_tree = FolderTree(ready_path)
-
-        return stage_tree
 
     @staticmethod
     def __date_generator(start_date: date):
@@ -58,6 +49,9 @@ class ScheduleAction(Action):
             posted_paths = [post.path for post in photoset_metafile.posts[group_url]]
 
             for hashtag in justin_folder.subtrees:
+                if hashtag.name == "report":
+                    continue
+
                 parts = PartingHelper.folder_tree_parts(hashtag)
 
                 parts_to_upload = []
@@ -77,7 +71,7 @@ class ScheduleAction(Action):
         return upload_hierarchy
 
     def perform(self, args: Namespace, world: World, group: Group) -> None:
-        stage_tree = self.__tree_with_sets(world)
+        stage_tree = self.tree_with_sets(world)
 
         photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
 

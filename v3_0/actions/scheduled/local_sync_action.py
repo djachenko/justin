@@ -5,28 +5,19 @@ from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
 from v3_0.actions.checks_runner import ChecksRunner
-from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
-from v3_0.actions.stage.logic.base.check import Check
-from v3_0.shared.filesystem.folder_tree import FolderTree
+from v3_0.actions.named.stage.exceptions.check_failed_error import CheckFailedError
+from v3_0.actions.named.stage.logic.base.check import Check
+from v3_0.actions.scheduled.scheduled_action import ScheduledAction
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
 
 
-class LocalSyncAction(Action):
+class LocalSyncAction(ScheduledAction):
     def __init__(self, prechecks: List[Check], all_published_action: Action) -> None:
         super().__init__()
 
         self.__prechecks = prechecks
         self.__all_published_action = all_published_action
-
-    # noinspection PyMethodMayBeStatic
-    def __tree_with_sets(self, world: World) -> FolderTree:
-        # todo: stages_region[stage3.schedule]
-        scheduled_path = world.current_location / "stages/stage3.schedule"
-
-        stage_tree = FolderTree(scheduled_path)
-
-        return stage_tree
 
     def __check_for_publishing(self, photosets: Iterable[Photoset], world: World, group: Group):
         paths_of_published_sets = []
@@ -59,7 +50,7 @@ class LocalSyncAction(Action):
         self.__all_published_action.perform(internal_args, world, group)
 
     def perform(self, args: Namespace, world: World, group: Group) -> None:
-        stage_tree = self.__tree_with_sets(world)
+        stage_tree = self.tree_with_sets(world)
 
         photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
 

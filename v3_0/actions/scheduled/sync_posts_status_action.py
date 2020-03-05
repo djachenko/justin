@@ -1,27 +1,16 @@
 from argparse import Namespace
-from pathlib import Path
 
 from pyvko.models.group import Group
 
-from v3_0.actions.action import Action
-from v3_0.shared.filesystem.folder_tree import FolderTree
+from v3_0.actions.scheduled.scheduled_action import ScheduledAction
 from v3_0.shared.metafiles.post_metafile import PostStatus
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
 
 
-class SyncPostsStatusAction(Action):
-    # noinspection PyMethodMayBeStatic
-    def __tree_with_sets(self) -> FolderTree:
-        ready_path = Path("D:/photos/stages/stage3.schedule")
-        # todo: stages_region[stage3.schedule]
-
-        stage_tree = FolderTree(ready_path)
-
-        return stage_tree
-
+class SyncPostsStatusAction(ScheduledAction):
     def perform(self, args: Namespace, world: World, group: Group) -> None:
-        stage_tree = self.__tree_with_sets()
+        stage_tree = self.tree_with_sets(world)
 
         photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
 
