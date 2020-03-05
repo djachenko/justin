@@ -66,3 +66,10 @@ class ChecksFactory:
     @lru_cache()
     def metafile(self) -> Check:
         return MetafileStateCheck()
+
+    @lru_cache()
+    def everything_is_published(self) -> Check:
+        return Check(
+            name="everything is published check",
+            selector=self.__selector_factory.everything_is_published()
+        )
