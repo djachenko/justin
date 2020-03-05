@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 
-from v3_0.actions.archive.archive import Archive
+from v3_0.actions.named.archive.archive import Archive
 from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.locations.locations_manager import LocationsManager
 from v3_0.shared.new_structure import Structure

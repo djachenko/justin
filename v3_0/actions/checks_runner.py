@@ -1,7 +1,7 @@
 from typing import Iterable
 
-from v3_0.actions.stage.exceptions.check_failed_error import CheckFailedError
-from v3_0.actions.stage.logic.base.check import Check
+from v3_0.actions.named.stage.exceptions.check_failed_error import CheckFailedError
+from v3_0.actions.named.stage.logic.base.check import Check
 from v3_0.shared.helpers.singleton import Singleton
 from v3_0.shared.models.photoset import Photoset
 
