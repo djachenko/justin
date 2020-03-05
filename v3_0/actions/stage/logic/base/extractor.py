@@ -58,7 +58,7 @@ class Extractor:
             filtered = part.tree[self.__filter_folder]
 
             if not filtered:
-                return
+                continue
 
             filtered_photoset = Photoset(filtered)
 

@@ -29,5 +29,7 @@ class CommandFactory:
             NamedCommand("archive", ActionId.ARCHIVE),
             NamedCommand("move", ActionId.MOVE),
             NamedCommand("make_gif", ActionId.MAKE_GIF),
-            NamedCommand("split", ActionId.SPLIT)
+            NamedCommand("split", ActionId.SPLIT),
+            NamedCommand("fix_metafile", ActionId.FIX_METAFILE),
+            SingleActionCommand("web_sync", ActionId.SYNC_POSTS_STATUS),
         ]
