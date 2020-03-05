@@ -1,15 +1,17 @@
 from functools import lru_cache
 from typing import List
 
-from v3_0.actions.stage.models.stages_factory import StagesFactory
-from v3_0.commands.archive_command import ArchiveCommand
+from v3_0.actions.action_id import ActionId
+from v3_0.actions.named.stage.models.stages_factory import StagesFactory
 from v3_0.commands.command import Command
-from v3_0.commands.delete_posts_command import DeletePostsCommand
-from v3_0.commands.local_sync_command import LocalSyncCommand
-from v3_0.commands.move_command import MoveCommand
-from v3_0.commands.rearrange_command import RearrangeCommand
+from v3_0.commands.single_subparser_commands.delay_command import DelayCommand
+from v3_0.commands.single_subparser_commands.resize_gif_sources_command import ResizeGifSourcesCommand
+from v3_0.commands.single_subparser_commands.single_action_command import SingleActionCommand
+from v3_0.commands.single_subparser_commands.delete_posts_command import DeletePostsCommand
+from v3_0.commands.single_subparser_commands.named_command import NamedCommand
+from v3_0.commands.single_subparser_commands.rearrange_command import RearrangeCommand
+from v3_0.commands.single_subparser_commands.upload_command import UploadCommand
 from v3_0.commands.stage_command import StageCommand
-from v3_0.commands.upload_command import UploadCommand
 
 
 class CommandFactory:
@@ -25,7 +27,13 @@ class CommandFactory:
             UploadCommand(),
             DeletePostsCommand(),
             RearrangeCommand(),
-            LocalSyncCommand(),
-            ArchiveCommand(),
-            MoveCommand(),
+            SingleActionCommand("local_sync", ActionId.LOCAL_SYNC),
+            NamedCommand("archive", ActionId.ARCHIVE),
+            NamedCommand("move", ActionId.MOVE),
+            NamedCommand("make_gif", ActionId.MAKE_GIF),
+            NamedCommand("split", ActionId.SPLIT),
+            NamedCommand("fix_metafile", ActionId.FIX_METAFILE),
+            SingleActionCommand("web_sync", ActionId.SYNC_POSTS_STATUS),
+            DelayCommand(),
+            ResizeGifSourcesCommand(),
         ]

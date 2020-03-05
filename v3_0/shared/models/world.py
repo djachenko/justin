@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import List
 
-from v3_0.actions.archive.archive import Archive
-from v3_0.shared.filesystem.folder_tree.single_folder_tree import SingleFolderTree
+from v3_0.actions.named.archive.archive import Archive
+from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.locations.locations_manager import LocationsManager
 from v3_0.shared.new_structure import Structure
 
@@ -13,7 +13,7 @@ class World:
         super().__init__()
 
         self.__locations_manager = LocationsManager.instance()
-        self.__archive = Archive(SingleFolderTree(self.__locations_manager.main_location()), disk_structure)
+        self.__archive = Archive(FolderTree(self.current_location), disk_structure)
 
     @property
     def archive(self) -> Archive:

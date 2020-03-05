@@ -5,6 +5,7 @@ from pyvko.models.group import Group
 
 from v3_0.actions.action import Action
 from v3_0.actions.action_factory import ActionFactory
+from v3_0.actions.action_id import ActionId
 from v3_0.shared.models.world import World
 
 
@@ -23,34 +24,5 @@ class Justin:
 
         return inner
 
-    @property
-    def schedule(self) -> Callable[[Namespace], None]:
-        return self.__build_action(self.__actions_factory.schedule())
-
-    @property
-    def stage(self) -> Callable[[Namespace], None]:
-        return self.__build_action(self.__actions_factory.stage())
-
-    @property
-    def rearrange(self) -> Callable[[Namespace], None]:
-        return self.__build_action(self.__actions_factory.rearrange())
-
-    @property
-    def sync_posts_status(self) -> Callable[[Namespace], None]:
-        return self.__build_action(self.__actions_factory.sync_posts_status())
-
-    @property
-    def delete_posts(self) -> Callable[[Namespace], None]:
-        return self.__build_action(self.__actions_factory.delete_posts())
-
-    @property
-    def local_sync(self):
-        return self.__build_action(self.__actions_factory.local_sync())
-
-    @property
-    def archive(self):
-        return self.__build_action(self.__actions_factory.archive())
-
-    @property
-    def move(self):
-        return self.__build_action(self.__actions_factory.move())
+    def __getitem__(self, action: ActionId) -> Callable[[Namespace], None]:
+        return self.__build_action(self.__actions_factory[action])
