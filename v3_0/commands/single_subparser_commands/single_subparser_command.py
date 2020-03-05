@@ -5,9 +5,8 @@ from v3_0.commands.command import Command
 
 
 class SingleSubparserCommand(Command, ABC):
-    @classmethod
     @abstractmethod
-    def command(cls) -> str:
+    def command(self) -> str:
         pass
 
     def configure_parser(self, parser_adder):

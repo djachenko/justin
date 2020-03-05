@@ -1,19 +1,19 @@
 from pathlib import Path
 
 from v3_0.runners import general_runner
-from v3_0.shared.helpers.cd import cd
 
 if __name__ == '__main__':
     stage_commands = [
-        "develop",      # 0
-        "ourate",       # 1
-        "ready",        # 2
-        "publish",      # 3
-        "archive",      # 4
-        "move",         # 5
-        "make_gif",     # 6
-        "split",        # 7
-        "fix_metafile"  # 8
+        "develop",             # 0
+        "ourate",              # 1
+        "ready",               # 2
+        "publish",             # 3
+        "archive",             # 4
+        "move",                # 5
+        "make_gif",            # 6
+        "split",               # 7
+        "fix_metafile",        # 8
+        "resize_gif_sources",  # 9
     ]
 
     locations = [
@@ -36,14 +36,14 @@ if __name__ == '__main__':
 
 
     commands = [
-        build_command(3, 1, 2, "19.12.19*"),
+        build_command(9, 1, 0, "20*"),
         "upload -s 1",
         "local_sync",
         "rearrange -s 1",
+        "delay"
     ]
 
-    with cd(Path("H:/photos/stages/stage4.published")):
-        general_runner.run(
-            Path(__file__).parent.parent.parent,
-            commands[0].split()
-        )
+    general_runner.run(
+        Path(__file__).parent.parent.parent,
+        commands[0].split()
+    )
