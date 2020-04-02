@@ -13,3 +13,5 @@ class ActionId(Enum):
     SYNC_POSTS_STATUS = auto()
     SPLIT = auto()
     FIX_METAFILE = auto()
+    DELAY = auto()
+    RESIZE_SOURCES = auto()

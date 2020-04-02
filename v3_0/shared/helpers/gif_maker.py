@@ -60,12 +60,20 @@ class GifMaker:
         return max(width, height)
 
     @staticmethod
-    def __resize_sources(sources: Path):
+    def __gif_has_good_size(gif_path: Path) -> bool:
+        gif_size = gif_path.stat().st_size
+
+        return GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE
+
+    # noinspection PyMethodMayBeStatic
+    def resize_sources(self, sources: Path, scale_factor: float = 0.5):
+        assert sources.is_dir()
+
         current_size = GifMaker.__long_side(sources)
-        new_size = int(current_size * 0.2)
+        new_size = int(current_size * scale_factor)
 
         resized_name = f"resized_{new_size}"
-        resized_path: Path = sources.parent / resized_name
+        resized_path: Path = sources.with_name(resized_name)
 
         resized_path.mkdir(parents=True, exist_ok=True)
 
@@ -77,19 +85,17 @@ class GifMaker:
 
             frame.save(resized_path / frame_path.name, "JPEG")
 
-    @staticmethod
-    def __gif_has_good_size(gif_path: Path) -> bool:
-        gif_size = gif_path.stat().st_size
+        sources.rename(sources.with_name(f"{sources.name}_{current_size}"))
+        resized_path.rename(sources)
 
-        return GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE
-
+    # noinspection PyMethodMayBeStatic
     def make_gif(self, sources_path: Path, name: str):
         if not name.endswith(".gif"):
             name = name + ".gif"
 
         gif_path = sources_path / name
 
-        if gif_path.exists() and self.__gif_has_good_size(gif_path):
+        if gif_path.exists() and GifMaker.__gif_has_good_size(gif_path):
             print("Valid gif already exists")
 
             return
@@ -102,12 +108,7 @@ class GifMaker:
 
             print(f"Starting iteration with size {iteration_size}... ", end="")
 
-            try:
-                self.__make_gif(sources_path, name, iteration_size)
-            except MemoryError:
-                print("\nOut of memory, resizing")
-
-                self.__resize_sources(sources_path)
+            GifMaker.__make_gif(sources_path, name, iteration_size)
 
             gif_size = gif_path.stat().st_size
 
@@ -116,7 +117,7 @@ class GifMaker:
             if GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE or \
                     iteration_size == GifMaker.__START_MAX_SIZE:
                 print(f"successful\nFinal result lies at {gif_path.name}")
-                print(f"Scale rate: {GifMaker.__long_side(sources_path)/iteration_size:.2f}")
+                print(f"Scale rate: {GifMaker.__long_side(sources_path) / iteration_size:.2f}")
 
                 break
             elif gif_size > GifMaker.__MAX_DESIRED_SIZE:
