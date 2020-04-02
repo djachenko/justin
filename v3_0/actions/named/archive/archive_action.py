@@ -20,6 +20,7 @@ class ArchiveAction(NamedAction):
 
         return biggest_tree
 
+    # todo: adapt for multipart
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
         archive = world.archive
 
