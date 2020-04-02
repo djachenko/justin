@@ -17,7 +17,16 @@ class DelayAction(Action):
 
         delay = timedelta(days=delay_days)
 
+        print(f"Delaying posts for {delay}...")
+
         for post in posts:
-            post.date += delay
+            old_date = post.date
+            new_date = old_date + delay
+
+            print(f"Moving post {post.id} from {old_date} to {new_date}...", end="")
+
+            post.date = new_date
 
             group.update_post(post)
+
+            print(" done.")

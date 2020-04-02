@@ -6,6 +6,7 @@ from typing import List, Dict
 from pyvko.models.group import Group
 from pyvko.models.post import Post
 
+from v3_0.actions.rearrange_action import RearrangeAction
 from v3_0.actions.scheduled.scheduled_action import ScheduledAction
 from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers.parting_helper import PartingHelper
@@ -15,7 +16,7 @@ from v3_0.shared.models.world import World
 
 
 class ScheduleAction(ScheduledAction):
-    __STEP = timedelta(days=3)
+    __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
 
     @staticmethod
     def __date_generator(start_date: date):
