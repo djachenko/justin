@@ -11,7 +11,7 @@ from v3_0.shared.factories_container import FactoriesContainer
 from v3_0.shared.justin import Justin
 from v3_0.shared.models.world import World
 
-__CONFIGS_FOLDER = ".justin_configs"
+__CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
 
 
