@@ -2,8 +2,10 @@ from functools import lru_cache
 from typing import List
 
 from v3_0.actions.action_id import ActionId
-from v3_0.actions.stage.models.stages_factory import StagesFactory
+from v3_0.actions.named.stage.models.stages_factory import StagesFactory
 from v3_0.commands.command import Command
+from v3_0.commands.single_subparser_commands.delay_command import DelayCommand
+from v3_0.commands.single_subparser_commands.resize_gif_sources_command import ResizeGifSourcesCommand
 from v3_0.commands.single_subparser_commands.single_action_command import SingleActionCommand
 from v3_0.commands.single_subparser_commands.delete_posts_command import DeletePostsCommand
 from v3_0.commands.single_subparser_commands.named_command import NamedCommand
@@ -32,4 +34,6 @@ class CommandFactory:
             NamedCommand("split", ActionId.SPLIT),
             NamedCommand("fix_metafile", ActionId.FIX_METAFILE),
             SingleActionCommand("web_sync", ActionId.SYNC_POSTS_STATUS),
+            DelayCommand(),
+            ResizeGifSourcesCommand(),
         ]

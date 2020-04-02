@@ -35,7 +35,7 @@ class Archive(TreeBased):
         if name not in self.__destinations and self.__structure.has_substructure(name):
             new_destination_path = self.path / name
 
-            new_destination_path.mkdir()
+            new_destination_path.mkdir(exist_ok=True, parents=True)
 
             return Destination(FolderTree(new_destination_path), self.__structure[name])
 

@@ -2,13 +2,13 @@ from functools import lru_cache
 
 from v3_0.actions.action import Action
 from v3_0.actions.action_id import ActionId
-from v3_0.actions.archive.archive_action import ArchiveAction
+from v3_0.actions.delay_action import DelayAction
 from v3_0.actions.delete_posts_action import DeletePostsAction
 from v3_0.actions.named.archive.archive_action import ArchiveAction
 from v3_0.actions.named.fix_metafile_action import FixMetafileAction
 from v3_0.actions.named.make_gifs_action import MakeGifAction
 from v3_0.actions.move_action import MoveAction
-from v3_0.actions.rearrange.rearrange_action import RearrangeAction
+from v3_0.actions.named.resize_gif_sources_action import ResizeGifSourcesAction
 from v3_0.actions.named.split_action import SplitAction
 from v3_0.actions.named.stage.logic.factories.checks_factory import ChecksFactory
 from v3_0.actions.named.stage.models.stages_factory import StagesFactory
@@ -32,6 +32,8 @@ class ActionFactory:
         ActionId.SYNC_POSTS_STATUS: SyncPostsStatusAction,
         ActionId.SPLIT: SplitAction,
         ActionId.FIX_METAFILE: FixMetafileAction,
+        ActionId.DELAY: DelayAction,
+        ActionId.RESIZE_SOURCES: ResizeGifSourcesAction,
     }
 
     def __init__(self, stages_factory: StagesFactory, checks_factory: ChecksFactory) -> None:
