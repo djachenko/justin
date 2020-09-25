@@ -12,7 +12,7 @@ class SourcesParser:
     def from_file_sequence(seq: Iterable[File]) -> List[Source]:
         split = list(util.split_by_predicates(
             seq,
-            lambda file: file.extension.lower() in ['.nef', ],
+            lambda file: file.extension.lower() in ['.nef', ".heic", ],
             lambda file: file.extension.lower() == ".xmp",
             lambda file: file.extension.lower() in ['.jpg', ".tif", ".dng"]
         ))
