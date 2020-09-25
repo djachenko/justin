@@ -22,6 +22,8 @@ class Locations(str, Enum):
     D = "D:/"
     H = "H:/"
     PESTILENCE = "/Volumes/pestilence/"
+    MICHAEL = "/Volumes/michael/"
+    MAC_OS_HOME = "/Users/justin"
 
 
 class Stage(str, Enum):
@@ -36,7 +38,7 @@ if __name__ == '__main__':
     def build_command(command: Commands, location: Locations, stage: Stage, name: str):
         return f"{command} {location}photos/stages/{stage}/{name}"
 
-    current_location = Locations.H
+    current_location = Locations.MICHAEL
 
     commands = [
         build_command(
@@ -48,11 +50,12 @@ if __name__ == '__main__':
         "upload -s 1",
         "local_sync",
         "rearrange -s 1",
-        "delay"
+        "delay",
+        "",
     ]
 
     with cd(Path(str(current_location.value))):
         general_runner.run(
             Path(__file__).parent.parent.parent,
-            commands[0].split()
+            commands[2].split()
         )
