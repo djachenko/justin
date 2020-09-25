@@ -26,7 +26,7 @@ class GifMaker:
 
         frames: List[Image] = []
 
-        for frame_path in sources.iterdir():
+        for frame_path in sorted(sources.iterdir(), key=lambda x: x.stem):
             if frame_path.suffix != ".jpg":
                 continue
 
