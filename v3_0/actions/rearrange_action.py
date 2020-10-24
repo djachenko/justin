@@ -24,7 +24,9 @@ class RearrangeAction(Action):
             step_value_in_days = RearrangeAction.DEFAULT_STEP
 
         step = timedelta(days=step_value_in_days)
-        earliest_date = scheduled_posts[0].date.date()
+
+        dates = [post.date.date() for post in scheduled_posts]
+        earliest_date = min(dates)
 
         new_dates = [earliest_date + step * index for index in range(len(scheduled_posts))]
 
