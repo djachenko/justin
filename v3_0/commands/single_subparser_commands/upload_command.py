@@ -14,6 +14,7 @@ class UploadCommand(SingleSubparserCommand):
         super().configure_subparser(subparser)
 
         subparser.add_argument("-s", "--step", default=RearrangeAction.DEFAULT_STEP, type=int)
+        subparser.add_argument("--shuffle", action="store_true")
 
     def run(self, args, justin: Justin) -> None:
         justin[ActionId.SYNC_POSTS_STATUS](args)
