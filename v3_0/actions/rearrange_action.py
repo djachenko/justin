@@ -1,3 +1,4 @@
+import random
 from argparse import Namespace
 from datetime import timedelta, datetime
 
@@ -29,6 +30,9 @@ class RearrangeAction(Action):
         earliest_date = min(dates)
 
         new_dates = [earliest_date + step * index for index in range(len(scheduled_posts))]
+
+        if args.shuffle:
+            random.shuffle(scheduled_posts)
 
         dates_and_posts = list(zip(new_dates, scheduled_posts))[1:]
 
