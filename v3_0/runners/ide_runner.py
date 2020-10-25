@@ -19,7 +19,9 @@ class Commands(str, Enum):
 
 
 class Locations(str, Enum):
+    C = "C:/Users/justin/"
     D = "D:/"
+    E = "E:/"
     H = "H:/"
     PESTILENCE = "/Volumes/pestilence/"
     MICHAEL = "/Volumes/michael/"
@@ -31,6 +33,7 @@ class Stage(str, Enum):
     DEVELOP = "stage2.develop"
     OURATE = "stage2.ourate"
     READY = "stage3.ready"
+    SCHEDULED = "stage3.schedule"
     PUBLISHED = "stage4.published"
 
 
@@ -38,20 +41,24 @@ if __name__ == '__main__':
     def build_command(command: Commands, location: Locations, stage: Stage, name: str):
         return f"{command} {location}photos/stages/{stage}/{name}"
 
-    current_location = Locations.MICHAEL
+    current_location = Locations.C
 
     commands = [
         build_command(
-            command=Commands.PUBLISH,
+            command=Commands.OURATE,
             location=current_location,
-            stage=Stage.PUBLISHED,
-            name="*"
+            stage=Stage.OURATE,
+            name="17.07*"
         ),
-        "upload -s 1",
+        "upload",
         "local_sync",
         "rearrange -s 1",
+        "rearrange",
         "delay",
         "",
+        "web_sync",
+        "delay",
+        f"move {Locations.C}/photos/photoclub"
     ]
 
     with cd(Path(str(current_location.value))):
