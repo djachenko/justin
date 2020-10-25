@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Callable
 
 from lazy_object_proxy import Proxy
 from pyvko.config.config import Config as PyvkoConfig
@@ -45,7 +45,7 @@ def run(config_path: Path, args=None):
 
     name = parser.parse_args(args)
 
-    if hasattr(name, "func") and name.func:
+    if hasattr(name, "func") and name.func and isinstance(name.func, Callable):
         url = config[Config.Keys.GROUP_URL]
 
         group = Proxy(lambda: pyvko.get(url))
