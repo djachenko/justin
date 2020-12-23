@@ -3,9 +3,10 @@ from typing import List, Optional, Dict
 
 from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.path_based import PathBased
+from v3_0.shared.helpers.multiplexer import Multiplexable
 
 
-class FolderTree(PathBased):
+class FolderTree(PathBased, Multiplexable):
     # noinspection PyTypeChecker
     def __init__(self, path: Path) -> None:
         super().__init__(path)
@@ -53,8 +54,11 @@ class FolderTree(PathBased):
 
         return result
 
+    def file_count(self) -> int:
+        return sum(subtree.file_count() for subtree in self.subtrees) + len(self.files)
+
     def empty(self) -> bool:
-        return len(self.files) == 0 and all((subtree.empty() for subtree in self.subtrees))
+        return self.file_count() == 0
 
     def remove(self):
         assert len(self.files) == 0
