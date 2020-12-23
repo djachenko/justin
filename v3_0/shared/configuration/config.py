@@ -33,7 +33,7 @@ class Config:
 
     @staticmethod
     def from_source(path: Path) -> 'Config':
-        run_result = runpy.run_path(path)
+        run_result = runpy.run_path(str(path))
 
         config_dict = run_result["config"]
 
