@@ -26,8 +26,9 @@ class JpegType(Flag):
     OUR_PEOPLE = auto()
     CLOSED = auto()
     PHOTOCLUB = auto()
+    INSTAGRAM = auto()
     SIGNED = JUSTIN | OUR_PEOPLE | CLOSED | PHOTOCLUB
-    ALL = SELECTION | SIGNED
+    ALL = SELECTION | SIGNED | INSTAGRAM
 
 
 def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegType = None) -> List[PathBased]:
@@ -41,6 +42,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
         JpegType.OUR_PEOPLE: photoset.our_people,
         JpegType.CLOSED: photoset.closed,
         JpegType.PHOTOCLUB: photoset.photoclub,
+        JpegType.INSTAGRAM: photoset.instagram,
     }
 
     for t, tree in mapping.items():
