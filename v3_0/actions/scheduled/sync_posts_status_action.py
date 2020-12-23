@@ -12,7 +12,7 @@ class SyncPostsStatusAction(ScheduledAction):
     def perform(self, args: Namespace, world: World, group: Group) -> None:
         stage_tree = self.tree_with_sets(world)
 
-        photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
+        metasets = [Photoset(subtree) for subtree in stage_tree.subtrees]
 
         scheduled_posts = group.get_scheduled_posts()
         published_posts = group.get_posts()
@@ -25,52 +25,54 @@ class SyncPostsStatusAction(ScheduledAction):
 
         print("Performing sync of local state with web...")
 
-        for photoset in photosets:
-            photoset_metafile = photoset.get_metafile()
+        for metaset in metasets:
+            for photoset in metaset.parts:
 
-            existing_posts = []
+                photoset_metafile = photoset.get_metafile()
 
-            for post_metafile in photoset_metafile.posts[group.url]:
-                post_id = post_metafile.post_id
+                existing_posts = []
 
-                print(f"Syncing post with id {post_id}... ", end="")
+                for post_metafile in photoset_metafile.posts[group.url]:
+                    post_id = post_metafile.post_id
 
-                if post_metafile.status is PostStatus.SCHEDULED:
+                    print(f"Syncing post with id {post_id}... ", end="")
 
-                    if post_id in scheduled_ids:
-                        print("still scheduled")
+                    if post_metafile.status is PostStatus.SCHEDULED:
 
-                        existing_posts.append(post_metafile)
+                        if post_id in scheduled_ids:
+                            print("still scheduled")
 
-                    elif post_id in published_timed_ids:
-                        post_metafile.status = PostStatus.PUBLISHED
-                        post_metafile.post_id = published_mapping[post_id]
+                            existing_posts.append(post_metafile)
 
-                        print(f"was published, now has id {post_metafile.post_id}")
+                        elif post_id in published_timed_ids:
+                            post_metafile.status = PostStatus.PUBLISHED
+                            post_metafile.post_id = published_mapping[post_id]
 
-                        existing_posts.append(post_metafile)
-                    elif post_id in published_ids:
-                        # scheduled id can't become an id for published post
+                            print(f"was published, now has id {post_metafile.post_id}")
 
-                        print("somehow ended in posted array, aborting...")
+                            existing_posts.append(post_metafile)
+                        elif post_id in published_ids:
+                            # scheduled id can't become an id for published post
 
-                        assert False
+                            print("somehow ended in posted array, aborting...")
 
-                    else:
-                        print("was deleted")
+                            assert False
 
-                elif post_metafile.status is PostStatus.PUBLISHED:
-                    assert post_id not in scheduled_ids
-                    assert post_id not in published_timed_ids
+                        else:
+                            print("was deleted")
 
-                    if post_id in published_ids:
-                        print("still published")
+                    elif post_metafile.status is PostStatus.PUBLISHED:
+                        assert post_id not in scheduled_ids
+                        assert post_id not in published_timed_ids
 
-                        existing_posts.append(post_metafile)
-                    else:
-                        print("was deleted")
+                        if post_id in published_ids:
+                            print("still published")
 
-            photoset_metafile.posts[group.url] = existing_posts
-            photoset.save_metafile(photoset_metafile)
+                            existing_posts.append(post_metafile)
+                        else:
+                            print("was deleted")
+
+                photoset_metafile.posts[group.url] = existing_posts
+                photoset.save_metafile(photoset_metafile)
 
         print("Performed successfully")
