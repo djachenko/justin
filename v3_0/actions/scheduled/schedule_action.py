@@ -2,6 +2,7 @@ import json
 import random
 from argparse import Namespace
 from datetime import time, date, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import List, Dict, Iterable
 
@@ -11,11 +12,62 @@ from pyvko.models.post import Post
 
 from v3_0.actions.rearrange_action import RearrangeAction
 from v3_0.actions.scheduled.scheduled_action import ScheduledAction
+from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.metafiles.post_metafile import PostMetafile, PostStatus
-from v3_0.shared.models.photoset import Photoset
+from v3_0.shared.models.photoset import Photoset, Metafiled
 from v3_0.shared.models.world import World
+
+
+# class PostConfig
+
+class PostTemplate(Metafiled):
+    __CONFIG_FILE = "post_config.json"
+
+    def __init__(self, folder: FolderTree) -> None:
+        super().__init__()
+
+        assert len(folder.subtrees) == 0
+
+        self.__folder = folder
+
+    @property
+    def metafile_path(self) -> Path:
+        return self.__folder.path / PostTemplate.__CONFIG_FILE
+
+    @property
+    def path(self) -> Path:
+        return self.__folder.path
+
+    @property
+    def files(self) -> List[File]:
+        folder_files = self.__folder.files
+
+        folder_files = [file for file in folder_files if file.name != PostTemplate.__CONFIG_FILE]
+
+        return folder_files
+
+    @property
+    @lru_cache()
+    def __config(self):
+        post_config_path = self.metafile_path
+
+        if not post_config_path.exists():
+            return None
+
+        with post_config_path.open() as post_config_file:
+            post_config = json.load(post_config_file)
+
+            return post_config
+
+    @property
+    def cover(self):
+        return self.__config["cover"]
+
+    @property
+    def grid(self):
+        return self.__config["grid"]
 
 
 class ScheduleAction(ScheduledAction):
@@ -40,7 +92,7 @@ class ScheduleAction(ScheduledAction):
 
     @staticmethod
     def __get_not_uploaded_hierarchy(photosets: List[Photoset], group_url: str) \
-            -> Dict[Photoset, Dict[str, List[FolderTree]]]:
+            -> Dict[Photoset, Dict[str, List[PostTemplate]]]:
         upload_hierarchy = {}
 
         for metaset in photosets:
@@ -60,7 +112,7 @@ class ScheduleAction(ScheduledAction):
 
     @staticmethod
     def not_uploaded_hashtags(justin_folder: FolderTree, root_path: Path, posted_paths: List[Path]) \
-            -> Dict[str, List[FolderTree]]:
+            -> Dict[str, List[PostTemplate]]:
         hashtags_to_upload = {}
 
         for hashtag in justin_folder.subtrees:
@@ -74,14 +126,17 @@ class ScheduleAction(ScheduledAction):
         return hashtags_to_upload
 
     @staticmethod
-    def not_uploaded_parts(parts: Iterable[FolderTree], root_path: Path, posted_paths: List[Path]) -> List[FolderTree]:
+    def not_uploaded_parts(parts: Iterable[FolderTree], root_path: Path, posted_paths: List[Path]) \
+            -> List[PostTemplate]:
         parts_to_upload = []
 
         for justin_part in parts:
             part_path = justin_part.path.relative_to(root_path)
 
             if part_path not in posted_paths:
-                parts_to_upload.append(justin_part)
+                post_template = PostTemplate(justin_part)
+
+                parts_to_upload.append(post_template)
 
         return parts_to_upload
 
@@ -114,19 +169,17 @@ class ScheduleAction(ScheduledAction):
             for hashtag, parts in hashtags.items():
                 print(f"Uploading #{hashtag}")
 
-                for part in parts:
-                    part_path = part.path.relative_to(photoset.path)
+                for post_template in parts:
+                    part_path = post_template.path.relative_to(photoset.path)
 
                     print(f"Uploading contents of {part_path}... ", end="", flush=True)
 
-                    assert len(part.subtrees) == 0
-
-                    photo_files = part.files
+                    photo_files = post_template.files
 
                     if hashtag != "report":
                         attachments = self.get_simple_attachments(group, photo_files)
                     else:
-                        attachments = self.get_report_attachments(group, photoset.name, part)
+                        attachments = self.get_report_attachments(group, photoset.name, post_template)
 
                     post_datetime = next(date_generator)
 
@@ -156,37 +209,23 @@ class ScheduleAction(ScheduledAction):
         return vk_photos
 
     # noinspection PyMethodMayBeStatic
-    def get_report_attachments(self, group: Group, set_name: str, folder: FolderTree) -> List[Attachment]:
+    def get_report_attachments(self, group: Group, set_name: str, folder: PostTemplate) -> List[Attachment]:
         album = group.create_album(set_name)
 
-        post_config_file_name = "_post_config.json"
-
-        post_config_path = folder.path / post_config_file_name
-
-        cover = ""
-        grid_stems: List[str] = []
-
-        if post_config_path.exists():
-            with post_config_path.open() as post_config_file:
-                post_config = json.load(post_config_file)
-
-                cover = post_config["cover"]
-                grid_stems = post_config["grid"]
+        cover = folder.cover
+        grid_stems = folder.grid
 
         assert cover not in grid_stems
 
         photos = {}
 
         for file in folder.files:
-            if file.name == post_config_file_name:
-                continue
-
             photo = album.add_photo(file.path)
 
             if file.stem() == cover:
                 album.set_cover(photo)
 
-            if file in grid_stems:
+            if file.stem() in grid_stems:
                 photos[file.stem()] = photo
 
         sorted_photos = [photos[stem] for stem in grid_stems]
