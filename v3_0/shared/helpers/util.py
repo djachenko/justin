@@ -1,5 +1,6 @@
 import glob
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Iterable, TypeVar, Callable, Dict, Any, List, Generator
 
@@ -104,3 +105,26 @@ def is_distinct(seq: List[T], key: Callable[[T], None] = None) -> bool:
         key = identity
 
     return len(set(key(item) for item in seq)) == len(seq)
+
+
+def is_iterable(obj: Any) -> bool:
+    return isinstance(obj, Sequence) and not isinstance(obj, str)
+
+
+def all_same_type(seq: Iterable) -> bool:
+    return same(type(i) for i in seq)
+
+
+def same(seq: Iterable):
+    if not seq:
+        return False
+
+    example = None
+
+    for item in seq:
+        if example and item != example:
+            return False
+
+        example = item
+
+    return True
