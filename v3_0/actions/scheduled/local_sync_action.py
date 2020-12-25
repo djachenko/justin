@@ -37,6 +37,8 @@ class LocalSyncAction(ScheduledAction):
 
             print()
 
+        input("Press Enter to proceed to publishing.")
+
         if len(paths_of_published_sets) == 0:
             return
 

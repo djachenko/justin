@@ -5,6 +5,7 @@ from pyvko.models.group import Group
 
 from v3_0.actions.named.named_action import NamedAction
 from v3_0.shared.filesystem.folder_tree import FolderTree
+from v3_0.shared.helpers.multiplexer import Multiplexer
 from v3_0.shared.models.photoset import Photoset
 from v3_0.shared.models.world import World
 
@@ -14,19 +15,22 @@ class ArchiveAction(NamedAction):
     def __get_biggest_tree(trees: List[FolderTree]) -> FolderTree:
         trees = [i for i in trees if i is not None]
 
-        trees.sort(key=lambda d: len(d.flatten()), reverse=True)
+        trees.sort(key=lambda d: d.file_count(), reverse=True)
 
         biggest_tree = trees[0]
 
         return biggest_tree
 
+    # todo: adapt for multipart
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
         archive = world.archive
 
+        multiplexer = Multiplexer(photoset.parts)
+
         primary_destination_tree = self.__get_biggest_tree([
-            photoset.justin,
-            photoset.photoclub,
-            photoset.closed
+            multiplexer.justin,
+            multiplexer.photoclub,
+            multiplexer.closed
         ])
 
         primary_destination_name = primary_destination_tree.name
