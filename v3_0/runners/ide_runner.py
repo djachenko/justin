@@ -58,11 +58,14 @@ if __name__ == '__main__':
         "",
         "web_sync",
         "delay",
-        f"move {Locations.C}/photos/photoclub"
+        f"move " + " ".join([f"{Locations.C}/photos/{f}" for f in [
+            "1",
+            "2",
+        ]])
     ]
 
     with cd(Path(str(current_location.value))):
         general_runner.run(
             Path(__file__).parent.parent.parent,
-            commands[2].split()
+            commands[9].split()
         )
