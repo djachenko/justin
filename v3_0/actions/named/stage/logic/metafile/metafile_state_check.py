@@ -1,6 +1,8 @@
 from typing import List
 
 from v3_0.actions.named.stage.logic.base.check import Check
+from v3_0.shared.helpers import util
+from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.metafiles.photoset_metafile import PhotosetMetafile
 from v3_0.shared.metafiles.post_metafile import PostStatus, PostMetafile
 from v3_0.shared.models.photoset import Photoset
@@ -30,7 +32,11 @@ class MetafileStateCheck(Check):
     def __photoset_has_folders_not_in_metafile(photoset: Photoset, post_metafiles: List[PostMetafile]) -> bool:
         posted_paths = {post_metafile.path for post_metafile in post_metafiles}
 
-        relative_paths = [subtree.path.relative_to(photoset.path) for subtree in photoset.justin.subtrees]
+        subtrees_parts = util.flatten(
+            [PartingHelper.folder_tree_parts(subtree) for subtree in photoset.justin.subtrees]
+        )
+
+        relative_paths = [part.path.relative_to(photoset.path) for part in subtrees_parts]
 
         return any(path not in posted_paths for path in relative_paths)
 

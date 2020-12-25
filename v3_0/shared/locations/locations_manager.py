@@ -51,7 +51,13 @@ class LocationsManager(Singleton):
         all_locations = self.get_locations()
 
         for location in all_locations:
-            if location in path.parents or path in location.parents:
+            checks = [
+                location in path.parents,
+                location == path,
+                path in location.parents,
+            ]
+
+            if any(checks):
                 return location
 
         return None

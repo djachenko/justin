@@ -1,49 +1,71 @@
+from enum import Enum
 from pathlib import Path
 
 from v3_0.runners import general_runner
+from v3_0.shared.helpers.cd import cd
+
+
+class Commands(str, Enum):
+    DEVELOP = "develop"
+    OURATE = "ourate"
+    READY = "ready"
+    PUBLISH = "publish"
+    ARCHIVE = "archive"
+    MOVE = "move"
+    MAKE_GIF = "make_gif"
+    SPLIT = "split"
+    FIX_METAFILE = "fix_metafile"
+    RESIZE_GIF_SOURCES = "resize_gif_sources"
+
+
+class Locations(str, Enum):
+    C = "C:/Users/justin/"
+    D = "D:/"
+    E = "E:/"
+    H = "H:/"
+    PESTILENCE = "/Volumes/pestilence/"
+    MICHAEL = "/Volumes/michael/"
+    MAC_OS_HOME = "/Users/justin"
+
+
+class Stage(str, Enum):
+    GIF = "stage0.gif"
+    DEVELOP = "stage2.develop"
+    OURATE = "stage2.ourate"
+    READY = "stage3.ready"
+    SCHEDULED = "stage3.schedule"
+    PUBLISHED = "stage4.published"
+
 
 if __name__ == '__main__':
-    stage_commands = [
-        "develop",             # 0
-        "ourate",              # 1
-        "ready",               # 2
-        "publish",             # 3
-        "archive",             # 4
-        "move",                # 5
-        "make_gif",            # 6
-        "split",               # 7
-        "fix_metafile",        # 8
-        "resize_gif_sources",  # 9
-    ]
+    def build_command(command: Commands, location: Locations, stage: Stage, name: str):
+        return f"{command} {location}photos/stages/{stage}/{name}"
 
-    locations = [
-        "D:/",                   # 0
-        "H:/",                   # 1
-        "/Volumes/pestilence/",  # 2
-    ]
-
-    stages = [
-        "stage0.gif",        # 0
-        "stage2.develop",    # 1
-        "stage2.ourate",     # 2
-        "stage3.ready",      # 3
-        "stage4.published",  # 4
-    ]
-
-
-    def build_command(command, location, stage, name):
-        return f"{stage_commands[command]} {locations[location]}photos/stages/{stages[stage]}/{name}"
-
+    current_location = Locations.C
 
     commands = [
-        build_command(9, 1, 0, "20*"),
-        "upload -s 1",
+        build_command(
+            command=Commands.OURATE,
+            location=current_location,
+            stage=Stage.OURATE,
+            name="17.07*"
+        ),
+        "upload",
         "local_sync",
         "rearrange -s 1",
-        "delay"
+        "rearrange",
+        "delay",
+        "",
+        "web_sync",
+        "delay",
+        f"move " + " ".join([f"{Locations.C}/photos/{f}" for f in [
+            "1",
+            "2",
+        ]])
     ]
 
-    general_runner.run(
-        Path(__file__).parent.parent.parent,
-        commands[0].split()
-    )
+    with cd(Path(str(current_location.value))):
+        general_runner.run(
+            Path(__file__).parent.parent.parent,
+            commands[9].split()
+        )

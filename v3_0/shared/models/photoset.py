@@ -1,3 +1,4 @@
+from abc import abstractmethod, ABC
 from pathlib import Path
 from typing import List, Optional
 
@@ -5,13 +6,30 @@ from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.folder_tree import FolderTree
 from v3_0.shared.filesystem.movable import Movable
 from v3_0.shared.helpers import util
+from v3_0.shared.helpers.multiplexer import Multiplexable
 from v3_0.shared.helpers.parting_helper import PartingHelper
 from v3_0.shared.metafiles.photoset_metafile import PhotosetMetafile
 from v3_0.shared.models.source.source import Source
 from v3_0.shared.models.source.sources_parser import SourcesParser
 
 
-class Photoset(Movable):
+class Metafiled(ABC):
+    @property
+    @abstractmethod
+    def metafile_path(self) -> Path:
+        pass
+
+    def has_metafile(self) -> bool:
+        return self.metafile_path.exists()
+
+    def get_metafile(self) -> PhotosetMetafile:
+        return PhotosetMetafile.read(self.metafile_path)
+
+    def save_metafile(self, metafile: PhotosetMetafile):
+        metafile.write(self.metafile_path)
+
+
+class Photoset(Movable, Multiplexable, Metafiled):
     __GIF = "gif"
     __CLOSED = "closed"
     __JUSTIN = "justin"
@@ -30,17 +48,8 @@ class Photoset(Movable):
         return self.__tree
 
     @property
-    def __metafile_path(self) -> Path:
+    def metafile_path(self) -> Path:
         return self.tree.path / Photoset.__METAFILE
-
-    def has_metafile(self) -> bool:
-        return self.__metafile_path.exists()
-
-    def get_metafile(self) -> PhotosetMetafile:
-        return PhotosetMetafile.read(self.__metafile_path)
-
-    def save_metafile(self, metafile: PhotosetMetafile):
-        metafile.write(self.__metafile_path)
 
     @property
     def path(self) -> Path:

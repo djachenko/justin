@@ -13,6 +13,8 @@ class GifMaker:
     __MAX_DESIRED_SIZE = 200 * __MB
     __MIN_DESIRED_SIZE = 195 * __MB
 
+    # https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
+
     @staticmethod
     def __thumbnail(path: Path, size: int) -> Image:
         frame = Image.open(path)
@@ -26,7 +28,7 @@ class GifMaker:
 
         frames: List[Image] = []
 
-        for frame_path in sources.iterdir():
+        for frame_path in sorted(sources.iterdir(), key=lambda x: x.stem):
             if frame_path.suffix != ".jpg":
                 continue
 
@@ -100,8 +102,10 @@ class GifMaker:
 
             return
 
+        max_available_size = min(GifMaker.__START_MAX_SIZE, GifMaker.__long_side(sources_path))
+
         min_size = GifMaker.__START_MIN_SIZE
-        max_size = min(GifMaker.__START_MAX_SIZE, GifMaker.__long_side(sources_path))
+        max_size = max_available_size
 
         while True:
             iteration_size = round((min_size + max_size) / 2)
@@ -115,7 +119,7 @@ class GifMaker:
             gif_size_in_mb = round(gif_size / GifMaker.__MB, 2)
 
             if GifMaker.__MIN_DESIRED_SIZE < gif_size < GifMaker.__MAX_DESIRED_SIZE or \
-                    iteration_size == GifMaker.__START_MAX_SIZE:
+                    iteration_size == max_available_size:
                 print(f"successful\nFinal result lies at {gif_path.name}")
                 print(f"Scale rate: {GifMaker.__long_side(sources_path) / iteration_size:.2f}")
 

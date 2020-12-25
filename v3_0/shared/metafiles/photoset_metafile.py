@@ -16,7 +16,7 @@ class PhotosetMetafile(Metafile):
 
     def to_dict(self) -> dict:
         return {
-            "posts": self.posts.to_dict()
+            PhotosetMetafile.__POSTS_KEY: self.posts.to_dict()
         }
 
     @classmethod
