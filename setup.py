@@ -16,7 +16,7 @@ setup(
     description='',
     entry_points={
         "console_scripts": [
-            "justin = v3_0.runners.console_runner:run",
+            "justin = justin.runners.console_runner:run",
             "parts = parts.parts:run",
             "sf = subfolder.subfolder:run",
         ]
