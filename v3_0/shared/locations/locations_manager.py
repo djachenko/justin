@@ -3,7 +3,8 @@ import platform
 from pathlib import Path
 from typing import List, Optional
 
-from v3_0.shared.helpers.singleton import Singleton
+from justin_utils.singleton import Singleton
+
 from v3_0.shared.locations.locations import Locations, MacOSLocations, WindowsLocations
 
 

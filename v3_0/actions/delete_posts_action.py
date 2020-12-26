@@ -1,7 +1,7 @@
 from argparse import Namespace
 
+from justin_utils import util
 from pyvko.models.group import Group
-from v3_0.shared.helpers import util
 
 from v3_0.actions.action import Action
 from v3_0.shared.models.world import World
