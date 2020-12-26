@@ -5,13 +5,12 @@ from functools import partial
 from pathlib import Path
 from typing import List, Callable
 
-from v3_0.shared.helpers.data_size import DataSize
-from v3_0.shared.helpers.time_formatter import format_time
-from v3_0.shared.helpers.transfer_speed_meter import TransferSpeedMeter
-from v3_0.shared.helpers.transfer_time_estimator import TransferTimeEstimator
-
-
 # region helpers
+from justin_utils.data import DataSize
+from justin_utils.transfer import TransferSpeedMeter, TransferTimeEstimator
+
+from v3_0.shared.helpers.time_formatter import format_time
+
 
 def __subfolders(path: Path) -> List[Path]:
     if path.exists():

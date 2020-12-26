@@ -1,9 +1,10 @@
 from pathlib import Path
 from typing import List, Optional, Dict
 
+from justin_utils.multiplexer import Multiplexable
+
 from v3_0.shared.filesystem.file import File
 from v3_0.shared.filesystem.path_based import PathBased
-from v3_0.shared.helpers.multiplexer import Multiplexable
 
 
 class FolderTree(PathBased, Multiplexable):

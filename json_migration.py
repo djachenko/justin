@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict
 
-from v3_0.shared.helpers.singleton import Singleton
+from justin_utils.singleton import Singleton
 
 Version = int
 JsonObject = Dict
