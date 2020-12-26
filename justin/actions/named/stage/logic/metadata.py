@@ -2,7 +2,8 @@ from typing import List
 
 from justin_utils import joins
 
-from justin.actions.named.stage.logic.base.selector import Selector
+from justin.actions.named.stage.logic.base import Check
+from justin.actions.named.stage.logic.base import Selector
 from justin.shared.models.photoset import Photoset
 
 
@@ -24,3 +25,11 @@ class MetadataSelector(Selector):
         outdated_jpegs_names = [jpeg_name for jpeg_name, _ in outdated]
 
         return outdated_jpegs_names
+
+
+class MetadataCheck(Check):
+    def __init__(self, selector: Selector) -> None:
+        super().__init__(
+            name="metadata check",
+            selector=selector,
+        )

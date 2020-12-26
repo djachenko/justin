@@ -1,12 +1,25 @@
-from typing import List
+from abc import abstractmethod
+from typing import Optional, List
 
-from justin.actions.named.stage.logic.base.abstract_check import AbstractCheck
-from justin.actions.named.stage.logic.base.selector import Selector
+from justin_utils import util
+
 from justin.actions.named.stage.logic.exceptions.extractor_error import ExtractorError
 from justin.shared.filesystem.path_based import PathBased
 from justin.shared.filesystem.relative_fileset import RelativeFileset
 from justin.shared.helpers import photoset_utils
 from justin.shared.models.photoset import Photoset
+
+
+class AbstractCheck:
+    @abstractmethod
+    def is_good(self, photoset: Photoset) -> bool:
+        pass
+
+
+class Selector:
+    @abstractmethod
+    def select(self, photoset: Photoset) -> List[str]:
+        pass
 
 
 class Extractor:
@@ -71,3 +84,51 @@ class Extractor:
             filtered_set.move_up()
 
         photoset.tree.refresh()
+
+
+class Check(AbstractCheck):
+    def __init__(self, name: str, selector: Optional[Selector] = None, hook: Optional[Extractor] = None,
+                 message: str = "") -> None:
+        super().__init__()
+
+        self.__selector = selector
+        self.__hook = hook
+        self.__name = name
+        self.__message = message
+
+    @property
+    def hookable(self) -> bool:
+        return self.__hook is not None
+
+    @property
+    def message(self) -> str:
+        return self.__message
+
+    def __check_part(self, photoset: Photoset) -> bool:
+        return len(self.__selector.select(photoset)) == 0
+
+    def is_good(self, photoset: Photoset) -> bool:
+        result = all(self.__check_part(part) for part in photoset.parts)
+
+        return result
+
+    def ask_for_extract(self):
+        if self.__hook is None:
+            return False
+
+        return util.ask_for_permission(self.__message)
+
+    def extract(self, photoset: Photoset):
+        if self.hookable:
+            self.__hook.forward(photoset)
+
+    def rollback(self, photoset: Photoset):
+        if self.hookable:
+            self.__hook.backwards(photoset)
+
+    @property
+    def name(self):
+        return self.__name
+
+    def __repr__(self) -> str:
+        return self.name.capitalize()

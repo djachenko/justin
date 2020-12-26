@@ -1,11 +1,11 @@
 from functools import lru_cache
 
-from justin.actions.named.stage.logic.base.check import Check
+from justin.actions.named.stage.logic.base import Check
 from justin.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
 from justin.actions.named.stage.logic.factories.selector_factory import SelectorFactory
-from justin.actions.named.stage.logic.gif_sources.gif_sources_check import GifSourcesCheck
-from justin.actions.named.stage.logic.metadata.metadata_check import MetadataCheck
-from justin.actions.named.stage.logic.metafile.metafile_state_check import MetafileStateCheck
+from justin.actions.named.stage.logic.gif_sources import GifSourcesCheck
+from justin.actions.named.stage.logic.metadata import MetadataCheck
+from justin.actions.named.stage.logic.metafile_state import MetafileStateCheck
 
 
 class ChecksFactory:

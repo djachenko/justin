@@ -2,7 +2,7 @@ from typing import List
 
 from justin_utils import util
 
-from justin.actions.named.stage.logic.base.check import Check
+from justin.actions.named.stage.logic.base import Check
 from justin.shared.helpers.parting_helper import PartingHelper
 from justin.shared.metafiles.photoset_metafile import PhotosetMetafile
 from justin.shared.metafiles.post_metafile import PostStatus, PostMetafile
