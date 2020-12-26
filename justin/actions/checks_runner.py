@@ -3,7 +3,7 @@ from typing import Iterable
 from justin_utils.singleton import Singleton
 
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
-from justin.actions.named.stage.logic.base.check import Check
+from justin.actions.named.stage.logic.base import Check
 from justin.shared.models.photoset import Photoset
 
 

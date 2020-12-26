@@ -3,8 +3,8 @@ from typing import List, Iterable
 
 from justin.actions.checks_runner import ChecksRunner
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
-from justin.actions.named.stage.logic.base.check import Check
-from justin.actions.named.stage.logic.base.extractor import Extractor
+from justin.actions.named.stage.logic.base import Check
+from justin.actions.named.stage.logic.base import Extractor
 from justin.shared.models.photoset import Photoset
 
 

@@ -1,14 +1,14 @@
 from functools import lru_cache
 
-from justin.actions.named.stage.logic.base.selector import Selector
-from justin.actions.named.stage.logic.edited.edited_selector import EditedSelector
+from justin.actions.named.stage.logic.base import Selector
+from justin.actions.named.stage.logic.edited import EditedSelector
 from justin.actions.named.stage.logic.everything_is_published_selector import EverythingIsPublishedSelector
-from justin.actions.named.stage.logic.gif_sources.gif_sources_selector import GifSourcesSelector
-from justin.actions.named.stage.logic.metadata.metadata_selector import MetadataSelector
-from justin.actions.named.stage.logic.missing_gifs.missing_gifs_selector import MissingGifsSelector
-from justin.actions.named.stage.logic.odd_selection.odd_selection_selector import OddSelectionSelector
-from justin.actions.named.stage.logic.structure.structure_selector import StructureSelector
-from justin.actions.named.stage.logic.unselected.unselected_selector import UnselectedSelector
+from justin.actions.named.stage.logic.gif_sources import GifSourcesSelector
+from justin.actions.named.stage.logic.metadata import MetadataSelector
+from justin.actions.named.stage.logic.missing_gifs import MissingGifsSelector
+from justin.actions.named.stage.logic.odd_selection import OddSelectionSelector
+from justin.actions.named.stage.logic.structure import StructureSelector
+from justin.actions.named.stage.logic.unselected import UnselectedSelector
 from justin.shared.new_structure import Structure
 
 

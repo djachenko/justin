@@ -1,6 +1,6 @@
 from typing import List
 
-from justin.actions.named.stage.logic.base.selector import Selector
+from justin.actions.named.stage.logic.base import Selector
 from justin.shared.models.photoset import Photoset
 
 

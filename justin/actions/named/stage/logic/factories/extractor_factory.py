@@ -1,11 +1,11 @@
 from functools import lru_cache
 
-from justin.actions.named.stage.logic.base.extractor import Extractor
+from justin.actions.named.stage.logic.base import Extractor
 from justin.actions.named.stage.logic.factories.selector_factory import SelectorFactory
-from justin.actions.named.stage.logic.metadata.metadata_check import MetadataCheck
-from justin.actions.named.stage.logic.missing_gifs.missing_gifs_handler import MissingGifsHandler
-from justin.actions.named.stage.logic.progress.progress_extractor import ProgressExtractor
-from justin.actions.named.stage.logic.structure.structure_extractor import StructureExtractor
+from justin.actions.named.stage.logic.metadata import MetadataCheck
+from justin.actions.named.stage.logic.missing_gifs import MissingGifsHandler
+from justin.actions.named.stage.logic.progress import ProgressExtractor
+from justin.actions.named.stage.logic.structure import StructureExtractor
 
 
 class ExtractorFactory:
