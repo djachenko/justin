@@ -1,7 +1,7 @@
 from typing import Optional
 
 from justin.actions.named.archive.tree_based import TreeBased
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree
 from justin.shared.new_structure import Structure
 
 

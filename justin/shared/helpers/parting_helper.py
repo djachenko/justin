@@ -1,6 +1,6 @@
 from typing import List
 
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree
 
 
 class PartingHelper:

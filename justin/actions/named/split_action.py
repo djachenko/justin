@@ -5,9 +5,8 @@ from justin_utils import util
 from pyvko.models.group import Group
 
 from justin.actions.named.named_action import NamedAction
-from justin.shared.filesystem.file import File
-from justin.shared.filesystem.folder_tree import FolderTree
-from justin.shared.filesystem.relative_fileset import RelativeFileset
+from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import RelativeFileset, File
 from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.photoset_utils import JpegType
 from justin.shared.models.photoset import Photoset

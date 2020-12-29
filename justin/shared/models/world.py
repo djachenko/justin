@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 
 from justin.actions.named.archive.archive import Archive
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree
 from justin.shared.locations.locations_manager import LocationsManager
 from justin.shared.new_structure import Structure
 

@@ -1,11 +1,9 @@
 from pathlib import Path
 from typing import List
 
-from justin.actions.named.stage.logic.base import Extractor
-from justin.actions.named.stage.logic.base import Selector
-from justin.shared.filesystem.folder_tree import FolderTree
-from justin.shared.filesystem.path_based import PathBased
-from justin.shared.filesystem.paths_parser import PathsParser
+from justin.actions.named.stage.logic.base import Extractor, Selector
+from justin.shared import filesystem
+from justin.shared.filesystem import FolderTree, PathBased
 from justin.shared.helpers.parting_helper import PartingHelper
 from justin.shared.models.photoset import Photoset
 from justin.shared.new_structure import Structure
@@ -62,4 +60,4 @@ class StructureExtractor(Extractor):
 
         absolute_paths = [photoset.path / path for path in relative_paths]
 
-        return PathsParser.parse(absolute_paths)
+        return filesystem.parse_paths(absolute_paths)

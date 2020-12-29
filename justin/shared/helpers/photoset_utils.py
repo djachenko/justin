@@ -4,7 +4,7 @@ from typing import Iterable, Tuple, Any, List
 from justin_utils import util, joins
 
 from justin.actions.named.stage.exceptions.no_files_for_name_error import NoFilesForNameError
-from justin.shared.filesystem.path_based import PathBased
+from justin.shared.filesystem import PathBased
 from justin.shared.models.photoset import Photoset
 
 

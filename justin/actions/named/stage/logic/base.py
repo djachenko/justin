@@ -4,8 +4,7 @@ from typing import Optional, List
 from justin_utils import util
 
 from justin.actions.named.stage.logic.exceptions.extractor_error import ExtractorError
-from justin.shared.filesystem.path_based import PathBased
-from justin.shared.filesystem.relative_fileset import RelativeFileset
+from justin.shared.filesystem import PathBased, RelativeFileset
 from justin.shared.helpers import photoset_utils
 from justin.shared.models.photoset import Photoset
 
