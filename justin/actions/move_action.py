@@ -8,7 +8,7 @@ from justin.actions.action import Action
 from justin.actions.checks_runner import ChecksRunner
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.base import Check
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree
 
 from justin.shared.models.photoset import Photoset
 from justin.shared.models.world import World

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree
 
 
 class TreeBased:

@@ -5,13 +5,11 @@ from typing import List, Optional
 from justin_utils import util
 from justin_utils.multiplexer import Multiplexable
 
-from justin.shared.filesystem.file import File
-from justin.shared.filesystem.folder_tree import FolderTree
-from justin.shared.filesystem.movable import Movable
+from justin.shared.filesystem import FolderTree, File, Movable
 from justin.shared.helpers.parting_helper import PartingHelper
 from justin.shared.metafiles.photoset_metafile import PhotosetMetafile
-from justin.shared.models.source.source import Source
-from justin.shared.models.source.sources_parser import SourcesParser
+from justin.shared.models import sources
+from justin.shared.models.sources import Source
 
 
 class Metafiled(ABC):
@@ -83,9 +81,9 @@ class Photoset(Movable, Multiplexable, Metafiled):
 
     @property
     def sources(self) -> List[Source]:
-        sources = SourcesParser.from_file_sequence(self.tree.files)
+        sources_ = sources.parse_sources(self.tree.files)
 
-        return sources
+        return sources_
 
     def __subtree_files(self, key: str) -> Optional[List[File]]:
         subtree = self.tree[key]

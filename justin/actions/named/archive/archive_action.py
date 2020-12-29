@@ -5,7 +5,7 @@ from justin_utils.multiplexer import Multiplexer
 from pyvko.models.group import Group
 
 from justin.actions.named.named_action import NamedAction
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree
 
 from justin.shared.models.photoset import Photoset
 from justin.shared.models.world import World

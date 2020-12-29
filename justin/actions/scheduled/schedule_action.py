@@ -12,8 +12,7 @@ from pyvko.models.post import Post
 
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.scheduled.scheduled_action import ScheduledAction
-from justin.shared.filesystem.file import File
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree, File
 from justin.shared.helpers.parting_helper import PartingHelper
 from justin.shared.metafiles.post_metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset, Metafiled

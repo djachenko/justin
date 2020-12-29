@@ -3,7 +3,7 @@ from argparse import Namespace
 from pyvko.models.group import Group
 
 from justin.actions.named.named_action import NamedAction
-from justin.shared.filesystem import fs
+from justin.shared import filesystem
 from justin.shared.helpers.parting_helper import PartingHelper
 from justin.shared.metafiles.post_metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
@@ -53,7 +53,7 @@ class FixMetafileAction(NamedAction):
                     if answer != "":
                         break
 
-                    fs.open_file_manager(part.path)
+                    filesystem.open_file_manager(part.path)
 
                 if answer == "-":
                     break

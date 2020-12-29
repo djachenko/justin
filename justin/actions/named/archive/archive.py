@@ -4,7 +4,7 @@ from justin_utils import util
 
 from justin.actions.named.archive.destination import Destination
 from justin.actions.named.archive.tree_based import TreeBased
-from justin.shared.filesystem.folder_tree import FolderTree
+from justin.shared.filesystem import FolderTree
 
 from justin.shared.new_structure import Structure
 
