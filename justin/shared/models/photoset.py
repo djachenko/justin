@@ -109,10 +109,6 @@ class Photoset(Movable, Multiplexable, Metafiled):
         return result
 
     @property
-    def selection_folder_name(self) -> str:
-        return Photoset.__SELECTION
-
-    @property
     def justin(self) -> Optional[FolderTree]:
         return self.tree[Photoset.__JUSTIN]
 
@@ -150,10 +146,6 @@ class Photoset(Movable, Multiplexable, Metafiled):
             jpegs += self.selection
 
         return jpegs
-
-    @property
-    def all_jpegs(self) -> List[File]:
-        return self.big_jpegs + self.gif.flatten()
 
     def move(self, path: Path):
         self.tree.move(path)
