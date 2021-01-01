@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Union
 
-from justin.shared.new_structure import Structure
+from justin.shared.structure import Structure
 
 
 class Config:

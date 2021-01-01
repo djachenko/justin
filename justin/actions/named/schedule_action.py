@@ -4,19 +4,18 @@ from argparse import Namespace
 from datetime import time, date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Dict, Iterable
+from typing import List, Dict, Iterable, Optional
 
 from pyvko.attachment.attachment import Attachment
 from pyvko.models.group import Group
 from pyvko.models.post import Post
 
+from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
-from justin.actions.scheduled.scheduled_action import ScheduledAction
 from justin.shared.filesystem import FolderTree, File
 from justin.shared.helpers.parting_helper import PartingHelper
-from justin.shared.metafiles.post_metafile import PostMetafile, PostStatus
+from justin.shared.metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset, Metafiled
-from justin.shared.models.world import World
 
 
 # class PostConfig
@@ -69,8 +68,9 @@ class PostTemplate(Metafiled):
         return self.__config["grid"]
 
 
-class ScheduleAction(ScheduledAction):
+class ScheduleAction(NamedAction):
     __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
+    __SCHEDULED_POSTS = "scheduled_posts"
 
     @staticmethod
     def __date_generator(start_date: date):
@@ -90,34 +90,31 @@ class ScheduleAction(ScheduledAction):
             yield post_datetime
 
     @staticmethod
-    def __get_not_uploaded_hierarchy(photosets: List[Photoset], group_url: str) \
-            -> Dict[Photoset, Dict[str, List[PostTemplate]]]:
+    def __get_not_uploaded_hierarchy(part: Photoset, group_url: str) -> Dict[Photoset, Dict[str, List[PostTemplate]]]:
         upload_hierarchy = {}
 
-        for metaset in photosets:
-            for photoset in metaset.parts:
-                justin_folder = photoset.justin
+        justin_folder = part.justin
 
-                photoset_metafile = photoset.get_metafile()
+        photoset_metafile = part.get_metafile()
 
-                posted_paths = [post.path for post in photoset_metafile.posts[group_url]]
+        posted_paths = [post.path for post in photoset_metafile.posts[group_url]]
 
-                hashtags_to_upload = ScheduleAction.not_uploaded_hashtags(justin_folder, photoset.path, posted_paths)
+        hashtags_to_upload = ScheduleAction.__not_uploaded_hashtags(justin_folder, part.path, posted_paths)
 
-                if len(hashtags_to_upload) > 0:
-                    upload_hierarchy[photoset] = hashtags_to_upload
+        if len(hashtags_to_upload) > 0:
+            upload_hierarchy[part] = hashtags_to_upload
 
         return upload_hierarchy
 
     @staticmethod
-    def not_uploaded_hashtags(justin_folder: FolderTree, root_path: Path, posted_paths: List[Path]) \
+    def __not_uploaded_hashtags(justin_folder: FolderTree, root_path: Path, posted_paths: List[Path]) \
             -> Dict[str, List[PostTemplate]]:
         hashtags_to_upload = {}
 
         for hashtag in justin_folder.subtrees:
             parts = PartingHelper.folder_tree_parts(hashtag)
 
-            parts_to_upload = ScheduleAction.not_uploaded_parts(parts, root_path, posted_paths)
+            parts_to_upload = ScheduleAction.__not_uploaded_parts(parts, root_path, posted_paths)
 
             if len(parts_to_upload) > 0:
                 hashtags_to_upload[hashtag.name] = parts_to_upload
@@ -125,7 +122,7 @@ class ScheduleAction(ScheduledAction):
         return hashtags_to_upload
 
     @staticmethod
-    def not_uploaded_parts(parts: Iterable[FolderTree], root_path: Path, posted_paths: List[Path]) \
+    def __not_uploaded_parts(parts: Iterable[FolderTree], root_path: Path, posted_paths: List[Path]) \
             -> List[PostTemplate]:
         parts_to_upload = []
 
@@ -139,19 +136,22 @@ class ScheduleAction(ScheduledAction):
 
         return parts_to_upload
 
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
-        stage_tree = self.tree_with_sets(world)
+    def get_extra(self, context: Context) -> Optional[Extra]:
+        return {
+            ScheduleAction.__SCHEDULED_POSTS: context.group.get_scheduled_posts()
+        }
 
-        photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
+    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Optional[Extra]) -> None:
 
-        scheduled_posts = group.get_scheduled_posts()
+        scheduled_posts = extra[ScheduleAction.__SCHEDULED_POSTS]
+        group = context.group
 
         last_date = ScheduleAction.__get_start_date(scheduled_posts)
         date_generator = ScheduleAction.__date_generator(last_date)
 
         print("Performing scheduling... ", end="")
 
-        upload_hierarchy = ScheduleAction.__get_not_uploaded_hierarchy(photosets, group.url)
+        upload_hierarchy = ScheduleAction.__get_not_uploaded_hierarchy(part, group.url)
 
         if len(upload_hierarchy) > 0:
             print()
@@ -160,25 +160,26 @@ class ScheduleAction(ScheduledAction):
 
             return
 
-        for photoset, hashtags in upload_hierarchy.items():
-            print(f"Uploading photoset {photoset.name}")
+        # todo: replace nested loops with one
+        for part, hashtags in upload_hierarchy.items():
+            print(f"Uploading photoset {part.name}")
 
-            photoset_metafile = photoset.get_metafile()
+            photoset_metafile = part.get_metafile()
 
             for hashtag, parts in hashtags.items():
                 print(f"Uploading #{hashtag}")
 
                 for post_template in parts:
-                    part_path = post_template.path.relative_to(photoset.path)
+                    part_path = post_template.path.relative_to(part.path)
 
                     print(f"Uploading contents of {part_path}... ", end="", flush=True)
 
                     photo_files = post_template.files
 
                     if hashtag != "report":
-                        attachments = self.get_simple_attachments(group, photo_files)
+                        attachments = self.__get_simple_attachments(group, photo_files)
                     else:
-                        attachments = self.get_report_attachments(group, photoset.name, post_template)
+                        attachments = self.__get_report_attachments(group, part.name, post_template)
 
                     post_datetime = next(date_generator)
 
@@ -197,18 +198,18 @@ class ScheduleAction(ScheduledAction):
                     )
 
                     photoset_metafile.posts[group.url].append(post_metafile)
-                    photoset.save_metafile(photoset_metafile)
+                    part.save_metafile(photoset_metafile)
 
                     print(f"successful, new post has id {post_id}")
 
     # noinspection PyMethodMayBeStatic
-    def get_simple_attachments(self, group, photo_files) -> List[Attachment]:
+    def __get_simple_attachments(self, group, photo_files) -> List[Attachment]:
         vk_photos = [group.upload_photo_to_wall(file.path) for file in photo_files]
 
         return vk_photos
 
     # noinspection PyMethodMayBeStatic
-    def get_report_attachments(self, group: Group, set_name: str, folder: PostTemplate) -> List[Attachment]:
+    def __get_report_attachments(self, group: Group, set_name: str, folder: PostTemplate) -> List[Attachment]:
         album = group.create_album(set_name)
 
         cover = folder.cover

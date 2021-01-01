@@ -6,7 +6,7 @@ from justin.shared import filesystem
 from justin.shared.filesystem import FolderTree, PathBased
 from justin.shared.helpers.parting_helper import PartingHelper
 from justin.shared.models.photoset import Photoset
-from justin.shared.new_structure import Structure
+from justin.shared.structure import Structure
 
 
 class StructureSelector(Selector):

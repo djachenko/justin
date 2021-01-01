@@ -1,4 +1,4 @@
-from justin.shared.exceptions.justin_error import JustinError
+from justin.shared.errors import JustinError
 
 
 class ExtractorError(JustinError):

@@ -1,80 +1,85 @@
 from argparse import Namespace
+from typing import Optional, List
 
-from pyvko.models.group import Group
+from pyvko.models.post import Post
 
-from justin.actions.named.named_action import NamedAction
+from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared import filesystem
 from justin.shared.helpers.parting_helper import PartingHelper
-from justin.shared.metafiles.post_metafile import PostMetafile, PostStatus
+from justin.shared.metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
 
 
 class FixMetafileAction(NamedAction):
-    def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
-        justin_folder = photoset.justin
+    __POSTS_KEY = "posts"
 
-        photoset_metafile = photoset.get_metafile()
+    def get_extra(self, context: Context) -> Optional[Extra]:
+        return {
+            FixMetafileAction.__POSTS_KEY: context.group.get_posts()
+        }
+
+    def perform_for_part(self, part: Photoset, args: Namespace, context: Context,
+                         extra: Optional[Extra]) -> None:
+        group = context.group
+        posts: List[Post] = extra[FixMetafileAction.__POSTS_KEY]
+
+        remote_posts_ids = {post.id for post in posts}
+
+        photoset_metafile = part.get_metafile()
 
         local_post_info = photoset_metafile.posts[group.url]
         posted_paths = [post.path for post in local_post_info]
-        local_post_ids = {post.post_id for post in local_post_info}
+        local_posts_ids = {post.post_id for post in local_post_info}
 
-        parts_to_upload = []
+        print(f"Fixing metafile for {part.name} photoset.")
 
-        print(f"Fixing metafile for {photoset.name} photoset.")
+        justin_folder = part.justin
 
         for hashtag in justin_folder.subtrees:
             parts = PartingHelper.folder_tree_parts(hashtag)
 
-            for part in parts:
-                part_path = part.path.relative_to(photoset.path)
+            for hashtag_part in parts:
+                hashtag_part_path = hashtag_part.path.relative_to(part.path)
 
-                if part_path not in posted_paths:
-                    parts_to_upload.append(part)
+                if hashtag_part_path in posted_paths:
+                    continue
 
-        posts = group.get_posts()
+                while True:  # handling post loop
+                    while True:  # ask loop
+                        answer = input(
+                            f"You have folder \"{hashtag_part_path}\" without corresponding post. What would you like?\n"
+                            f"* Enter a number - bind to existing post\n"
+                            f"* Enter a \"-\" symbol - leave it as is\n"
+                            f"* Just press Enter - open folder\n"
+                            f"> ")
 
-        posts_id_mapping = {post.id: post for post in posts}
+                        answer = answer.strip()
 
-        for part in parts_to_upload:
-            part_path = part.path.relative_to(photoset.path)
+                        if answer != "":
+                            break
 
-            while True:  # handling post loop
-                while True:  # ask loop
-                    answer = input(f"You have folder \"{part_path}\" without corresponding post. What would you like?\n"
-                                   f"* Enter a number - bind to existing post\n"
-                                   f"* Enter a \"-\" symbol - leave it as is\n"
-                                   f"* Just press Enter - open folder\n"
-                                   f"> ")
+                        filesystem.open_file_manager(hashtag_part.path)
 
-                    answer = answer.strip()
-
-                    if answer != "":
+                    if answer == "-":
                         break
 
-                    filesystem.open_file_manager(part.path)
+                    if answer.isdecimal():
+                        post_id = int(answer)
 
-                if answer == "-":
-                    break
+                        if post_id in local_posts_ids:
+                            print("This post is already associated with other path")
 
-                elif answer.isdecimal():
-                    post_id = int(answer)
+                            continue
 
-                    if post_id in local_post_ids:
-                        print("This post is already associated with other path")
+                        if post_id not in remote_posts_ids:
+                            print("There is no such post")
 
-                        continue
+                            continue
 
-                    if post_id not in posts_id_mapping:
-                        print("There is no such post")
+                        post_metafile = PostMetafile(hashtag_part_path, post_id, PostStatus.PUBLISHED)
 
-                        continue
+                        local_post_info.append(post_metafile)
+                        photoset_metafile.posts[group.url] = local_post_info
+                        part.save_metafile(photoset_metafile)
 
-                    post_metafile = PostMetafile(part_path, post_id, PostStatus.PUBLISHED)
-
-                    local_post_info.append(post_metafile)
-                    photoset_metafile.posts[group.url] = local_post_info
-                    photoset.save_metafile(photoset_metafile)
-
-                    break
+                        break

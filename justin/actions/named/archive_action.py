@@ -1,16 +1,14 @@
 from argparse import Namespace
-from typing import List
+from typing import List, Optional
 
 from justin_utils.multiplexer import Multiplexer
-from pyvko.models.group import Group
 
-from justin.actions.named.named_action import NamedAction
+from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared.filesystem import FolderTree
-
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
 
 
+# todo: may be reduced to stage
 class ArchiveAction(NamedAction):
     @staticmethod
     def __get_biggest_tree(trees: List[FolderTree]) -> FolderTree:
@@ -23,7 +21,8 @@ class ArchiveAction(NamedAction):
         return biggest_tree
 
     # todo: adapt for multipart
-    def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
+    def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Optional[Extra]) -> None:
+        world = context.world
         archive = world.archive
 
         multiplexer = Multiplexer(photoset.parts)

@@ -4,7 +4,7 @@ from justin.actions.action import Action
 from justin.actions.action_id import ActionId
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
-from justin.actions.named.archive.archive_action import ArchiveAction
+from justin.actions.named.archive_action import ArchiveAction
 from justin.actions.named.fix_metafile_action import FixMetafileAction
 from justin.actions.named.make_gifs_action import MakeGifAction
 from justin.actions.move_action import MoveAction
@@ -15,8 +15,8 @@ from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.actions.named.stage.stage_action import StageAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.scheduled.local_sync_action import LocalSyncAction
-from justin.actions.scheduled.schedule_action import ScheduleAction
-from justin.actions.scheduled.sync_posts_status_action import SyncPostsStatusAction
+from justin.actions.named.schedule_action import ScheduleAction
+from justin.actions.named.web_sync_action import WebSyncAction
 
 
 class ActionFactory:
@@ -29,7 +29,7 @@ class ActionFactory:
         ActionId.REARRANGE: RearrangeAction,
         ActionId.SCHEDULE: ScheduleAction,
         ActionId.STAGE: StageAction,
-        ActionId.SYNC_POSTS_STATUS: SyncPostsStatusAction,
+        ActionId.SYNC_POSTS_STATUS: WebSyncAction,
         ActionId.SPLIT: SplitAction,
         ActionId.FIX_METAFILE: FixMetafileAction,
         ActionId.DELAY: DelayAction,

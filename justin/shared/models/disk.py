@@ -1,6 +1,6 @@
 from typing import Iterable, List
 
-from justin.shared.new_structure import Structure
+from justin.shared.structure import Structure
 from justin.shared.filesystem import FolderTree
 from justin.shared.models.photoset import Photoset
 

@@ -8,12 +8,11 @@ from typing import List, Optional, Dict, Callable
 
 from justin_utils.data import DataSize
 from justin_utils.multiplexer import Multiplexable
+from justin_utils.time_formatter import format_time
+from justin_utils.transfer import TransferSpeedMeter, TransferTimeEstimator
 
 
 # region helpers
-from justin_utils.transfer import TransferSpeedMeter, TransferTimeEstimator
-
-from justin.shared.helpers.time_formatter import format_time
 
 
 def __subfolders(path: Path) -> List[Path]:
@@ -421,6 +420,25 @@ class FolderTree(PathBased, Multiplexable):
         super().move(path)
 
         self.refresh()
+
+
+class TreeBased(PathBased):
+    def __init__(self, tree: FolderTree) -> None:
+        super().__init__(tree.path)
+
+        self.__tree = tree
+
+    @property
+    def tree(self) -> FolderTree:
+        return self.__tree
+
+    @property
+    def name(self) -> str:
+        return self.tree.name
+
+    @property
+    def path(self) -> Path:
+        return self.tree.path
 
 
 def parse_paths(paths: List[Path]) -> List[PathBased]:

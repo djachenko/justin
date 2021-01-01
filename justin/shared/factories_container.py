@@ -4,7 +4,7 @@ from justin.actions.named.stage.logic.factories.extractor_factory import Extract
 from justin.actions.named.stage.logic.factories.selector_factory import SelectorFactory
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.commands.command_factory import CommandFactory
-from justin.shared.configuration.config import Config
+from justin.shared.config import Config
 
 
 class FactoriesContainer:

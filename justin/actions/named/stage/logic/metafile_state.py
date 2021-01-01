@@ -4,8 +4,7 @@ from justin_utils import util
 
 from justin.actions.named.stage.logic.base import Check
 from justin.shared.helpers.parting_helper import PartingHelper
-from justin.shared.metafiles.photoset_metafile import PhotosetMetafile
-from justin.shared.metafiles.post_metafile import PostStatus, PostMetafile
+from justin.shared.metafile import PostMetafile, PhotosetMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
 
@@ -19,7 +18,7 @@ class MetafileStateCheck(Check):
 
     @staticmethod
     def __metafile_has_no_group_entries(photoset_metafile: PhotosetMetafile) -> bool:
-        return photoset_metafile.posts.empty()
+        return len(photoset_metafile.posts) == 0
 
     @staticmethod
     def __group_entry_has_no_post_entries(post_metafiles: List[PostMetafile]) -> bool:

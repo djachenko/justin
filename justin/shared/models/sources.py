@@ -104,7 +104,7 @@ def parse_sources(seq: Iterable[File]) -> List[Source]:
         seq,
         lambda file: file.extension.lower() in ['.nef', ".heic", ],
         lambda file: file.extension.lower() == ".xmp",
-        lambda file: file.extension.lower() in ['.jpg', ".tif", ".dng"]
+        lambda file: file.extension.lower() in ['.jpg', ".tif", ".dng", ]
     ))
 
     join = joins.left(
