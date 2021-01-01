@@ -64,14 +64,6 @@ class Stage:
         except CheckFailedError:
             return False
 
-    def able_to_come_out(self, photoset: Photoset) -> bool:
-        print("Running outcoming checks")
-        return self.__run_checks(photoset, self.__outcoming_checks)
-
-    def able_to_come_in(self, photoset: Photoset) -> bool:
-        print("Running incoming checks")
-        return self.__run_checks(photoset, self.__incoming_checks)
-
     def prepare(self, photoset: Photoset):
         for hook in self.__preparation_hooks:
             hook.forward(photoset)

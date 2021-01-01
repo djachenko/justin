@@ -357,10 +357,6 @@ class FolderTree(PathBased, Multiplexable):
         return self.__files
 
     @property
-    def subtree_names(self) -> List[str]:
-        return list(self.__subtrees.keys())
-
-    @property
     def subtrees(self) -> List['FolderTree']:
         return list(self.__subtrees.values())
 

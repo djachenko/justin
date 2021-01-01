@@ -25,13 +25,6 @@ class Config:
         return self.__internal_dict[key]
 
     @staticmethod
-    def from_json(path: Path) -> 'Config':
-        with path.open() as config_file:
-            config_object = json.load(config_file)
-
-            return Config(config_object)
-
-    @staticmethod
     def from_source(path: Path) -> 'Config':
         run_result = runpy.run_path(str(path))
 
