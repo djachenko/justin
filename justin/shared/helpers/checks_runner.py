@@ -23,4 +23,5 @@ class ChecksRunner(Singleton):
                 if check.ask_for_extract():
                     check.extract(photoset)
 
+                # todo: remove controlling flow with exception
                 raise CheckFailedError(f"Failed {check.name}")

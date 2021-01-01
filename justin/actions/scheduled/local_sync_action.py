@@ -4,14 +4,15 @@ from typing import Iterable, List
 from pyvko.models.group import Group
 
 from justin.actions.action import Action
-from justin.actions.checks_runner import ChecksRunner
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.base import Check
 from justin.actions.scheduled.scheduled_action import ScheduledAction
+from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.shared.models.photoset import Photoset
 from justin.shared.models.world import World
 
 
+# todo: maybe just replace with publish *
 class LocalSyncAction(ScheduledAction):
     def __init__(self, prechecks: List[Check], all_published_action: Action) -> None:
         super().__init__()
@@ -37,10 +38,10 @@ class LocalSyncAction(ScheduledAction):
 
             print()
 
-        input("Press Enter to proceed to publishing.")
-
         if len(paths_of_published_sets) == 0:
             return
+
+        input("Press Enter to proceed to publishing.")
 
         str_paths = [str(path.absolute()) for path in paths_of_published_sets]
 

@@ -1,15 +1,12 @@
 from argparse import Namespace
+from typing import Optional
 
-from pyvko.models.group import Group
-
-from justin.actions.named.named_action import NamedAction
-from justin.shared.helpers.gif_maker import GifMaker
+from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
 
 
 class MakeGifAction(NamedAction):
-    def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
-        maker = GifMaker()
+    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Optional[Extra]) -> None:
+        maker = context.gif_maker
 
-        maker.make_gif(photoset.path / "gif", photoset.name)
+        maker.make_gif(part.path / "gif", part.name)

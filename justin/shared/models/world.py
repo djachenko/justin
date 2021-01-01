@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import List
 
-from justin.actions.named.archive.archive import Archive
 from justin.shared.filesystem import FolderTree
 from justin.shared.locations.locations_manager import LocationsManager
-from justin.shared.new_structure import Structure
+from justin.shared.models.archive.archive import Archive
+from justin.shared.structure import Structure
 
 
 # todo: class is currently unused, review

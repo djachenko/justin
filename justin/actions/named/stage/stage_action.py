@@ -1,14 +1,12 @@
 from argparse import Namespace
+from typing import Optional
 
-from pyvko.models.group import Group
-
-from justin.actions.checks_runner import ChecksRunner
-from justin.actions.named.named_action import NamedAction
+from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.exceptions.extractor_error import ExtractorError
 from justin.actions.named.stage.models.stages_factory import StagesFactory
+from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
 
 
 class StageAction(NamedAction):
@@ -18,7 +16,8 @@ class StageAction(NamedAction):
 
         self.__stages_factory = factory
 
-    def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
+    def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Optional[Extra])\
+            -> None:
         # check if able to exit
         # cleanup
         # check if able to enter

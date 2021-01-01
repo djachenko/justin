@@ -9,7 +9,7 @@ from justin.actions.named.stage.logic.missing_gifs import MissingGifsSelector
 from justin.actions.named.stage.logic.odd_selection import OddSelectionSelector
 from justin.actions.named.stage.logic.structure import StructureSelector
 from justin.actions.named.stage.logic.unselected import UnselectedSelector
-from justin.shared.new_structure import Structure
+from justin.shared.structure import Structure
 
 
 class SelectorFactory:

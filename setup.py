@@ -8,6 +8,7 @@ setup(
         'pyvko',
         'Pillow',
         'lazy-object-proxy',
+        'justin_utils',
     ],
     url='',
     license='MIT',
@@ -16,9 +17,7 @@ setup(
     description='',
     entry_points={
         "console_scripts": [
-            "justin = justin.runners.console_runner:run",
-            "parts = parts.parts:run",
-            "sf = subfolder.subfolder:run",
+            "justin = justin.runner:console_run",
         ]
     }
 )

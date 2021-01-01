@@ -2,20 +2,19 @@ from argparse import Namespace
 from typing import List, Optional, Dict
 
 from justin_utils import util
-from pyvko.models.group import Group
 
-from justin.actions.named.named_action import NamedAction
+from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared.filesystem import FolderTree
 from justin.shared.filesystem import RelativeFileset, File
 from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.photoset_utils import JpegType
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
 
 
 class SplitAction(NamedAction):
-
-    def perform_for_photoset(self, photoset: Photoset, args: Namespace, world: World, group: Group) -> None:
+    # todo: looks like shit, needs refactoring
+    def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Optional[Extra])\
+            -> None:
         def flat_or_empty(tree: Optional[FolderTree]) -> List[File]:
             if tree is None:
                 return []
