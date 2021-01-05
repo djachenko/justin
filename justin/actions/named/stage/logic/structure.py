@@ -4,7 +4,7 @@ from typing import List
 from justin.actions.named.stage.logic.base import Extractor, Selector
 from justin.shared import filesystem
 from justin.shared.filesystem import FolderTree, PathBased
-from justin.shared.helpers.parting_helper import PartingHelper
+from justin.shared.helpers.parts import is_parted, folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin.shared.structure import Structure
 
@@ -18,27 +18,23 @@ class StructureSelector(Selector):
     def __inner_select(self, tree: FolderTree, structure: Structure) -> List[Path]:
         result = []
 
-        parted = PartingHelper.is_parted(tree)
-
-        if parted and not structure.has_parts:
-            result += [subtree.path for subtree in tree.subtrees]
+        if is_parted(tree):
+            if structure.has_parts:
+                for part in folder_tree_parts(tree):
+                    result += self.__inner_select(part, structure)
+            else:
+                result += [subtree.path for subtree in tree.subtrees]
 
             return result
 
-        if not structure.has_unlimited_files:
-            result += [file.path for file in tree.files]
-
         for subtree in tree.subtrees:
-            if structure.has_substructure(subtree.name):
-                if parted:
-                    next_structure = structure
-                else:
-                    next_structure = structure[subtree.name]
-
-                result += self.__inner_select(subtree, next_structure)
-
-            else:
+            if subtree.name not in structure.folders:
                 result.append(subtree.path)
+            else:
+                result += self.__inner_select(subtree, structure[subtree.name])
+
+        if not structure.has_files:
+            result += [file.path for file in tree.files]
 
         return result
 

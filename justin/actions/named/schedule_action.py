@@ -13,7 +13,7 @@ from pyvko.models.post import Post
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import FolderTree, File
-from justin.shared.helpers.parting_helper import PartingHelper
+from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset, Metafiled
 
@@ -112,7 +112,7 @@ class ScheduleAction(NamedAction):
         hashtags_to_upload = {}
 
         for hashtag in justin_folder.subtrees:
-            parts = PartingHelper.folder_tree_parts(hashtag)
+            parts = folder_tree_parts(hashtag)
 
             parts_to_upload = ScheduleAction.__not_uploaded_parts(parts, root_path, posted_paths)
 

@@ -58,8 +58,8 @@ class NamedAction(Action):
     def get_extra(self, context: Context) -> Optional[Extra]:
         return None
 
-    def __perform_for_pattern(self, pattern: Iterable[Path], args: Namespace, context: Context, extra: Optional[Extra]) \
-            -> None:
+    def __perform_for_pattern(self, pattern: Iterable[Path], args: Namespace, context: Context,
+                              extra: Optional[Extra]) -> None:
         for path in pattern:
             photoset = Photoset(FolderTree(path))
 

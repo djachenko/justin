@@ -2,14 +2,14 @@ from typing import List
 
 from justin.actions.named.stage.logic.base import Extractor
 from justin.shared.helpers.gif_maker import GifMaker
-from justin.shared.helpers.parting_helper import PartingHelper
+from justin.shared.helpers.parts import folder_tree_parts
 from justin.actions.named.stage.logic.base import Selector
 from justin.shared.models.photoset import Photoset
 
 
 class MissingGifsSelector(Selector):
     def select(self, photoset: Photoset) -> List[str]:
-        parts = PartingHelper.folder_tree_parts(photoset.gif)
+        parts = folder_tree_parts(photoset.gif)
 
         result = []
 
@@ -24,7 +24,7 @@ class MissingGifsSelector(Selector):
 
 class MissingGifsHandler(Extractor):
     def forward(self, photoset: Photoset):
-        parts = PartingHelper.folder_tree_parts(photoset.gif)
+        parts = folder_tree_parts(photoset.gif)
 
         parts_to_generate = self.selector.select(photoset)
 

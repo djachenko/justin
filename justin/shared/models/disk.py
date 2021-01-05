@@ -33,7 +33,7 @@ class Disk:
         for i in structure_root.substructures:
             result += Disk.__collect_photosets(folder_root[i.name], i)
 
-        if structure_root.has_implicit_sets:
+        if structure_root.has_sets:
             photosets = [Photoset(subtree) for subtree in folder_root.subtrees]
 
             result += photosets

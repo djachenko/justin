@@ -6,7 +6,7 @@ from justin_utils import util
 from justin_utils.multiplexer import Multiplexable
 
 from justin.shared.filesystem import FolderTree, File, Movable
-from justin.shared.helpers.parting_helper import PartingHelper
+from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PhotosetMetafile
 from justin.shared.models import sources
 from justin.shared.models.sources import Source
@@ -61,6 +61,7 @@ class Photoset(Movable, Multiplexable, Metafiled):
     def stem(self) -> str:
         assert False
 
+        # noinspection PyUnreachableCode
         return self.name
 
     def __str__(self) -> str:
@@ -72,7 +73,7 @@ class Photoset(Movable, Multiplexable, Metafiled):
 
     @property
     def parts(self) -> List['Photoset']:
-        parts_folders = PartingHelper.folder_tree_parts(self.tree)
+        parts_folders = folder_tree_parts(self.tree)
         parts = [Photoset(part_folder) for part_folder in parts_folders]
 
         return parts

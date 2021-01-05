@@ -1,8 +1,6 @@
 from pathlib import Path
-from typing import List, Iterable
+from typing import List
 
-from justin.shared.helpers.checks_runner import ChecksRunner
-from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.base import Check
 from justin.actions.named.stage.logic.base import Extractor
 from justin.shared.models.photoset import Photoset
@@ -54,15 +52,6 @@ class Stage:
 
     def __str__(self) -> str:
         return "Stage: " + self.name
-
-    @staticmethod
-    def __run_checks(photoset: Photoset, checks: Iterable[Check]) -> bool:
-        try:
-            ChecksRunner.instance().run(photoset, checks)
-
-            return True
-        except CheckFailedError:
-            return False
 
     def prepare(self, photoset: Photoset):
         for hook in self.__preparation_hooks:

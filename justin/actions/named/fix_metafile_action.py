@@ -5,7 +5,7 @@ from pyvko.models.post import Post
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared import filesystem
-from justin.shared.helpers.parting_helper import PartingHelper
+from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
@@ -36,7 +36,7 @@ class FixMetafileAction(NamedAction):
         justin_folder = part.justin
 
         for hashtag in justin_folder.subtrees:
-            parts = PartingHelper.folder_tree_parts(hashtag)
+            parts = folder_tree_parts(hashtag)
 
             for hashtag_part in parts:
                 hashtag_part_path = hashtag_part.path.relative_to(part.path)
@@ -47,11 +47,12 @@ class FixMetafileAction(NamedAction):
                 while True:  # handling post loop
                     while True:  # ask loop
                         answer = input(
-                            f"You have folder \"{hashtag_part_path}\" without corresponding post. What would you like?\n"
+                            f"You have folder \"{hashtag_part_path}\" without bound post. What would you like?\n"
                             f"* Enter a number - bind to existing post\n"
                             f"* Enter a \"-\" symbol - leave it as is\n"
                             f"* Just press Enter - open folder\n"
-                            f"> ")
+                            f"> "
+                        )
 
                         answer = answer.strip()
 
