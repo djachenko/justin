@@ -3,7 +3,7 @@ from typing import List
 from justin_utils import util
 
 from justin.actions.named.stage.logic.base import Check
-from justin.shared.helpers.parting_helper import PartingHelper
+from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PhotosetMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
@@ -33,7 +33,7 @@ class MetafileStateCheck(Check):
         posted_paths = {post_metafile.path for post_metafile in post_metafiles}
 
         subtrees_parts = util.flatten(
-            [PartingHelper.folder_tree_parts(subtree) for subtree in photoset.justin.subtrees]
+            [folder_tree_parts(subtree) for subtree in photoset.justin.subtrees]
         )
 
         relative_paths = [part.path.relative_to(photoset.path) for part in subtrees_parts]

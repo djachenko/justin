@@ -1,4 +1,3 @@
-import json
 import runpy
 from enum import Enum
 from pathlib import Path

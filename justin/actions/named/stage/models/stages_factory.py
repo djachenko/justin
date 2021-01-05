@@ -19,7 +19,6 @@ class StagesFactory:
         self.__stages_by_command = {stage.command: stage for stage in stages}
         self.__stages_by_folders = {stage.folder: stage for stage in stages}
 
-
     @property
     @lru_cache()
     def commands(self):
