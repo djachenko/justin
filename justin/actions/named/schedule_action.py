@@ -138,7 +138,11 @@ class ScheduleAction(NamedAction):
 
     def get_extra(self, context: Context) -> Extra:
         return {
-            ScheduleAction.__SCHEDULED_POSTS: context.group.get_scheduled_posts()
+            **super().get_extra(context),
+            **
+            {
+                ScheduleAction.__SCHEDULED_POSTS: context.group.get_scheduled_posts()
+            },
         }
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
