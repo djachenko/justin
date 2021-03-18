@@ -22,10 +22,13 @@ class WebSyncAction(NamedAction):
         published_mapping = dict(zip(published_timed_ids, published_ids))
 
         return {
-            WebSyncAction.__SCHEDULED_IDS: scheduled_ids,
-            WebSyncAction.__PUBLISHED_IDS: published_ids,
-            WebSyncAction.__TIMED_IDS: published_timed_ids,
-            WebSyncAction.__PUBLISHED_MAPPING: published_mapping,
+            **super().get_extra(context),
+            **{
+                WebSyncAction.__SCHEDULED_IDS: scheduled_ids,
+                WebSyncAction.__PUBLISHED_IDS: published_ids,
+                WebSyncAction.__TIMED_IDS: published_timed_ids,
+                WebSyncAction.__PUBLISHED_MAPPING: published_mapping,
+            },
         }
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:

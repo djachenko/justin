@@ -15,7 +15,10 @@ class FixMetafileAction(NamedAction):
 
     def get_extra(self, context: Context) -> Extra:
         return {
-            FixMetafileAction.__POSTS_KEY: context.group.get_posts()
+            **super().get_extra(context),
+            **{
+                FixMetafileAction.__POSTS_KEY: context.group.get_posts()
+            },
         }
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
