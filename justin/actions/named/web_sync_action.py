@@ -1,5 +1,4 @@
 from argparse import Namespace
-from typing import Optional
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared.metafile import PostStatus
@@ -12,7 +11,7 @@ class WebSyncAction(NamedAction):
     __TIMED_IDS = "timed_ids"
     __PUBLISHED_MAPPING = "published_mapping"
 
-    def get_extra(self, context: Context) -> Optional[Extra]:
+    def get_extra(self, context: Context) -> Extra:
         scheduled_posts = context.group.get_scheduled_posts()
         published_posts = context.group.get_posts()
 
@@ -29,8 +28,7 @@ class WebSyncAction(NamedAction):
             WebSyncAction.__PUBLISHED_MAPPING: published_mapping,
         }
 
-    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Optional[Extra]) \
-            -> None:
+    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         scheduled_ids = extra[WebSyncAction.__SCHEDULED_IDS]
 
         published_ids = extra[WebSyncAction.__PUBLISHED_IDS]

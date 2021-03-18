@@ -1,5 +1,5 @@
 from argparse import Namespace
-from typing import Optional, List
+from typing import List
 
 from pyvko.models.post import Post
 
@@ -13,13 +13,12 @@ from justin.shared.models.photoset import Photoset
 class FixMetafileAction(NamedAction):
     __POSTS_KEY = "posts"
 
-    def get_extra(self, context: Context) -> Optional[Extra]:
+    def get_extra(self, context: Context) -> Extra:
         return {
             FixMetafileAction.__POSTS_KEY: context.group.get_posts()
         }
 
-    def perform_for_part(self, part: Photoset, args: Namespace, context: Context,
-                         extra: Optional[Extra]) -> None:
+    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         group = context.group
         posts: List[Post] = extra[FixMetafileAction.__POSTS_KEY]
 
