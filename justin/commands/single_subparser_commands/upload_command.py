@@ -15,6 +15,7 @@ class UploadCommand(SingleSubparserCommand):
 
         subparser.add_argument("-s", "--step", default=RearrangeAction.DEFAULT_STEP, type=int)
         subparser.add_argument("--shuffle", action="store_true")
+        subparser.add_argument("name", nargs="+")  # move to namedCommand
 
     def run(self, args, justin: Justin) -> None:
         actions = [

@@ -85,6 +85,7 @@ class Commands(str, Enum):
     SPLIT = "split"
     FIX_METAFILE = "fix_metafile"
     RESIZE_GIF_SOURCES = "resize_gif_sources"
+    UPLOAD = "upload"
 
 
 class Locations(str, Enum):
@@ -110,13 +111,14 @@ def main():
     def build_command(command: Commands, location: Locations, stage: Stages, name: str):
         return f"{command} {location}photos/stages/{stage}/{name}"
 
-    current_location = Locations.C
+    current_location = Locations.D
+
     commands = [
         build_command(
-            command=Commands.OURATE,
+            command=Commands.SPLIT,
             location=current_location,
-            stage=Stages.OURATE,
-            name="17.07*"
+            stage=Stages.READY,
+            name="21.02.*"
         ),
         "upload",
         "local_sync",
@@ -126,15 +128,12 @@ def main():
         "",
         "web_sync",
         "delay",
-        f"move " + " ".join([f"{Locations.C}/photos/{f}" for f in [
-            "1",
-            "2",
-        ]])
+        f"move " + " ".join([f"{current_location}/photos/stages/stage2.develop/*"])
     ]
     with cd(Path(str(current_location.value))):
         __run(
-            Path(__file__).parent.parent.parent,
-            commands[9].split()
+            Path(__file__).parent.parent,
+            commands[0].split()
         )
 
 
