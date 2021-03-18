@@ -1,5 +1,4 @@
 from argparse import Namespace
-from typing import Optional
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
@@ -16,8 +15,7 @@ class StageAction(NamedAction):
 
         self.__stages_factory = factory
 
-    def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Optional[Extra])\
-            -> None:
+    def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         # check if able to exit
         # cleanup
         # check if able to enter

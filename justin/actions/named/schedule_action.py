@@ -4,7 +4,7 @@ from argparse import Namespace
 from datetime import time, date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Dict, Iterable, Optional
+from typing import List, Dict, Iterable
 
 from pyvko.attachment.attachment import Attachment
 from pyvko.models.group import Group
@@ -136,12 +136,12 @@ class ScheduleAction(NamedAction):
 
         return parts_to_upload
 
-    def get_extra(self, context: Context) -> Optional[Extra]:
+    def get_extra(self, context: Context) -> Extra:
         return {
             ScheduleAction.__SCHEDULED_POSTS: context.group.get_scheduled_posts()
         }
 
-    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Optional[Extra]) -> None:
+    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
 
         scheduled_posts = extra[ScheduleAction.__SCHEDULED_POSTS]
         group = context.group
