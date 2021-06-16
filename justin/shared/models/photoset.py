@@ -5,7 +5,7 @@ from typing import List, Optional
 from justin_utils import util
 from justin_utils.multiplexer import Multiplexable
 
-from justin.shared.filesystem import FolderTree, File, Movable
+from justin.shared.filesystem import FolderTree, File, TreeBased
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PhotosetMetafile
 from justin.shared.models import sources
@@ -28,7 +28,7 @@ class Metafiled(ABC):
         metafile.write(self.metafile_path)
 
 
-class Photoset(Movable, Multiplexable, Metafiled):
+class Photoset(TreeBased, Multiplexable, Metafiled):
     __GIF = "gif"
     __CLOSED = "closed"
     __JUSTIN = "justin"
@@ -39,24 +39,9 @@ class Photoset(Movable, Multiplexable, Metafiled):
 
     __METAFILE = "_meta.json"
 
-    def __init__(self, entry: FolderTree):
-        self.__tree = entry
-
-    @property
-    def tree(self) -> FolderTree:
-        return self.__tree
-
     @property
     def metafile_path(self) -> Path:
         return self.tree.path / Photoset.__METAFILE
-
-    @property
-    def path(self) -> Path:
-        return self.tree.path
-
-    @property
-    def name(self) -> str:
-        return self.tree.name
 
     def stem(self) -> str:
         assert False
@@ -147,15 +132,3 @@ class Photoset(Movable, Multiplexable, Metafiled):
             jpegs += self.selection
 
         return jpegs
-
-    def move(self, path: Path):
-        self.tree.move(path)
-
-    def move_down(self, subfolder: str) -> None:
-        self.tree.move_down(subfolder)
-
-    def move_up(self) -> None:
-        self.tree.move_up()
-
-    def copy(self, path: Path) -> None:
-        self.tree.copy(path)
