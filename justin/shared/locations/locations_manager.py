@@ -35,9 +35,6 @@ class LocationsManager(Singleton):
         # noinspection PyTypeChecker
         return os.access(path, os.F_OK) and path.exists()
 
-    def main_location(self) -> Path:
-        return self.__locations.main() / LocationsManager.__PHOTOS_FOLDER
-
     def get_locations(self) -> List[Path]:
         return [location for location in self.__get_all_possible_locations() if self.__validate_location(location)]
 
