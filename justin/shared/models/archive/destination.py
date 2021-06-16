@@ -8,7 +8,7 @@ class Destination(TreeBased):
     def __init__(self, tree: FolderTree, structure: Structure) -> None:
         super().__init__(tree)
 
-        if structure.has_substructures:
+        if len(structure.folders) > 0:
             assert len(set(subtree.name for subtree in tree.subtrees)) == len(tree.subtrees)
 
             self.__categories = {subtree.name: subtree for subtree in tree.subtrees}

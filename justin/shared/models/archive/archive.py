@@ -24,7 +24,7 @@ class Archive(TreeBased):
         for subtree in self.tree.subtrees:
             subtree_name = subtree.name
 
-            if not self.__structure.has_substructure(subtree_name):
+            if subtree_name not in self.__structure.folders:
                 continue
 
             destinations[subtree_name] = Destination(subtree, self.__structure[subtree_name])
@@ -32,7 +32,7 @@ class Archive(TreeBased):
         self.__destinations = destinations
 
     def get_destination(self, name: str) -> Optional[Destination]:
-        if name not in self.__destinations and self.__structure.has_substructure(name):
+        if name not in self.__destinations and len(self.__structure.folders) > 0:
             new_destination_path = self.path / name
 
             new_destination_path.mkdir(exist_ok=True, parents=True)
