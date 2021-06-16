@@ -11,6 +11,9 @@ class ChecksRunner(Singleton):
     # noinspection PyMethodMayBeStatic
     def run(self, photoset: Photoset, checks: Iterable[Check]):
         for check in checks:
+            check.rollback(photoset)
+
+        for check in checks:
             print(f"Running {check.name} for {photoset.name}... ", end="")
 
             result = check.is_good(photoset)
