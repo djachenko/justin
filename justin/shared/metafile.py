@@ -38,7 +38,7 @@ class Metafile:
             json.dump(json_dict, metafile_file, indent=4)
 
 
-class PostStatus(Enum, Metafile):
+class PostStatus(Metafile, Enum):
     SCHEDULED = "scheduled"
     PUBLISHED = "posted"
 
@@ -103,7 +103,8 @@ class PhotosetMetafile(Metafile):
     @classmethod
     def decode(cls, d: Json) -> 'PhotosetMetafile':
         return PhotosetMetafile(
-            posts={k: [PostMetafile.decode(post_json) for post_json in v] for k, v in d.items()}
+            posts={k: [PostMetafile.decode(post_json) for post_json in v] for k, v
+                   in d[PhotosetMetafile.__POSTS_KEY].items()}
         )
 
     def encode(self) -> Json:
