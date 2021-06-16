@@ -11,7 +11,7 @@ class Config:
         GROUP_URL = "group_url"
         PYVKO_CONFIG = "pyvko_config"
         PHOTOSET_STRUCTURE = "photoset_structure"
-        DISK_STRUCTURE = "disk_structure"
+        DISK_STRUCTURE = "global_structure"
 
     def __init__(self, json_object: dict) -> None:
         super().__init__()
