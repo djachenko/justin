@@ -4,9 +4,6 @@ from justin.shared.filesystem import FolderTree
 
 
 def is_part_name(name: str) -> bool:
-    if "." not in name:
-        return False
-
     return name.split(".", maxsplit=1)[0].isdecimal()
 
 
