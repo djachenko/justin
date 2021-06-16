@@ -10,7 +10,7 @@ class SingleActionCommand(SingleSubparserCommand):
         super().__init__()
 
         self.__command = command
-        self.action = action
+        self.__action = action
 
     def command(self) -> str:
         return self.__command
@@ -19,4 +19,4 @@ class SingleActionCommand(SingleSubparserCommand):
         super().configure_subparser(subparser)
 
     def run(self, args: Namespace, justin: Justin) -> None:
-        justin[self.action](args)
+        justin[self.__action](args)
