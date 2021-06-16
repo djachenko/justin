@@ -98,6 +98,7 @@ def __handle_tree(src_path: Path, dst_path: Path, file_handler: Callable[[Path, 
     dst_path = dst_path.resolve()
 
     files = __flatten(src_path)
+    files.sort()
 
     total_size = DataSize.from_bytes(sum(file.stat().st_size for file in files))
     total_copied = DataSize.from_bytes(0)
@@ -417,6 +418,12 @@ class FolderTree(PathBased, Multiplexable):
 
         self.refresh()
 
+    def __str__(self) -> str:
+        return f"FolderTree: {self.path}"
+
+    def __repr__(self) -> str:
+        return str(self)
+
 
 class TreeBased(PathBased):
     def __init__(self, tree: FolderTree) -> None:
@@ -435,6 +442,9 @@ class TreeBased(PathBased):
     @property
     def path(self) -> Path:
         return self.tree.path
+
+    def move(self, path: Path) -> None:
+        self.tree.move(path)
 
 
 def parse_paths(paths: List[Path]) -> List[PathBased]:
