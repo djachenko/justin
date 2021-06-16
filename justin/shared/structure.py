@@ -1,5 +1,6 @@
+from contextlib import contextmanager
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import is_parted
@@ -9,16 +10,20 @@ class Readonly:
     def __init__(self) -> None:
         super().__init__()
 
-        self.__locked = True
+        self.__dict__['_Readonly__locked'] = True
 
-    def lock(self) -> None:
-        self.__locked = True
-
+    @contextmanager
     def unlock(self) -> None:
         self.__locked = False
 
+        try:
+            yield
+        finally:
+            # noinspection PyAttributeOutsideInit
+            self.__locked = True
+
     def __setattr__(self, name: str, value: Any) -> None:
-        assert (not self.__locked) or (name == "__locked" and value is False)
+        assert (not self.__locked) or (name == '_Readonly__locked' and value is False)
 
         super().__setattr__(name, value)
 
@@ -40,19 +45,18 @@ class Structure(Readonly):
                  folders: Dict[str, 'Structure']) -> None:
         super().__init__()
 
-        self.folders = folders
-        self.files = files
-        self.has_parts = has_parts
-        self.has_files = has_files
-        self.has_sets = has_sets
+        with self.unlock():
+            self.folders = folders
+            self.files = files
+            self.has_parts = has_parts
+            self.has_files = has_files
+            self.has_sets = has_sets
 
-    def __getitem__(self, key) -> 'Structure':
+    def __getitem__(self, key) -> Optional['Structure']:
         if self.has_sets and Structure.is_photoset_name(key):
             key = Structure.SETS_KEY
 
-        assert key in self.folders
-
-        return self.folders[key]
+        return self.folders.get(key)
 
     @staticmethod
     def is_photoset_name(key: str) -> bool:
@@ -120,8 +124,8 @@ def parse_structure(description: dict, path: Path = None) -> Structure:
     has_files = Structure.FILES_KEY in description
     has_parts = Structure.PARTS_KEY in description
 
-    assert has_implicit_sets != (has_parts or has_files)
-    assert has_files != (len(files) == 0)
+    assert not (has_implicit_sets and (has_parts or has_files))
+    # assert has_files != (len(files) == 0)
 
     if has_implicit_sets:
         assert len(description) == 1
