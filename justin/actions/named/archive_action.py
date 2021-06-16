@@ -1,7 +1,8 @@
 from argparse import Namespace
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
-from justin_utils.multiplexer import Multiplexer
+from py_linq import Enumerable
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared.filesystem import FolderTree
@@ -24,15 +25,40 @@ class ArchiveAction(NamedAction):
         world = context.world
         archive = world.archive
 
-        multiplexer = Multiplexer(photoset.parts)
+        roots = [
+            "justin",
+            "photoclub",
+            "closed",
+        ]
 
-        primary_destination_tree = self.__get_biggest_tree([
-            multiplexer.justin,
-            multiplexer.photoclub,
-            multiplexer.closed
-        ])
+        root_paths = [Path(root) for root in roots]
 
-        primary_destination_name = primary_destination_tree.name
+        def downstride_tree(tree: FolderTree, path: Path) -> Optional[FolderTree]:
+            root = tree
+
+            for component in path.parts:
+                root = root[component]
+
+                if root is None:
+                    return None
+
+            return root
+
+        def get_count(path: Path) -> int:
+            int_sum = Enumerable(photoset.parts) \
+                .select(lambda part: downstride_tree(part.tree, path)) \
+                .where(lambda e: e is not None) \
+                .select(lambda tree: tree.file_count()) \
+                .sum()
+
+            return int_sum
+
+        def get_biggest_tree(paths: List[Path]) -> Path:
+            return sorted(paths, key=get_count, reverse=True)[0]
+
+        primary_path = get_biggest_tree(root_paths)
+
+        primary_destination_name = primary_path.name
 
         primary_destination = archive.get_destination(primary_destination_name)
 
@@ -41,7 +67,14 @@ class ArchiveAction(NamedAction):
         assert primary_destination is not None
 
         if primary_destination.has_categories:
-            primary_category_name = self.__get_biggest_tree(primary_destination_tree.subtrees).name
+            primary_category_name = Enumerable(photoset.parts) \
+                .select(lambda part: downstride_tree(part.tree, primary_path)) \
+                .where(lambda e: e is not None) \
+                .select_many(lambda t: t.subtrees) \
+                .group_by(key_names=["name"], key=lambda x: x.name) \
+                .select(lambda g: (g.key.name, g.sum(lambda e: e.file_count()))) \
+                .order_by_descending(lambda e: e[1]) \
+                .first()[0]
 
             final_path /= primary_category_name
 
