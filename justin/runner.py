@@ -86,6 +86,8 @@ class Commands(str, Enum):
     FIX_METAFILE = "fix_metafile"
     RESIZE_GIF_SOURCES = "resize_gif_sources"
     UPLOAD = "upload"
+    WEB_SYNC = "web_sync"
+    LOCAL_SYNC = "local_sync"
 
 
 class Locations(str, Enum):
@@ -113,23 +115,19 @@ def main():
 
     current_location = Locations.D
 
-    commands = [
-        build_command(
-            command=Commands.SPLIT,
+    commands = {
+        0: build_command(
+            command=Commands.ARCHIVE,
             location=current_location,
-            stage=Stages.READY,
-            name="21.02.*"
+            stage=Stages.PUBLISHED,
+            name="*"
         ),
-        "upload",
-        "local_sync",
-        "rearrange -s 1",
-        "rearrange",
-        "delay",
-        "",
-        "web_sync",
-        "delay",
-        f"move " + " ".join([f"{current_location}/photos/stages/stage2.develop/*"])
-    ]
+        1: "rearrange -s 1",
+        2: "rearrange",
+        3: "delay",
+        4: "",
+    }
+
     with cd(Path(str(current_location.value))):
         __run(
             Path(__file__).parent.parent,
