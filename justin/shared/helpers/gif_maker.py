@@ -10,8 +10,8 @@ class GifMaker:
 
     __MB = 1024 * 1024
 
-    __MAX_DESIRED_SIZE = 200 * __MB
-    __MIN_DESIRED_SIZE = 195 * __MB
+    __MAX_DESIRED_SIZE = 300 * __MB
+    __MIN_DESIRED_SIZE = 250 * __MB
 
     # https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
 
