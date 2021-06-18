@@ -1,5 +1,6 @@
 import json
 from abc import abstractmethod
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Union
@@ -98,13 +99,13 @@ class PhotosetMetafile(Metafile):
     def __init__(self, posts: Dict[str, List[PostMetafile]]) -> None:
         super().__init__()
 
-        self.posts = posts
+        self.posts = defaultdict(lambda: [], posts)
 
     @classmethod
     def decode(cls, d: Json) -> 'PhotosetMetafile':
         return PhotosetMetafile(
             posts={k: [PostMetafile.decode(post_json) for post_json in v] for k, v
-                   in d[PhotosetMetafile.__POSTS_KEY].items()}
+                   in d.get(PhotosetMetafile.__POSTS_KEY, {}).items()}
         )
 
     def encode(self) -> Json:
