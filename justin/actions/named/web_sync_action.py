@@ -40,7 +40,7 @@ class WebSyncAction(NamedAction):
 
         group = context.group
 
-        print("Performing sync of local state with web...")
+        print(f"Web syncing {part.name}...")
 
         part_metafile = part.get_metafile()
 
