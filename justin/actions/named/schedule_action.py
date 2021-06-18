@@ -70,7 +70,7 @@ class PostTemplate(Metafiled):
 
 class ScheduleAction(NamedAction):
     __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
-    __SCHEDULED_POSTS = "scheduled_posts"
+    __DATE_GENERATOR = "date_generator"
 
     @staticmethod
     def __date_generator(start_date: date):
@@ -137,21 +137,21 @@ class ScheduleAction(NamedAction):
         return parts_to_upload
 
     def get_extra(self, context: Context) -> Extra:
+        scheduled_posts = context.group.get_scheduled_posts()
+        last_date = ScheduleAction.__get_start_date(scheduled_posts)
+        date_generator = ScheduleAction.__date_generator(last_date)
+
         return {
             **super().get_extra(context),
-            **
-            {
-                ScheduleAction.__SCHEDULED_POSTS: context.group.get_scheduled_posts()
+            **{
+                ScheduleAction.__DATE_GENERATOR: date_generator
             },
         }
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
+        date_generator = extra[ScheduleAction.__DATE_GENERATOR]
 
-        scheduled_posts = extra[ScheduleAction.__SCHEDULED_POSTS]
         group = context.group
-
-        last_date = ScheduleAction.__get_start_date(scheduled_posts)
-        date_generator = ScheduleAction.__date_generator(last_date)
 
         print("Performing scheduling... ", end="")
 

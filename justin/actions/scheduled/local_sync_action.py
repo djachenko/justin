@@ -27,7 +27,8 @@ class LocalSyncAction(ScheduledAction):
             print(f"Syncing post {photoset.name}...")
 
             try:
-                ChecksRunner.instance().run(photoset, self.__prechecks)
+                for part in photoset.parts:
+                    ChecksRunner.instance().run(part, self.__prechecks)
 
                 paths_of_published_sets.append(photoset.path)
 
