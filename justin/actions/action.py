@@ -1,12 +1,10 @@
 from abc import abstractmethod
 from argparse import Namespace
 
-from pyvko.models.group import Group
-
-from justin.shared.models.world import World
+from justin.shared.context import Context
 
 
 class Action:
     @abstractmethod
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+    def perform(self, args: Namespace, context: Context) -> None:
         pass

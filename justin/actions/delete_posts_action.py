@@ -1,14 +1,14 @@
 from argparse import Namespace
 
-from justin_utils import util
-from pyvko.models.group import Group
-
 from justin.actions.action import Action
-from justin.shared.models.world import World
+from justin.shared.context import Context
+from justin_utils import util
 
 
 class DeletePostsAction(Action):
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+    def perform(self, args: Namespace, context: Context) -> None:
+        group = context.group
+
         if args.published:
             posts = group.get_posts()
 

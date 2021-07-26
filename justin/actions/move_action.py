@@ -1,17 +1,14 @@
 from argparse import Namespace
 from typing import List
 
-from justin_utils import util
-from pyvko.models.group import Group
-
 from justin.actions.action import Action
-from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.base import Check
+from justin.shared.context import Context
 from justin.shared.filesystem import FolderTree
-
+from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
+from justin_utils import util
 
 
 class MoveAction(Action):
@@ -21,7 +18,9 @@ class MoveAction(Action):
 
         self.__prechecks = prechecks
 
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+    def perform(self, args: Namespace, context: Context) -> None:
+        world = context.world
+
         all_locations = world.all_locations
 
         paths = list(util.resolve_patterns(args.name))

@@ -25,16 +25,12 @@ class FactoriesContainer:
             extractor_factory
         )
 
-        self.__actions_factory = ActionFactory(
+        actions_factory = ActionFactory(
             stages_factory,
             checks_factory
         )
 
-        self.__commands_factory = CommandFactory(stages_factory)
-
-    @property
-    def actions_factory(self) -> ActionFactory:
-        return self.__actions_factory
+        self.__commands_factory = CommandFactory(stages_factory, actions_factory)
 
     @property
     def commands_factory(self) -> CommandFactory:

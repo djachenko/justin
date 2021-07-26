@@ -1,7 +1,7 @@
 from argparse import Namespace
 from typing import List
 
-from pyvko.models.post import Post
+from pyvko.models.models import Post
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared import filesystem

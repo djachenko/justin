@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import List, Dict, Iterable
 
 from pyvko.attachment.attachment import Attachment
-from pyvko.models.group import Group
-from pyvko.models.post import Post
+from pyvko.models.active_models import Group
+
+from pyvko.models.models import Post
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.rearrange_action import RearrangeAction

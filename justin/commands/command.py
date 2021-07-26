@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from argparse import ArgumentParser, Namespace
 
-from justin.shared.justin import Justin
+from justin.shared.context import Context
 
 
 class Command:
@@ -10,7 +10,7 @@ class Command:
         pass
 
     @abstractmethod
-    def run(self, args: Namespace, justin: Justin) -> None:
+    def run(self, args: Namespace, context: Context) -> None:
         pass
 
     def setup_callback(self, parser: ArgumentParser):

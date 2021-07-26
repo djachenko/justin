@@ -1,7 +1,6 @@
 from functools import lru_cache
 
 from justin.actions.action import Action
-from justin.actions.action_id import ActionId
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.move_action import MoveAction
@@ -20,42 +19,66 @@ from justin.actions.scheduled.local_sync_action import LocalSyncAction
 
 
 class ActionFactory:
-    __TYPES_MAPPING = {
-        ActionId.ARCHIVE: ArchiveAction,
-        ActionId.DELETE_POSTS: DeletePostsAction,
-        ActionId.LOCAL_SYNC: LocalSyncAction,
-        ActionId.MAKE_GIF: MakeGifAction,
-        ActionId.MOVE: MoveAction,
-        ActionId.REARRANGE: RearrangeAction,
-        ActionId.SCHEDULE: ScheduleAction,
-        ActionId.STAGE: StageAction,
-        ActionId.SYNC_POSTS_STATUS: WebSyncAction,
-        ActionId.SPLIT: SplitAction,
-        ActionId.FIX_METAFILE: FixMetafileAction,
-        ActionId.DELAY: DelayAction,
-        ActionId.RESIZE_SOURCES: ResizeGifSourcesAction,
-    }
 
     def __init__(self, stages_factory: StagesFactory, checks_factory: ChecksFactory) -> None:
         super().__init__()
 
-        self.__parameters_mapping = {
-            ActionId.STAGE: lambda: [stages_factory],
-            ActionId.LOCAL_SYNC: lambda: [[checks_factory.metafile()], self.__get(ActionId.STAGE)],
-            ActionId.MOVE: lambda: [[checks_factory.metadata()]],
-        }
+        self.__stages_factory = stages_factory
+        self.__checks_factory = checks_factory
 
-    # noinspection PyTypeChecker
-    @lru_cache(len(ActionId))
-    def __get(self, identifier: ActionId) -> Action:
-        action_type = ActionFactory.__TYPES_MAPPING[identifier]
-        parameters_generator = self.__parameters_mapping.get(identifier, lambda: [])
+    @lru_cache()
+    def stage_action(self) -> Action:
+        return StageAction(self.__stages_factory)
 
-        parameters = parameters_generator()
+    @lru_cache()
+    def schedule_action(self) -> Action:
+        return ScheduleAction()
 
-        action = action_type(*parameters)
+    @lru_cache()
+    def local_sync_action(self) -> Action:
+        return LocalSyncAction(
+            prechecks=[self.__checks_factory.metafile()],
+            all_published_action=self.stage_action()
+        )
 
-        return action
+    @lru_cache()
+    def archive_action(self) -> Action:
+        return ArchiveAction()
 
-    def __getitem__(self, item: ActionId) -> Action:
-        return self.__get(item)
+    @lru_cache()
+    def move_action(self) -> Action:
+        return MoveAction(
+            prechecks=[self.__checks_factory.metadata()]
+        )
+
+    @lru_cache()
+    def make_gif_action(self) -> Action:
+        return MakeGifAction()
+
+    @lru_cache()
+    def split_action(self) -> Action:
+        return SplitAction()
+
+    @lru_cache()
+    def fix_metafile_action(self) -> Action:
+        return FixMetafileAction()
+
+    @lru_cache()
+    def web_sync_action(self) -> Action:
+        return WebSyncAction()
+
+    @lru_cache()
+    def delete_posts_action(self) -> Action:
+        return DeletePostsAction()
+
+    @lru_cache()
+    def rearrange_action(self) -> Action:
+        return RearrangeAction()
+
+    @lru_cache()
+    def delay_action(self) -> Action:
+        return DelayAction()
+
+    @lru_cache()
+    def resize_gif_action(self) -> Action:
+        return ResizeGifSourcesAction()

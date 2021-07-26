@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import List
 
-from justin.actions.action_id import ActionId
+from justin.actions.action_factory import ActionFactory
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.commands.command import Command
 from justin.commands.single_subparser_commands.delay_command import DelayCommand
@@ -14,25 +14,33 @@ from justin.commands.stage_command import StageCommand
 
 
 class CommandFactory:
-    def __init__(self, stages_factory: StagesFactory) -> None:
+    def __init__(self, stages_factory: StagesFactory, action_factory: ActionFactory) -> None:
         super().__init__()
 
         self.__stages_factory = stages_factory
+        self.__action_factory = action_factory
 
     @lru_cache()
     def commands(self) -> List[Command]:
         return [
-            StageCommand(self.__stages_factory),
-            UploadCommand(),
-            DeletePostsCommand(),
-            RearrangeCommand(),
-            NamedCommand("local_sync", ActionId.LOCAL_SYNC),
-            NamedCommand("archive", ActionId.ARCHIVE),
-            NamedCommand("move", ActionId.MOVE),
-            NamedCommand("make_gif", ActionId.MAKE_GIF),
-            NamedCommand("split", ActionId.SPLIT),
-            NamedCommand("fix_metafile", ActionId.FIX_METAFILE),
-            NamedCommand("web_sync", ActionId.SYNC_POSTS_STATUS),
-            DelayCommand(),
-            ResizeGifSourcesCommand(),
+            StageCommand(self.__action_factory.stage_action(), self.__stages_factory),
+
+            UploadCommand([
+                self.__action_factory.web_sync_action(),
+                self.__action_factory.schedule_action(),
+                self.__action_factory.rearrange_action(),
+            ]),
+
+            DeletePostsCommand(self.__action_factory.delete_posts_action()),
+            RearrangeCommand(self.__action_factory.rearrange_action()),
+            DelayCommand(self.__action_factory.delay_action()),
+            ResizeGifSourcesCommand(self.__action_factory.resize_gif_action()),
+
+            NamedCommand("local_sync", self.__action_factory.local_sync_action()),
+            NamedCommand("archive", self.__action_factory.archive_action()),
+            NamedCommand("move", self.__action_factory.move_action()),
+            NamedCommand("make_gif", self.__action_factory.make_gif_action()),
+            NamedCommand("split", self.__action_factory.split_action()),
+            NamedCommand("fix_metafile", self.__action_factory.fix_metafile_action()),
+            NamedCommand("web_sync", self.__action_factory.web_sync_action()),
         ]
