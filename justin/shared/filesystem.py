@@ -149,14 +149,17 @@ def __handle_tree(src_path: Path, dst_path: Path, file_handler: Callable[[Path, 
 def __move_file(file_path: Path, new_path: Path):
     assert __get_mount(file_path) != __get_mount(new_path)
 
-    def __move():
+    try:
         __copy_file(file_path, new_path)
-        __remove_file(file_path)
+    except KeyboardInterrupt:
+        __remove_file(new_path)
+
+        raise
 
     try:
-        __move()
+        __remove_file(file_path)
     except KeyboardInterrupt:
-        __move()
+        __remove_file(file_path)
 
         raise
 
