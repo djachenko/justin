@@ -9,6 +9,9 @@ from justin.shared.structure import Structure
 class Config:
     class Keys(str, Enum):
         GROUP_URL = "group_url"
+        JUSTIN_URL = "justin_url"
+        CLOSED_URL = "closed_url"
+        MEETING_URL = "meeting_url"
         PYVKO_CONFIG = "pyvko_config"
         PHOTOSET_STRUCTURE = "photoset_structure"
         DISK_STRUCTURE = "global_structure"
