@@ -1,16 +1,16 @@
 from argparse import Namespace
 from datetime import timedelta
 
-from pyvko.models.group import Group
-
 from justin.actions.action import Action
-from justin.shared.models.world import World
+from justin.shared.context import Context
 
 
 class DelayAction(Action):
     DEFAULT_DAYS = 1
 
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+    def perform(self, args: Namespace, context: Context) -> None:
+        group = context.group
+
         posts = group.get_scheduled_posts()
 
         delay_days = args.days

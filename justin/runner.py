@@ -3,6 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Tuple, Callable
 
+from justin.shared.context import Context
 from justin_utils.cd import cd
 from lazy_object_proxy import Proxy
 from pyvko.config.config import Config as PyvkoConfig
@@ -10,7 +11,6 @@ from pyvko.pyvko_main import Pyvko
 
 from justin.shared.config import Config
 from justin.shared.factories_container import FactoriesContainer
-from justin.shared.justin import Justin
 from justin.shared.models.world import World
 
 # region general
@@ -47,17 +47,17 @@ def __run(config_path: Path, args=None):
     for command in commands:
         command.configure_parser(parser_adder)
 
-    name = parser.parse_args(args)
+    namespace = parser.parse_args(args)
 
-    if hasattr(name, "func") and name.func and isinstance(name.func, Callable):
+    if hasattr(namespace, "func") and namespace.func and isinstance(namespace.func, Callable):
         url = config[Config.Keys.GROUP_URL]
 
-        group = Proxy(lambda: pyvko.get(url))
-        world = Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE]))
+        context = Context(
+            world=Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE])),
+            group=Proxy(lambda: pyvko.get(url))
+        )
 
-        justin = Justin(group, world, factories_container.actions_factory)
-
-        name.func(name, justin)
+        namespace.func(namespace, context)
     else:
         print("no parameters is bad")
 
@@ -117,10 +117,10 @@ def main():
 
     commands = {
         0: build_command(
-            command=Commands.ARCHIVE,
+            command=Commands.LOCAL_SYNC,
             location=current_location,
-            stage=Stages.PUBLISHED,
-            name="*"
+            stage=Stages.SCHEDULED,
+            name="21.02*"
         ),
         1: "rearrange -s 1",
         2: "rearrange",
@@ -131,7 +131,7 @@ def main():
     with cd(Path(str(current_location.value))):
         __run(
             Path(__file__).parent.parent,
-            commands[0].split()
+            commands[2].split()
         )
 
 

@@ -2,19 +2,17 @@ import random
 from argparse import Namespace
 from datetime import timedelta, datetime
 
-from pyvko.models.group import Group
-
 from justin.actions.action import Action
-from justin.shared.models.world import World
+from justin.shared.context import Context
 
 
 class RearrangeAction(Action):
     DEFAULT_STEP = 1
 
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+    def perform(self, args: Namespace, context: Context) -> None:
         print("Performing rearrange... ", end="")
 
-        scheduled_posts = group.get_scheduled_posts()
+        scheduled_posts = context.group.get_scheduled_posts()
 
         if len(scheduled_posts) < 2:
             return
@@ -58,6 +56,6 @@ class RearrangeAction(Action):
 
             post.date = new_datetime
 
-            group.update_post(post)
+            context.group.update_post(post)
 
             print("success.")

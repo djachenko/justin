@@ -1,54 +1,24 @@
 from argparse import Namespace
-from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Any, Iterable
 
-from justin_utils import util
-from pyvko.models.group import Group
-
 from justin.actions.action import Action
+from justin.shared.context import Context
 from justin.shared.filesystem import FolderTree
-from justin.shared.helpers.gif_maker import GifMaker
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
+from justin_utils import util
 
 Extra = Dict[str, Any]
 
 
-class Context:
-    def __init__(self, world: World, group: Group) -> None:
-        super().__init__()
-
-        self.__world = world
-        self.__group = group
-
-    @property
-    def world(self) -> World:
-        return self.__world
-
-    @property
-    def group(self) -> Group:
-        return self.__group
-
-    @property
-    @lru_cache()
-    def gif_maker(self) -> GifMaker:
-        return GifMaker()
-
-
 class NamedAction(Action):
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+    def perform(self, args: Namespace, context: Context) -> None:
         names = list(util.resolve_patterns(args.name))
 
         if not any(names):
             print("No items found for that pattern.")
 
             return
-
-        context = Context(
-            world=world,
-            group=group
-        )
 
         extra = self.get_extra(context)
 

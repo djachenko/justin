@@ -1,12 +1,17 @@
 from argparse import ArgumentParser
 
-from justin.actions.action_id import ActionId
+from justin.actions.action import Action
+from justin.actions.named.named_action import Context
 from justin.actions.rearrange_action import RearrangeAction
 from justin.commands.single_subparser_commands.single_subparser_command import SingleSubparserCommand
-from justin.shared.justin import Justin
 
 
 class UploadCommand(SingleSubparserCommand):
+    def __init__(self, actions: [Action]) -> None:
+        super().__init__()
+
+        self.__actions = actions
+
     def command(self) -> str:
         return "upload"
 
@@ -17,12 +22,6 @@ class UploadCommand(SingleSubparserCommand):
         subparser.add_argument("--shuffle", action="store_true")
         subparser.add_argument("name", nargs="+")  # todo: move to namedCommand
 
-    def run(self, args, justin: Justin) -> None:
-        actions = [
-            ActionId.SYNC_POSTS_STATUS,
-            ActionId.SCHEDULE,
-            ActionId.REARRANGE
-        ]
-
-        for action in actions:
-            justin[action](args)
+    def run(self, args, context: Context) -> None:
+        for action in self.__actions:
+            action.perform(args, context)

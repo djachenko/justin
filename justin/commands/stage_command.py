@@ -1,15 +1,16 @@
 from argparse import ArgumentParser, Namespace
 
-from justin.actions.action_id import ActionId
+from justin.actions.action import Action
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.commands.command import Command
-from justin.shared.justin import Justin
+from justin.shared.context import Context
 
 
 class StageCommand(Command):
-    def __init__(self, factory: StagesFactory) -> None:
+    def __init__(self, action: Action, factory: StagesFactory) -> None:
         super().__init__()
 
+        self.__action = action
         self.__stages_factory = factory
 
     def configure_parser(self, parser_adder):
@@ -23,5 +24,5 @@ class StageCommand(Command):
 
             self.setup_callback(subparser)
 
-    def run(self, args: Namespace, justin: Justin) -> None:
-        justin[ActionId.STAGE](args)
+    def run(self, args: Namespace, context: Context) -> None:
+        self.__action.perform(args, context)
