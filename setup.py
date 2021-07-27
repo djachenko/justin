@@ -10,7 +10,6 @@ setup(
         'lazy-object-proxy',
         "six",
         "py_linq",
-        "six",
         'justin_utils',
     ],
     url='',
