@@ -12,7 +12,7 @@ class RearrangeAction(Action):
     def perform(self, args: Namespace, context: Context) -> None:
         print("Performing rearrange... ", end="")
 
-        scheduled_posts = context.group.get_scheduled_posts()
+        scheduled_posts = context.default_group.get_scheduled_posts()
 
         if len(scheduled_posts) < 2:
             return
@@ -56,6 +56,6 @@ class RearrangeAction(Action):
 
             post.date = new_datetime
 
-            context.group.update_post(post)
+            context.default_group.update_post(post)
 
             print("success.")

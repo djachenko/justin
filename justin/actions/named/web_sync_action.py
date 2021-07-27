@@ -12,8 +12,8 @@ class WebSyncAction(NamedAction):
     __PUBLISHED_MAPPING = "published_mapping"
 
     def get_extra(self, context: Context) -> Extra:
-        scheduled_posts = context.group.get_scheduled_posts()
-        published_posts = context.group.get_posts()
+        scheduled_posts = context.default_group.get_scheduled_posts()
+        published_posts = context.default_group.get_posts()
 
         scheduled_ids = [post.id for post in scheduled_posts]
 
@@ -38,7 +38,7 @@ class WebSyncAction(NamedAction):
         published_timed_ids = extra[WebSyncAction.__TIMED_IDS]
         published_mapping = extra[WebSyncAction.__PUBLISHED_MAPPING]
 
-        group = context.group
+        group = context.default_group
 
         print(f"Web syncing {part.name}...")
 

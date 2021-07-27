@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from functools import lru_cache
 
 from pyvko.models.active_models import Group
@@ -6,20 +7,16 @@ from justin.shared.helpers.gif_maker import GifMaker
 from justin.shared.models.world import World
 
 
+@dataclass(frozen=True)
 class Context:
-    def __init__(self, world: World, group: Group) -> None:
-        super().__init__()
-
-        self.__world = world
-        self.__group = group
-
-    @property
-    def world(self) -> World:
-        return self.__world
+    world: World
+    justin_group: Group
+    closed_group: Group
+    meeting_group: Group
 
     @property
-    def group(self) -> Group:
-        return self.__group
+    def default_group(self) -> Group:
+        return self.justin_group
 
     @property
     @lru_cache()
