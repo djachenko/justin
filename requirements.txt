@@ -2,3 +2,5 @@ Pillow
 pyvko
 lazy-object-proxy
 justin_utils
+six
+py_linq
