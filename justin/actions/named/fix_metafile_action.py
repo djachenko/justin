@@ -17,12 +17,12 @@ class FixMetafileAction(NamedAction):
         return {
             **super().get_extra(context),
             **{
-                FixMetafileAction.__POSTS_KEY: context.group.get_posts()
+                FixMetafileAction.__POSTS_KEY: context.default_group.get_posts()
             },
         }
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        group = context.group
+        group = context.default_group
         posts: List[Post] = extra[FixMetafileAction.__POSTS_KEY]
 
         remote_posts_ids = {post.id for post in posts}

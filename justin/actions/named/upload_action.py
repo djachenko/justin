@@ -40,7 +40,7 @@ class UploadAction(NamedAction):
             yield post_datetime
 
     def get_extra(self, context: Context) -> Extra:
-        scheduled_posts = context.group.get_scheduled_posts()
+        scheduled_posts = context.default_group.get_scheduled_posts()
         last_date = UploadAction.__get_start_date(scheduled_posts)
         date_generator = UploadAction.__date_generator(last_date)
 
@@ -63,7 +63,7 @@ class UploadAction(NamedAction):
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         date_generator = extra[UploadAction.__DATE_GENERATOR]
 
-        group = context.group
+        group = context.default_group
 
         print("Performing scheduling... ", end="")
 
@@ -93,9 +93,9 @@ class UploadAction(NamedAction):
                 continue
 
             if dest == "closed":
-                community = context.group  # .create_event(path.name)
+                community = context.default_group  # .create_event(path.name)
             else:
-                community = context.group
+                community = context.default_group
 
             if len(post.files) > 10:
                 # upload to album

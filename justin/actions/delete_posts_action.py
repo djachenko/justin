@@ -7,7 +7,7 @@ from justin_utils import util
 
 class DeletePostsAction(Action):
     def perform(self, args: Namespace, context: Context) -> None:
-        group = context.group
+        group = context.default_group
 
         if args.published:
             posts = group.get_posts()

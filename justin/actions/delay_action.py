@@ -9,7 +9,7 @@ class DelayAction(Action):
     DEFAULT_DAYS = 1
 
     def perform(self, args: Namespace, context: Context) -> None:
-        group = context.group
+        group = context.default_group
 
         posts = group.get_scheduled_posts()
 

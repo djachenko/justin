@@ -49,17 +49,19 @@ def __run(config_path: Path, args=None):
 
     namespace = parser.parse_args(args)
 
-    if hasattr(namespace, "func") and namespace.func and isinstance(namespace.func, Callable):
-        url = config[Config.Keys.GROUP_URL]
-
-        context = Context(
-            world=Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE])),
-            group=Proxy(lambda: pyvko.get(url))
-        )
-
-        namespace.func(namespace, context)
-    else:
+    if not hasattr(namespace, "func") or not namespace.func or not isinstance(namespace.func, Callable):
         print("no parameters is bad")
+
+        return
+
+    context = Context(
+        world=Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE])),
+        justin_group=Proxy(lambda: pyvko.get(config[Config.Keys.JUSTIN_URL])),
+        closed_group=Proxy(lambda: pyvko.get(config[Config.Keys.CLOSED_URL])),
+        meeting_group=Proxy(lambda: pyvko.get(config[Config.Keys.MEETING_URL]))
+    )
+
+    namespace.func(namespace, context)
 
 
 # endregion general
