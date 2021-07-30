@@ -4,8 +4,9 @@ from datetime import time, date, datetime, timedelta
 from typing import List
 
 from pyvko.attachment.attachment import Attachment
-from pyvko.models.active_models import Group
+from pyvko.models.active_models import Group, Event
 from pyvko.models.models import Post
+from pyvko.shared.mixins import Wall, Albums
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
@@ -13,9 +14,6 @@ from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
-
-
-# class PostConfig
 
 
 class UploadAction(NamedAction):
@@ -79,86 +77,102 @@ class UploadAction(NamedAction):
                 continue
 
             for category in destination.subtrees:
-                for post in folder_tree_parts(category):
-                    to_upload.append((destination.name, category.name, post))
+                for photos_folder in folder_tree_parts(category):
+                    to_upload.append((destination.name, category.name, photos_folder))
 
         photoset_metafile = part.get_metafile()
 
         posted_paths = {url: [post.path for post in posts] for url, posts in photoset_metafile.posts.values()}
 
-        for dest, cat, post in to_upload:
-            relative_path = post.path.relative_to(part.path)
+        for dest, cat, photos_folder in to_upload:
+            relative_path = photos_folder.path.relative_to(part.path)
 
             if relative_path in posted_paths[dest]:
                 continue
 
-            if dest == "closed":
-                community = context.default_group  # .create_event(path.name)
-            else:
-                community = context.default_group
+            if dest == "justin":
+                community = context.justin_group
 
-            if len(post.files) > 10:
-                # upload to album
-                attachments = self.__get_report_attachments(community, part.name, post)
-            else:
-                attachments = self.__get_simple_attachments(community, post)
+                if photos_folder.file_count() > 10:
+                    attach = self.__get_report_attachments(community, part.name, photos_folder)
+                else:
+                    attach = self.__get_simple_attachments(community, photos_folder)
 
-            post = Post(
-                attachments=attachments
-            )
+                photos_folder = Post(
+                    text=f"#{cat}@{community.url}",
+                    attachments=attach
+                )
 
-            community.add_post(post)
+                community.add_post(photos_folder)
 
-        # todo: replace nested loops with one
-        for part, hashtags in upload_hierarchy.items():
-            print(f"Uploading photoset {part.name}")
+            elif dest == "closed":
+                community = context.closed_group
 
-            photoset_metafile = part.get_metafile()
+                event = community.create_event(part.name)
 
-            for hashtag, parts in hashtags.items():
-                print(f"Uploading #{hashtag}")
+                event.event_category = Event.Category.CIRCUS
 
-                for post_template in parts:
-                    part_path = post_template.path.relative_to(part.path)
+                for section in Event.Section:
+                    event.set_section_state(section, Event.SectionState.DISABLED)
 
-                    print(f"Uploading contents of {part_path}... ", end="", flush=True)
+                event.set_section_state(Event.Section.PHOTOS, Event.SectionState.LIMITED)
+                event.set_section_state(Event.Section.WALL, Event.SectionState.LIMITED)
+                event.is_closed = True
+                event.main_section = Event.Section.PHOTOS
 
-                    photo_files = post_template.files
+                event.save()
 
-                    if hashtag != "report":
-                        attachments = self.__get_simple_attachments(group, photo_files)
-                    else:
-                        attachments = self.__get_report_attachments(group, part.name, post_template)
+                community = event
 
-                    post_datetime = next(date_generator)
+                if photos_folder.file_count() > 10:
+                    attach = self.__get_report_attachments(community, part.name, photos_folder)
+                else:
+                    attach = self.__get_simple_attachments(community, photos_folder)
 
-                    post = Post(
-                        text=f"#{hashtag}@{group.url}",
-                        attachments=attachments,
-                        date=post_datetime
-                    )
+                photos_folder = Post(
+                    attachments=attach
+                )
 
-                    post_id = group.add_post(post)
+                community.add_post(photos_folder)
 
-                    post_metafile = PostMetafile(
-                        path=part_path,
-                        post_id=post_id,
-                        status=PostStatus.SCHEDULED
-                    )
+            elif dest == "meeting":
+                community = context.meeting_group
 
-                    photoset_metafile.posts[group.url].append(post_metafile)
-                    part.save_metafile(photoset_metafile)
+                if photos_folder.file_count() <= 10:  # todo: check for multiple photographers
+                    attach = self.__get_simple_attachments(community, photos_folder)
+                else:
+                    event = community.create_event(part.name)
 
-                    print(f"successful, new post has id {post_id}")
+                    event.event_category = Event.Category.CIRCUS
+
+                    for section in Event.Section:
+                        event.set_section_state(section, Event.SectionState.DISABLED)
+
+                    event.set_section_state(Event.Section.PHOTOS, Event.SectionState.LIMITED)
+                    event.set_section_state(Event.Section.WALL, Event.SectionState.LIMITED)
+                    event.is_closed = True
+                    event.main_section = Event.Section.PHOTOS
+
+                    event.save()
+
+                    community = event
+
+                    attach = self.__get_report_attachments(community, part.name, photos_folder)
+
+                post = Post(
+                    attachments=attach
+                )
+
+                community.add_post(post)
 
     # noinspection PyMethodMayBeStatic
-    def __get_simple_attachments(self, community: Group, post: FolderTree) -> List[Attachment]:
+    def __get_simple_attachments(self, community: Wall, post: FolderTree) -> List[Attachment]:
         vk_photos = [community.upload_photo_to_wall(file.path) for file in post.files]
 
         return vk_photos
 
     # noinspection PyMethodMayBeStatic
-    def __get_report_attachments(self, community: Group, name: str, folder: FolderTree) -> List[Attachment]:
+    def __get_report_attachments(self, community: Albums, name: str, folder: FolderTree) -> List[Attachment]:
         album = community.create_album(name)
 
         for file in folder.files:
