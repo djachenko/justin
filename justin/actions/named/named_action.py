@@ -32,11 +32,11 @@ class NamedAction(Action):
         for path in pattern:
             photoset = Photoset(FolderTree(path))
 
-            self.perform_for_photoset(photoset, args, context, extra)
+            self.perform_for_photoset(photoset, args, context, extra.copy())
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         for part in photoset.parts:
-            self.perform_for_part(part, args, context, extra)
+            self.perform_for_part(part, args, context, extra.copy())
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         assert False
