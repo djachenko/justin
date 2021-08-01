@@ -1,11 +1,11 @@
 import random
 from argparse import Namespace
 from datetime import time, date, datetime, timedelta
-from typing import List
+from typing import List, Union
 
 from pyvko.models.active_models import Event
 from pyvko.models.models import Post
-from pyvko.shared.mixins import Wall, Albums
+from pyvko.shared.mixins import Wall, Albums, Events
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
@@ -17,6 +17,17 @@ from justin.shared.models.photoset import Photoset
 class UploadAction(NamedAction):
     __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
     __DATE_GENERATOR = "date_generator"
+
+    @staticmethod
+    def __get_start_date(scheduled_posts: List[Post]) -> date:
+        if scheduled_posts:
+            scheduled_dates = [post.date for post in scheduled_posts]
+
+            last_date = max(scheduled_dates)
+        else:
+            last_date = date.today()
+
+        return last_date
 
     @staticmethod
     def __date_generator(start_date: date):
@@ -58,8 +69,6 @@ class UploadAction(NamedAction):
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         date_generator = extra[UploadAction.__DATE_GENERATOR]
 
-        group = context.default_group
-
         print("Performing scheduling... ", end="")
 
         destinations = [
@@ -67,81 +76,88 @@ class UploadAction(NamedAction):
             part.closed
         ]
 
-        to_upload = []
+        photoset_metafile = part.get_metafile()
+
+        posted_paths = {url: [post.path for post in posts] for url, posts in photoset_metafile.posts.values()}
+        set_name = extra["set_name"]
 
         for destination in destinations:
             if destination is None:
                 continue
 
             for category in destination.subtrees:
-                for part_folder in folder_tree_parts(category):
-                    to_upload.append((destination.name, category.name, part_folder))
+                for post_folder in folder_tree_parts(category):
+                    destination_name = destination.name
+                    category_name = category.name
 
-        photoset_metafile = part.get_metafile()
+                    relative_path = post_folder.path.relative_to(part.path)
 
-        posted_paths = {url: [post.path for post in posts] for url, posts in photoset_metafile.posts.values()}
-        set_name = extra["set_name"]
+                    if relative_path in posted_paths[destination_name]:
+                        continue
 
-        for dest, cat, part_folder in to_upload:
-            relative_path = part_folder.path.relative_to(part.path)
+                    if destination_name == "justin":
+                        if set_name != part.name:
+                            album_name = ".".join([set_name, part.name])
+                        else:
+                            album_name = part.name
 
-            if relative_path in posted_paths[dest]:
-                continue
+                        community = context.justin_group
 
-            if dest == "justin":
-                community = context.justin_group
+                        self.__upload_folder(community, album_name, post_folder, f"#{category_name}@{community.url}")
 
-                if part_folder.file_count() > 10:
-                    part_name = part.name
+                    elif destination_name == "closed":
+                        if len(destination.subtrees) == 1:
+                            event_name = set_name
+                        else:
+                            event_name = f"{set_name}_{category_name}"
 
-                    if set_name != part_name:
-                        part_name = ".".join([set_name, part_name])
+                        event = self.__get_event(
+                            args,
+                            extra,
+                            destination_name,
+                            category_name,
+                            context.closed_group,
+                            event_name
+                        )
 
-                    self.__upload_to_album(community, part_name, part_folder)
-                else:
-                    self.__upload_to_post(
-                        community,
-                        part_folder,
-                        text=f"#{cat}@{community.url}"
-                    )
+                        self.__upload_folder(event, set_name, post_folder)
 
+                    elif destination_name == "meeting":
+                        event = self.__get_event(
+                            args,
+                            extra,
+                            destination_name,
+                            category_name,
+                            context.meeting_group,
+                            set_name
+                        )
 
-            elif dest == "closed":
+                        self.__upload_folder(event, set_name, post_folder)
 
-                community = context.closed_group
-                set_context = extra["set_context"]
+    def __get_event(self, args, extra: Extra, dest: str, cat: str, community: Events, set_name: str) -> Event:
+        set_context = extra["set_context"]
+        dest_context = set_context.get(dest, default={})
 
-                event: Event
+        event: Event
 
-                if cat in set_context:
-                    event = set_context[cat]
+        if cat in dest_context:
+            event = dest_context[cat]
 
-                elif args.event is not None:
-                    event_url = args.event
+        elif args.event is not None:
+            event_url = args.event
 
-                    event = community.get_event(event_url)
-                else:
-                    event = self.__create_event(community, set_name)
+            event = community.get_event(event_url)
+        else:
+            # todo: handle multiple cats for single set
+            event = self.__create_event(community, set_name)
 
-                if part_folder.file_count() > 10:
-                    self.__upload_to_album(event, set_name, part_folder)
-                else:
-                    self.__upload_to_post(event, part_folder)
+        dest_context[cat] = event
+        set_context[dest] = dest_context
 
-                set_context[cat] = event
-
-            elif dest == "meeting":
-                community = context.meeting_group
-
-                event = self.__create_event(community, set_name)
-
-                if part_folder.file_count() <= 10:  # todo: check for multiple photographers
-                    self.__upload_to_post(event, part_folder)
-                else:
-                    self.__upload_to_album(event, part.name, part_folder)
+        return event
 
     # noinspection PyMethodMayBeStatic
-    def __create_event(self, community, name) -> Event:
+    def __create_event(self, community: Events, name: str) -> Event:
         event = community.create_event(name)
 
         event.event_category = Event.Category.CIRCUS
@@ -158,16 +174,22 @@ class UploadAction(NamedAction):
 
         return event
 
-    # noinspection PyMethodMayBeStatic
-    def __upload_to_post(self, community: Wall, post: FolderTree, text: str = None) -> None:
-        vk_photos = [community.upload_photo_to_wall(file.path) for file in post.files]
+    def __upload_folder(self, event: Union[Wall, Albums], album_name: str, folder: FolderTree, text: str = None):
+        if folder.file_count() <= 10:
+            self.__upload_to_post(event, folder, text)
+        else:
+            self.__upload_to_album(event, album_name, folder)
 
-        post = Post(
+    # noinspection PyMethodMayBeStatic
+    def __upload_to_post(self, community: Wall, folder: FolderTree, text: str = None) -> None:
+        vk_photos = [community.upload_photo_to_wall(file.path) for file in folder.files]
+
+        folder = Post(
             text=text,
             attachments=vk_photos
         )
 
-        community.add_post(post)
+        community.add_post(folder)
 
     # noinspection PyMethodMayBeStatic
     def __upload_to_album(self, community: Albums, name: str, folder: FolderTree) -> None:
@@ -175,14 +197,3 @@ class UploadAction(NamedAction):
 
         for file in folder.files:
             album.add_photo(file.path)
-
-    @staticmethod
-    def __get_start_date(scheduled_posts: List[Post]) -> date:
-        if scheduled_posts:
-            scheduled_dates = [post.date for post in scheduled_posts]
-
-            last_date = max(scheduled_dates)
-        else:
-            last_date = date.today()
-
-        return last_date
