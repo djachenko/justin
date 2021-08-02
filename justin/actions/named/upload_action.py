@@ -1,7 +1,8 @@
 import random
 from argparse import Namespace
+from dataclasses import dataclass
 from datetime import time, date, datetime, timedelta
-from typing import List, Union
+from typing import List, Union, Optional
 
 from pyvko.models.active_models import Event
 from pyvko.models.models import Post
@@ -17,6 +18,13 @@ from justin.shared.models.photoset import Photoset
 class UploadAction(NamedAction):
     __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
     __DATE_GENERATOR = "date_generator"
+
+    @dataclass
+    class Params:
+        album_name: str
+        text: Optional[str] = None
+
+    # region date generator
 
     @staticmethod
     def __get_start_date(scheduled_posts: List[Post]) -> date:
@@ -45,6 +53,8 @@ class UploadAction(NamedAction):
             counter += 1
 
             yield post_datetime
+
+    # endregion date generator
 
     def get_extra(self, context: Context) -> Extra:
         scheduled_posts = context.default_group.get_scheduled_posts()
@@ -95,6 +105,9 @@ class UploadAction(NamedAction):
                     if relative_path in posted_paths[destination_name]:
                         continue
 
+                    community: Union[Wall, Albums]
+                    params: UploadAction.Params
+
                     if destination_name == "justin":
                         if set_name != part.name:
                             album_name = ".".join([set_name, part.name])
@@ -103,7 +116,11 @@ class UploadAction(NamedAction):
 
                         community = context.justin_group
 
-                        self.__upload_folder(community, album_name, post_folder, f"#{category_name}@{community.url}")
+                        params = UploadAction.Params(
+                            album_name=album_name,
+                            text=f"#{category_name}@{context.justin_group.url}"
+                        )
+
 
                     elif destination_name == "closed":
                         if len(destination.subtrees) == 1:
@@ -111,7 +128,7 @@ class UploadAction(NamedAction):
                         else:
                             event_name = f"{set_name}_{category_name}"
 
-                        event = self.__get_event(
+                        community = self.__get_event(
                             args,
                             extra,
                             destination_name,
@@ -120,10 +137,13 @@ class UploadAction(NamedAction):
                             event_name
                         )
 
-                        self.__upload_folder(event, set_name, post_folder)
+                        params = UploadAction.Params(
+                            album_name=set_name
+                        )
+
 
                     elif destination_name == "meeting":
-                        event = self.__get_event(
+                        community = self.__get_event(
                             args,
                             extra,
                             destination_name,
@@ -132,7 +152,17 @@ class UploadAction(NamedAction):
                             set_name
                         )
 
-                        self.__upload_folder(event, set_name, post_folder)
+                        params = UploadAction.Params(
+                            album_name=set_name
+                        )
+                    else:
+                        continue
+
+                    self.__upload_folder(community, post_folder, params)
+
+                # todo: metafile
+
+    # region event
 
     def __get_event(self, args, extra: Extra, dest: str, cat: str, community: Events, set_name: str) -> Event:
         set_context = extra["set_context"]
@@ -144,6 +174,7 @@ class UploadAction(NamedAction):
             event = dest_context[cat]
 
         elif args.event is not None:
+            # todo: move to asking
             event_url = args.event
 
             event = community.get_event(event_url)
@@ -174,26 +205,32 @@ class UploadAction(NamedAction):
 
         return event
 
-    def __upload_folder(self, event: Union[Wall, Albums], album_name: str, folder: FolderTree, text: str = None):
+    # endregion event
+
+    # region uploading
+
+    def __upload_folder(self, community: Union[Wall, Albums], folder: FolderTree, params: Params):
         if folder.file_count() <= 10:
-            self.__upload_to_post(event, folder, text)
+            self.__upload_to_post(community, folder, params)
         else:
-            self.__upload_to_album(event, album_name, folder)
+            self.__upload_to_album(community, folder, params)
 
     # noinspection PyMethodMayBeStatic
-    def __upload_to_post(self, community: Wall, folder: FolderTree, text: str = None) -> None:
+    def __upload_to_post(self, community: Wall, folder: FolderTree, params: Params) -> None:
         vk_photos = [community.upload_photo_to_wall(file.path) for file in folder.files]
 
         folder = Post(
-            text=text,
+            text=params.text,
             attachments=vk_photos
         )
 
         community.add_post(folder)
 
     # noinspection PyMethodMayBeStatic
-    def __upload_to_album(self, community: Albums, name: str, folder: FolderTree) -> None:
-        album = community.create_album(name)
+    def __upload_to_album(self, community: Albums, folder: FolderTree, params: Params) -> None:
+        album = community.create_album(params.album_name)
 
         for file in folder.files:
             album.add_photo(file.path)
+
+    # endregion uploading
