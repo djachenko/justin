@@ -2,8 +2,9 @@ import random
 from argparse import Namespace
 from dataclasses import dataclass
 from datetime import time, date, datetime, timedelta
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Iterator
 
+from py_linq import Enumerable
 from pyvko.models.active_models import Event
 from pyvko.models.models import Post
 from pyvko.shared.mixins import Wall, Albums, Events
@@ -17,12 +18,7 @@ from justin.shared.models.photoset import Photoset
 
 class UploadAction(NamedAction):
     __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
-    __DATE_GENERATOR = "date_generator"
-
-    @dataclass
-    class Params:
-        album_name: str
-        text: Optional[str] = None
+    __JUSTIN_DATE_GENERATOR = "date_generator"
 
     # region date generator
 
@@ -44,7 +40,7 @@ class UploadAction(NamedAction):
         while True:
             post_date = start_date + UploadAction.__STEP * counter
             post_time = time(
-                hour=random.randint(8, 23),
+                hour=random.randint(17, 23),
                 minute=random.randint(0, 59),
             )
 
@@ -54,30 +50,46 @@ class UploadAction(NamedAction):
 
             yield post_datetime
 
-    # endregion date generator
-
-    def get_extra(self, context: Context) -> Extra:
-        scheduled_posts = context.default_group.get_scheduled_posts()
+    @staticmethod
+    def __generator_for_group(group: Wall):
+        scheduled_posts = group.get_scheduled_posts()
         last_date = UploadAction.__get_start_date(scheduled_posts)
         date_generator = UploadAction.__date_generator(last_date)
 
+        return date_generator
+
+    # endregion date generator
+
+    def get_extra(self, context: Context) -> Extra:
         return {
             **super().get_extra(context),
             **{
-                UploadAction.__DATE_GENERATOR: date_generator
+                UploadAction.__JUSTIN_DATE_GENERATOR: UploadAction.__generator_for_group(context.justin_group)
             },
         }
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
+        names = Enumerable(folder_tree_parts(photoset.tree)) \
+            .select(lambda p: p.closed) \
+            .where(lambda e: e is not None) \
+            .select_many(lambda p: p.subtrees) \
+            .select(lambda p: p.name) \
+            .to_list()
+
+        names_count = {}
+
+        for name in names:
+            names_count[name] = names_count.get(name, default=0) + 1
+
         extra.update({
             "set_name": photoset.name,
-            "set_context": {}
+            "set_context": {},
+            "closed_names": names_count,
         })
 
         super().perform_for_photoset(photoset, args, context, extra)
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        date_generator = extra[UploadAction.__DATE_GENERATOR]
 
         print("Performing scheduling... ", end="")
 
@@ -89,103 +101,137 @@ class UploadAction(NamedAction):
         photoset_metafile = part.get_metafile()
 
         posted_paths = {url: [post.path for post in posts] for url, posts in photoset_metafile.posts.values()}
-        set_name = extra["set_name"]
+        extra["posted_paths"] = posted_paths
 
         for destination in destinations:
             if destination is None:
                 continue
 
-            for category in destination.subtrees:
-                for post_folder in folder_tree_parts(category):
-                    destination_name = destination.name
-                    category_name = category.name
+            if destination.name == "justin":
+                self.__upload_justin(
+                    folder=destination,
+                    context=context,
+                    extra=extra,
+                    part=part
+                )
+            elif destination.name == "closed":
+                self.__upload_closed(
+                    folder=destination,
+                    context=context,
+                    extra=extra
+                )
+            elif destination.name == "meeting":
+                self.__upload_meeting(
+                    folder=destination,
+                    context=context,
+                    extra=extra
+                )
 
-                    relative_path = post_folder.path.relative_to(part.path)
+            # todo: metafile
 
-                    if relative_path in posted_paths[destination_name]:
-                        continue
+    # region upload strategies
 
-                    community: Union[Wall, Albums]
-                    params: UploadAction.Params
+    def __upload_justin(self, folder: FolderTree, context: Context, extra: Extra, part: Photoset):
+        community = context.justin_group
+        set_name = extra["set_name"]
+        date_generator = extra[UploadAction.__JUSTIN_DATE_GENERATOR]
 
-                    if destination_name == "justin":
-                        if set_name != part.name:
-                            album_name = ".".join([set_name, part.name])
-                        else:
-                            album_name = part.name
+        if set_name != part.name:
+            album_name = ".".join([set_name, part.name])
+        else:
+            album_name = part.name
 
-                        community = context.justin_group
+        for category in folder.subtrees:
+            params = UploadAction.UploadParams(
+                album_name=album_name,
+                text=f"#{category.name}@{context.justin_group.url}",
+                date_generator=date_generator
+            )
 
-                        params = UploadAction.Params(
-                            album_name=album_name,
-                            text=f"#{category_name}@{context.justin_group.url}"
-                        )
+            for post_folder in folder_tree_parts(category):
+                self.__upload_folder(community, post_folder, params)
 
+    def __upload_closed(self, folder: FolderTree, context: Context, extra: Extra):
+        set_context = extra["set_context"]
+        set_name = extra["set_name"]
 
-                    elif destination_name == "closed":
-                        if len(destination.subtrees) == 1:
-                            event_name = set_name
-                        else:
-                            event_name = f"{set_name}_{category_name}"
+        names_count = extra["closed_names"]
 
-                        community = self.__get_event(
-                            args,
-                            extra,
-                            destination_name,
-                            category_name,
-                            context.closed_group,
-                            event_name
-                        )
+        for name in folder.subtrees:
+            if names_count[name.name] > 1:
+                event_name = set_name
+            else:
+                event_name = f"{set_name}_{name.name}"
 
-                        params = UploadAction.Params(
-                            album_name=set_name
-                        )
+            event = self.__get_event(
+                community=context.closed_group,
+                context=set_context,
+                params=UploadAction.EventParams(
+                    destination=folder.name,
+                    category=name.name,
+                    event_name=event_name
+                ))
 
+            date_generator = UploadAction.__generator_for_group(event)
 
-                    elif destination_name == "meeting":
-                        community = self.__get_event(
-                            args,
-                            extra,
-                            destination_name,
-                            category_name,
-                            context.meeting_group,
-                            set_name
-                        )
+            for post_folder in folder_tree_parts(name):
+                self.__upload_folder(event, post_folder, UploadAction.UploadParams(
+                    album_name=set_name,
+                    date_generator=date_generator
+                ))
 
-                        params = UploadAction.Params(
-                            album_name=set_name
-                        )
-                    else:
-                        continue
+    def __upload_meeting(self, folder: FolderTree, context: Context, extra: Extra):
+        set_context = extra["set_context"]
+        set_name = extra["set_name"]
 
-                    self.__upload_folder(community, post_folder, params)
+        event = self.__get_event(
+            community=context.meeting_group,
+            context=set_context,
+            params=UploadAction.EventParams(
+                destination=folder.name,
+                event_name=set_name
+            ))
 
-                # todo: metafile
+        date_generator = UploadAction.__generator_for_group(event)
+
+        for post_folder in folder_tree_parts(folder):
+            self.__upload_folder(event, post_folder, UploadAction.UploadParams(
+                album_name=set_name,
+                date_generator=date_generator
+            ))
+
+    # endregion upload strategies
 
     # region event
 
-    def __get_event(self, args, extra: Extra, dest: str, cat: str, community: Events, set_name: str) -> Event:
-        set_context = extra["set_context"]
-        dest_context = set_context.get(dest, default={})
+    @dataclass
+    class EventParams:
+        destination: str
+        event_name: str
+        category: Optional[str] = None
 
-        event: Event
+    def __get_event(self, community: Events, context: Extra, params: EventParams) -> Event:
+        destination = params.destination
 
-        if cat in dest_context:
-            event = dest_context[cat]
+        if params.category is not None:
+            context[destination] = context.get(destination, default={})
 
-        elif args.event is not None:
-            # todo: move to asking
-            event_url = args.event
+            context = context[destination]
+            key = params.category
+        else:
+            key = destination
+
+        if key not in context:
+            event_url = input("Please input event url: ")
 
             event = community.get_event(event_url)
-        else:
-            # todo: handle multiple cats for single set
-            event = self.__create_event(community, set_name)
 
-        dest_context[cat] = event
-        set_context[dest] = dest_context
+            if event is None:
+                event = self.__create_event(community, params.event_name)
 
-        return event
+            context[key] = event
+
+        return context[key]
 
     # noinspection PyMethodMayBeStatic
     def __create_event(self, community: Events, name: str) -> Event:
@@ -209,25 +255,32 @@ class UploadAction(NamedAction):
 
     # region uploading
 
-    def __upload_folder(self, community: Union[Wall, Albums], folder: FolderTree, params: Params):
+    @dataclass
+    class UploadParams:
+        album_name: str
+        date_generator: Iterator[datetime]
+        text: Optional[str] = None
+
+    def __upload_folder(self, community: Union[Wall, Albums], folder: FolderTree, params: UploadParams):
         if folder.file_count() <= 10:
             self.__upload_to_post(community, folder, params)
         else:
             self.__upload_to_album(community, folder, params)
 
     # noinspection PyMethodMayBeStatic
-    def __upload_to_post(self, community: Wall, folder: FolderTree, params: Params) -> None:
+    def __upload_to_post(self, community: Wall, folder: FolderTree, params: UploadParams) -> None:
         vk_photos = [community.upload_photo_to_wall(file.path) for file in folder.files]
 
         folder = Post(
             text=params.text,
-            attachments=vk_photos
+            attachments=vk_photos,
+            date=next(params.date_generator)
         )
 
         community.add_post(folder)
 
     # noinspection PyMethodMayBeStatic
-    def __upload_to_album(self, community: Albums, folder: FolderTree, params: Params) -> None:
+    def __upload_to_album(self, community: Albums, folder: FolderTree, params: UploadParams) -> None:
         album = community.create_album(params.album_name)
 
         for file in folder.files:

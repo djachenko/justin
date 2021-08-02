@@ -32,6 +32,7 @@ class Photoset(TreeBased, Multiplexable, Metafiled):
     __GIF = "gif"
     __CLOSED = "closed"
     __JUSTIN = "justin"
+    __MEETING = "meeting"
     __SELECTION = "selection"
     __PHOTOCLUB = "photoclub"
     __OUR_PEOPLE = "our_people"
@@ -107,6 +108,10 @@ class Photoset(TreeBased, Multiplexable, Metafiled):
         return self.tree[Photoset.__CLOSED]
 
     @property
+    def meeting(self) -> Optional[FolderTree]:
+        return self.tree[Photoset.__MEETING]
+
+    @property
     def results(self) -> List[File]:
         possible_subtrees = [
             self.instagram,
@@ -114,6 +119,7 @@ class Photoset(TreeBased, Multiplexable, Metafiled):
             self.justin,
             self.closed,
             self.photoclub,
+            self.meeting,
         ]
 
         possible_subtrees = [i for i in possible_subtrees if i is not None]
