@@ -46,7 +46,7 @@ class WebSyncAction(NamedAction):
 
         existing_posts = []
 
-        for post_metafile in part_metafile.posts[group.url]:
+        for post_metafile in part_metafile.posts[group.id]:
             post_id = post_metafile.post_id
 
             print(f"Syncing post with id {post_id}... ", end="")
@@ -86,7 +86,7 @@ class WebSyncAction(NamedAction):
                 else:
                     print("was deleted")
 
-        part_metafile.posts[group.url] = existing_posts
+        part_metafile.posts[group.id] = existing_posts
         part.save_metafile(part_metafile)
 
         print("Performed successfully")

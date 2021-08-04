@@ -29,7 +29,7 @@ class FixMetafileAction(NamedAction):
 
         photoset_metafile = part.get_metafile()
 
-        local_post_info = photoset_metafile.posts[group.url]
+        local_post_info = photoset_metafile.posts.get(group.id, [])
         posted_paths = [post.path for post in local_post_info]
         local_posts_ids = {post.post_id for post in local_post_info}
 
@@ -82,7 +82,7 @@ class FixMetafileAction(NamedAction):
                         post_metafile = PostMetafile(hashtag_part_path, post_id, PostStatus.PUBLISHED)
 
                         local_post_info.append(post_metafile)
-                        photoset_metafile.posts[group.url] = local_post_info
+                        photoset_metafile.posts[group.id] = local_post_info
                         part.save_metafile(photoset_metafile)
 
                         break

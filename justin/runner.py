@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Tuple, Callable
 
 from justin.shared.context import Context
+from justin.shared.metafile_migrations import *
 from justin_utils.cd import cd
 from lazy_object_proxy import Proxy
 from pyvko.config.config import Config as PyvkoConfig
@@ -14,6 +15,7 @@ from justin.shared.factories_container import FactoriesContainer
 from justin.shared.models.world import World
 
 # region general
+from justin_utils.json_migration import JsonMigrator
 
 __CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
@@ -53,6 +55,11 @@ def __run(config_path: Path, args=None):
         print("no parameters is bad")
 
         return
+
+    JsonMigrator.instance().register(
+        PostFormatMigration(),
+        PostStatusMigration(),
+    )
 
     context = Context(
         world=Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE])),
@@ -119,10 +126,10 @@ def main():
 
     commands = {
         0: build_command(
-            command=Commands.LOCAL_SYNC,
+            command=Commands.WEB_SYNC,
             location=current_location,
             stage=Stages.SCHEDULED,
-            name="21.02*"
+            name="*"
         ),
         1: "rearrange -s 1",
         2: "rearrange",
