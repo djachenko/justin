@@ -90,14 +90,14 @@ class ScheduleAction(NamedAction):
             yield post_datetime
 
     @staticmethod
-    def __get_not_uploaded_hierarchy(part: Photoset, group_url: str) -> Dict[Photoset, Dict[str, List[PostTemplate]]]:
+    def __get_not_uploaded_hierarchy(part: Photoset, group_id: int) -> Dict[Photoset, Dict[str, List[PostTemplate]]]:
         upload_hierarchy = {}
 
         justin_folder = part.justin
 
         photoset_metafile = part.get_metafile()
 
-        posted_paths = [post.path for post in photoset_metafile.posts[group_url]]
+        posted_paths = [post.path for post in photoset_metafile.posts[group_id]]
 
         hashtags_to_upload = ScheduleAction.__not_uploaded_hashtags(justin_folder, part.path, posted_paths)
 
@@ -155,7 +155,7 @@ class ScheduleAction(NamedAction):
 
         print("Performing scheduling... ", end="")
 
-        upload_hierarchy = ScheduleAction.__get_not_uploaded_hierarchy(part, group.url)
+        upload_hierarchy = ScheduleAction.__get_not_uploaded_hierarchy(part, group.id)
 
         if len(upload_hierarchy) > 0:
             print()
@@ -201,7 +201,7 @@ class ScheduleAction(NamedAction):
                         status=PostStatus.SCHEDULED
                     )
 
-                    photoset_metafile.posts[group.url].append(post_metafile)
+                    photoset_metafile.posts[group.id].append(post_metafile)
                     part.save_metafile(photoset_metafile)
 
                     print(f"successful, new post has id {post_id}")

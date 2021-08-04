@@ -32,9 +32,11 @@ class MetafileStateCheck(Check):
     def __photoset_has_folders_not_in_metafile(photoset: Photoset, post_metafiles: List[PostMetafile]) -> bool:
         posted_paths = {post_metafile.path for post_metafile in post_metafiles}
 
-        subtrees_parts = util.flatten(
-            [folder_tree_parts(subtree) for subtree in photoset.justin.subtrees]
-        )
+        subtrees_parts = util.flatten([
+            util.flatten([folder_tree_parts(tag_subtree) for tag_subtree in photoset.justin.subtrees]),
+            util.flatten([folder_tree_parts(name_subtree) for name_subtree in photoset.closed.subtrees]),
+            # todo: meeting
+        ])
 
         relative_paths = [part.path.relative_to(photoset.path) for part in subtrees_parts]
 
@@ -52,12 +54,10 @@ class MetafileStateCheck(Check):
         if MetafileStateCheck.__metafile_has_no_group_entries(photoset_metafile):
             return False
 
-        for group_url in photoset_metafile.posts:
-            post_metafiles = photoset_metafile.posts[group_url]
+        all_metafiles = util.flatten(photoset_metafile.posts.values())
 
-            if MetafileStateCheck.__group_entry_has_no_post_entries(post_metafiles) \
-                    or MetafileStateCheck.__metafile_has_not_published_entries(post_metafiles) \
-                    or MetafileStateCheck.__photoset_has_folders_not_in_metafile(photoset, post_metafiles):
-                return False
-
-        return True
+        return not any([
+            MetafileStateCheck.__group_entry_has_no_post_entries(all_metafiles),
+            MetafileStateCheck.__metafile_has_not_published_entries(all_metafiles),
+            MetafileStateCheck.__photoset_has_folders_not_in_metafile(photoset, all_metafiles),
+        ])
