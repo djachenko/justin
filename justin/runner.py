@@ -140,7 +140,7 @@ def main():
     with cd(Path(str(current_location.value))):
         __run(
             Path(__file__).parent.parent,
-            commands[2].split()
+            commands[0].split()
         )
 
 

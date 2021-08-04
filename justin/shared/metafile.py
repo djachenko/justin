@@ -100,7 +100,7 @@ class PhotosetMetafile(Metafile):
         group_posts_mapping = {}
 
         for group_id, group_posts in d.get(PhotosetMetafile.__POSTS_KEY, {}).items():
-            group_posts_mapping[group_id] = [PostMetafile.decode(group_post) for group_post in group_posts]
+            group_posts_mapping[int(group_id)] = [PostMetafile.decode(group_post) for group_post in group_posts]
 
         return PhotosetMetafile(
             posts=group_posts_mapping
