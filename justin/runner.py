@@ -3,6 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Tuple, Callable
 
+from justin.shared.metafile_migrations import *
 from justin_utils.cd import cd
 from lazy_object_proxy import Proxy
 from pyvko.config.config import Config as PyvkoConfig
@@ -14,6 +15,7 @@ from justin.shared.justin import Justin
 from justin.shared.models.world import World
 
 # region general
+from justin_utils.json_migration import JsonMigrator
 
 __CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
@@ -56,6 +58,11 @@ def __run(config_path: Path, args=None):
         world = Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE]))
 
         justin = Justin(group, world, factories_container.actions_factory)
+
+        JsonMigrator.instance().register(
+            PostFormatMigration(),
+            PostStatusMigration(),
+        )
 
         name.func(name, justin)
     else:
@@ -117,9 +124,9 @@ def main():
 
     commands = {
         0: build_command(
-            command=Commands.ARCHIVE,
+            command=Commands.WEB_SYNC,
             location=current_location,
-            stage=Stages.PUBLISHED,
+            stage=Stages.SCHEDULED,
             name="*"
         ),
         1: "rearrange -s 1",
