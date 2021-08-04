@@ -1,9 +1,11 @@
 import json
 from abc import abstractmethod
-from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Union, ClassVar
+
+from justin_utils.json_migration import JsonMigrator
 
 Json = Union[
     Dict[str, 'Json'],
@@ -27,6 +29,8 @@ class Metafile:
         if path.exists() and path.stat().st_size > 0:
             with path.open() as metafile_file:
                 json_dict = json.load(metafile_file)
+
+            JsonMigrator.instance().migrate(json_dict)
         else:
             json_dict = {}
 
@@ -41,36 +45,28 @@ class Metafile:
 
 class PostStatus(Metafile, Enum):
     SCHEDULED = "scheduled"
-    PUBLISHED = "posted"
+    PUBLISHED = "published"
 
     @classmethod
     def decode(cls, string: Json) -> 'PostStatus':
-        string = string.lower()
+        string = string.upper()
 
-        for status in PostStatus:
-            if string == status.value:
-                return status
-
-        return PostStatus.SCHEDULED
+        return PostStatus[string]
 
     def encode(self) -> Json:
         return self.value
 
 
+@dataclass
 class PostMetafile(Metafile):
-    __PATH_KEY = "path"
-    __POST_ID_KEY = "id"
-    __STATUS_KEY = "post_status"
+    __PATH_KEY: ClassVar[str] = "path"
+    __POST_ID_KEY: ClassVar[str] = "id"
+    __STATUS_KEY: ClassVar[str] = "post_status"
+    __GROUP_ID_KEY: ClassVar[str] = "group_id"
 
-    # cover
-    # grid
-
-    def __init__(self, path: Path, post_id: int, status: PostStatus) -> None:
-        super().__init__()
-
-        self.path = path
-        self.post_id = post_id
-        self.status = status
+    path: Path
+    post_id: int
+    status: PostStatus
 
     def encode(self) -> Json:
         return {
@@ -89,26 +85,33 @@ class PostMetafile(Metafile):
         return PostMetafile(
             path=Path(d[PostMetafile.__PATH_KEY]),
             post_id=d[PostMetafile.__POST_ID_KEY],
-            status=status
+            status=status,
         )
 
 
+@dataclass
 class PhotosetMetafile(Metafile):
-    __POSTS_KEY = "posts"
+    __POSTS_KEY: ClassVar[str] = "posts"
 
-    def __init__(self, posts: Dict[str, List[PostMetafile]]) -> None:
-        super().__init__()
-
-        self.posts = defaultdict(lambda: [], posts)
+    posts: Dict[int, List[PostMetafile]]
 
     @classmethod
     def decode(cls, d: Json) -> 'PhotosetMetafile':
+        group_posts_mapping = {}
+
+        for group_id, group_posts in d.get(PhotosetMetafile.__POSTS_KEY, {}).items():
+            group_posts_mapping[group_id] = [PostMetafile.decode(group_post) for group_post in group_posts]
+
         return PhotosetMetafile(
-            posts={k: [PostMetafile.decode(post_json) for post_json in v] for k, v
-                   in d.get(PhotosetMetafile.__POSTS_KEY, {}).items()}
+            posts=group_posts_mapping
         )
 
     def encode(self) -> Json:
+        jsons_mapping = {}
+
+        for group_id, posts in self.posts.items():
+            jsons_mapping[group_id] = [post.encode() for post in posts]
+
         return {
-            PhotosetMetafile.__POSTS_KEY: {k: [post.encode() for post in v] for k, v in self.posts.items()}
+            PhotosetMetafile.__POSTS_KEY: jsons_mapping
         }

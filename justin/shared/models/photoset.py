@@ -44,12 +44,6 @@ class Photoset(TreeBased, Multiplexable, Metafiled):
     def metafile_path(self) -> Path:
         return self.tree.path / Photoset.__METAFILE
 
-    def stem(self) -> str:
-        assert False
-
-        # noinspection PyUnreachableCode
-        return self.name
-
     def __str__(self) -> str:
         return "Photoset: " + self.tree.name
 
