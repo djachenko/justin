@@ -35,7 +35,7 @@ class MetafileStateCheck(Check):
         subtrees_parts = util.flatten([
             util.flatten([folder_tree_parts(tag_subtree) for tag_subtree in photoset.justin.subtrees]),
             util.flatten([folder_tree_parts(name_subtree) for name_subtree in photoset.closed.subtrees]),
-            # todo: meeting
+            photoset.meeting,
         ])
 
         relative_paths = [part.path.relative_to(photoset.path) for part in subtrees_parts]
