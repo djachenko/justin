@@ -13,6 +13,7 @@ from justin.actions.named.split_action import SplitAction
 from justin.actions.named.stage.logic.factories.checks_factory import ChecksFactory
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.actions.named.stage.stage_action import StageAction
+from justin.actions.named.upload_action import UploadAction
 from justin.actions.named.web_sync_action import WebSyncAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.scheduled.local_sync_action import LocalSyncAction
@@ -29,10 +30,6 @@ class ActionFactory:
     @lru_cache()
     def stage_action(self) -> Action:
         return StageAction(self.__stages_factory)
-
-    @lru_cache()
-    def schedule_action(self) -> Action:
-        return ScheduleAction()
 
     @lru_cache()
     def local_sync_action(self) -> Action:
@@ -82,3 +79,11 @@ class ActionFactory:
     @lru_cache()
     def resize_gif_action(self) -> Action:
         return ResizeGifSourcesAction()
+
+    @lru_cache()
+    def schedule_action(self) -> Action:
+        return ScheduleAction()
+
+    @lru_cache()
+    def upload_action(self) -> Action:
+        return UploadAction()
