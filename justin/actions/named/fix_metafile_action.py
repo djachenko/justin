@@ -1,88 +1,111 @@
 from argparse import Namespace
-from typing import List
 
-from pyvko.models.models import Post
+from pyvko.shared.mixins import Wall
 
+from justin.actions.named.mixins import EventUtils
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared import filesystem
+from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
 
-class FixMetafileAction(NamedAction):
-    __POSTS_KEY = "posts"
-
-    def get_extra(self, context: Context) -> Extra:
-        return {
-            **super().get_extra(context),
-            **{
-                FixMetafileAction.__POSTS_KEY: context.default_group.get_posts()
-            },
-        }
+class FixMetafileAction(NamedAction, EventUtils):
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        group = context.default_group
-        posts: List[Post] = extra[FixMetafileAction.__POSTS_KEY]
-
-        remote_posts_ids = {post.id for post in posts}
-
-        photoset_metafile = part.get_metafile()
-
-        local_post_info = photoset_metafile.posts.get(group.id, [])
-        posted_paths = [post.path for post in local_post_info]
-        local_posts_ids = {post.post_id for post in local_post_info}
+        mapping = [
+            (part.justin, context.justin_group),
+            (part.closed, context.closed_group),
+            (part.meeting, context.meeting_group),
+        ]
 
         print(f"Fixing metafile for {part.name} photoset.")
 
-        justin_folder = part.justin
+        for destination, group in mapping:
+            if destination is None:
+                continue
 
-        for hashtag in justin_folder.subtrees:
-            parts = folder_tree_parts(hashtag)
+            if destination.name == "meeting":
+                categories = [destination]
+            else:
+                categories = destination.subtrees
 
-            for hashtag_part in parts:
-                hashtag_part_path = hashtag_part.path.relative_to(part.path)
+            for category in categories:
+                community = None
 
-                if hashtag_part_path in posted_paths:
-                    continue
+                if destination.name == "justin":
+                    community = group
+                else:
+                    while community is None:
+                        community = group.get_event(FixMetafileAction.get_community_id(destination, part))
 
-                while True:  # handling post loop
-                    while True:  # ask loop
-                        answer = input(
-                            f"You have folder \"{hashtag_part_path}\" without bound post. What would you like?\n"
-                            f"* Enter a number - bind to existing post\n"
-                            f"* Enter a \"-\" symbol - leave it as is\n"
-                            f"* Just press Enter - open folder\n"
-                            f"> "
-                        )
+                FixMetafileAction.__handle_direct(category, part, community)
 
-                        answer = answer.strip()
+    @staticmethod
+    def __handle_direct(posts_folder: FolderTree, root: Photoset, community: Wall) -> None:
+        posts_folders = folder_tree_parts(posts_folder)
 
-                        if answer != "":
-                            break
+        published_posts = community.get_posts()
+        published_posts_ids = {post.id for post in published_posts}
 
-                        filesystem.open_file_manager(hashtag_part.path)
+        scheduled_posts = community.get_scheduled_posts()
+        scheduled_posts_ids = {post.id for post in scheduled_posts}
 
-                    if answer == "-":
+        photoset_metafile = root.get_metafile()
+
+        local_post_info = photoset_metafile.posts[community.id]
+        posted_paths = {post.path for post in local_post_info}
+        local_posts_ids = {post.post_id for post in local_post_info}
+
+        for post_folder in posts_folders:
+            post_path = post_folder.path.relative_to(root.path)
+
+            if post_path in posted_paths:
+                continue
+
+            while True:  # handling post loop
+                while True:  # ask loop
+                    answer = input(
+                        f"You have folder \"{post_path}\" without bound post. What would you like?\n"
+                        f"* Enter a number - bind to existing post\n"
+                        f"* Enter a \"-\" symbol - leave it as is\n"
+                        f"* Just press Enter - open folder\n"
+                        f"> "
+                    )
+
+                    answer = answer.strip()
+
+                    if answer != "":
                         break
 
-                    if answer.isdecimal():
-                        post_id = int(answer)
+                    filesystem.open_file_manager(post_folder.path)
 
-                        if post_id in local_posts_ids:
-                            print("This post is already associated with other path")
+                if answer == "-":
+                    break
 
-                            continue
+                if answer.isdecimal():
+                    post_id = int(answer)
 
-                        if post_id not in remote_posts_ids:
-                            print("There is no such post")
+                    if post_id in local_posts_ids:
+                        print("This post is already associated with other path")
 
-                            continue
+                        continue
 
-                        post_metafile = PostMetafile(hashtag_part_path, post_id, PostStatus.PUBLISHED)
+                    if post_id in published_posts_ids:
+                        status = PostStatus.PUBLISHED
+                    elif post_id in scheduled_posts_ids:
+                        status = PostStatus.SCHEDULED
+                    else:
+                        print("There is no such post")
 
-                        local_post_info.append(post_metafile)
-                        photoset_metafile.posts[group.id] = local_post_info
-                        part.save_metafile(photoset_metafile)
+                        continue
 
-                        break
+                    post_metafile = PostMetafile(post_path, post_id, status)
+
+                    photoset_metafile.posts[community.id].append(post_metafile)
+                    root.save_metafile(photoset_metafile)
+
+                    break
+
+
