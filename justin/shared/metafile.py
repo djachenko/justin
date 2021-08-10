@@ -1,5 +1,6 @@
 import json
 from abc import abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -103,13 +104,16 @@ class PhotosetMetafile(Metafile):
             group_posts_mapping[int(group_id)] = [PostMetafile.decode(group_post) for group_post in group_posts]
 
         return PhotosetMetafile(
-            posts=group_posts_mapping
+            posts=defaultdict(lambda: [], group_posts_mapping)
         )
 
     def encode(self) -> Json:
         jsons_mapping = {}
 
         for group_id, posts in self.posts.items():
+            if not posts:
+                continue
+
             jsons_mapping[group_id] = [post.encode() for post in posts]
 
         return {
