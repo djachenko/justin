@@ -107,5 +107,3 @@ class FixMetafileAction(NamedAction, EventUtils):
                     root.save_metafile(photoset_metafile)
 
                     break
-
-
