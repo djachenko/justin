@@ -8,6 +8,7 @@ class EventUtils:
     @staticmethod
     def get_community_id(posts_folder: FolderTree, root: Photoset) -> str:
         photoset_metafile = root.get_metafile()
+        root_path = root.path
 
         reverse_mapping = {}
 
@@ -18,17 +19,27 @@ class EventUtils:
         ids_from_folder = []
 
         for part in folder_tree_parts(posts_folder):
-            if part.path.relative_to(root.path) in reverse_mapping:
-                ids_from_folder.append(reverse_mapping[part.path])
+            part_path = part.path.relative_to(root_path)
+
+            if part_path in reverse_mapping:
+                ids_from_folder.append(reverse_mapping[part_path])
 
         if same(ids_from_folder):
             return str(ids_from_folder[0])
 
         answer = input(
-            f"Which event contents of {posts_folder.path.relative_to(root.path)} belong to?\n"
+            f"Which event contents of {posts_folder.path.relative_to(root_path)} belong to?\n"
             f"Enter event url: ",
         )
 
         answer = answer.strip()
 
+        while not EventUtils.__validate(answer):
+            answer = input("This was not event url. Try another: ")
+            answer = answer.strip()
+
         return answer
+
+    @staticmethod
+    def __validate(event_url: str) -> bool:
+        return event_url is not None
