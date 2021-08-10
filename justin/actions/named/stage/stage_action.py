@@ -3,6 +3,7 @@ from argparse import Namespace
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.exceptions.extractor_error import ExtractorError
+from justin.actions.named.stage.models.stage import stub_stage
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.shared.models.photoset import Photoset
@@ -24,6 +25,9 @@ class StageAction(NamedAction):
 
         new_stage = self.__stages_factory.stage_by_command(args.command)
         current_stage = self.__stages_factory.stage_by_path(photoset.path)
+
+        if current_stage is None:
+            current_stage = stub_stage
 
         assert isinstance(photoset, Photoset)
 
