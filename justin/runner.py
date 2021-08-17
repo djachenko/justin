@@ -106,7 +106,7 @@ class Locations(str, Enum):
     H = "H:/"
     PESTILENCE = "/Volumes/pestilence/"
     MICHAEL = "/Volumes/michael/"
-    MAC_OS_HOME = "/Users/justin"
+    MAC_OS_HOME = "/Users/justin/"
 
 
 class Stages(str, Enum):
