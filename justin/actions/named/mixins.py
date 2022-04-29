@@ -1,44 +1,42 @@
+import string
+from typing import Optional
+
+from justin.shared import filesystem
 from justin.shared.filesystem import FolderTree
-from justin.shared.helpers.parts import folder_tree_parts
+from justin.shared.metafile2 import GroupMetafile
 from justin.shared.models.photoset import Photoset
-from justin_utils.util import same
 
 
 class EventUtils:
     @staticmethod
-    def get_community_id(posts_folder: FolderTree, root: Photoset) -> str:
-        photoset_metafile = root.get_metafile()
-        root_path = root.path
+    def get_community_id(posts_folder: FolderTree, root_photoset: Photoset) -> Optional[str]:
+        root_path = root_photoset.path
 
-        reverse_mapping = {}
+        group_metafile: GroupMetafile = posts_folder.get_metafile(GroupMetafile)
 
-        for community_id, post_metafiles in photoset_metafile.posts.items():
-            for post_metafile in post_metafiles:
-                reverse_mapping[post_metafile.path] = community_id
+        if group_metafile is not None:
+            return str(group_metafile.group_id)
 
-        ids_from_folder = []
+        print(f"Which event contents of {posts_folder.path.relative_to(root_path)} belong to?")
 
-        for part in folder_tree_parts(posts_folder):
-            part_path = part.path.relative_to(root_path)
+        while True:
+            answer = input(
+                f"Enter event url: ",
+            )
 
-            if part_path in reverse_mapping:
-                ids_from_folder.append(reverse_mapping[part_path])
+            answer = answer.strip(" " + string.ascii_letters)
 
-        if same(ids_from_folder):
-            return str(ids_from_folder[0])
+            if not answer:
+                filesystem.open_file_manager(posts_folder.path)
+            elif not EventUtils.__validate(answer):
+                print("This was not event url. Try another.")
+            else:
+                break
 
-        answer = input(
-            f"Which event contents of {posts_folder.path.relative_to(root_path)} belong to?\n"
-            f"Enter event url: ",
-        )
-
-        answer = answer.strip()
-
-        while not EventUtils.__validate(answer):
-            answer = input("This was not event url. Try another: ")
-            answer = answer.strip()
-
-        return answer
+        if answer == "-":
+            return None
+        else:
+            return answer
 
     @staticmethod
     def __validate(event_url: str) -> bool:

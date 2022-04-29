@@ -1,10 +1,9 @@
 from typing import Optional
 
-from justin_utils import util
-
 from justin.shared.filesystem import FolderTree, TreeBased
 from justin.shared.models.archive.destination import Destination
 from justin.shared.structure import Structure
+from justin_utils import util
 
 
 class Archive(TreeBased):

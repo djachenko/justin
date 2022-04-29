@@ -73,3 +73,10 @@ class ChecksFactory:
             name="everything is published check",
             selector=self.__selector_factory.everything_is_published()
         )
+
+    @lru_cache()
+    def progress_has_results(self) -> Check:
+        return Check(
+            name="progress has results",
+            selector=self.__selector_factory.progress_has_results()
+        )

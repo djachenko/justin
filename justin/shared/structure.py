@@ -1,60 +1,38 @@
-from contextlib import contextmanager
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional, ClassVar
 
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import is_parted
 
 
-class Readonly:
-    def __init__(self) -> None:
-        super().__init__()
+@dataclass
+class Structure:
+    SETS_KEY: ClassVar[str] = "%set_name%"
+    PARTS_KEY: ClassVar[str] = "parts"
+    FILES_KEY: ClassVar[str] = "files"
+    STANDALONE_FILE: ClassVar[str] = "file"
 
-        self.__dict__['_Readonly__locked'] = True
-
-    @contextmanager
-    def unlock(self) -> None:
-        self.__locked = False
-
-        try:
-            yield
-        finally:
-            # noinspection PyAttributeOutsideInit
-            self.__locked = True
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        assert (not self.__locked) or (name == '_Readonly__locked' and value is False)
-
-        super().__setattr__(name, value)
-
-
-class Structure(Readonly):
-    SETS_KEY = "varied_folders"
-    PARTS_KEY = "parts"
-    FILES_KEY = "files"
-    STANDALONE_FILE = "file"
-
-    FLAG_KEYS = [
+    FLAG_KEYS: ClassVar[List[str]] = [
         SETS_KEY,
         FILES_KEY,
         PARTS_KEY,
         STANDALONE_FILE,
     ]
 
-    def __init__(self, has_sets: bool, has_files: bool, has_parts: bool, files: List[str],
-                 folders: Dict[str, 'Structure']) -> None:
-        super().__init__()
+    folders: Dict[str, 'Structure']
+    files: List[str]
+    has_parts: bool
+    has_files: bool
+    has_sets: bool = field(init=False)
+    set_structure: Optional['Structure']
 
-        with self.unlock():
-            self.folders = folders
-            self.files = files
-            self.has_parts = has_parts
-            self.has_files = has_files
-            self.has_sets = has_sets
+    def __post_init__(self):
+        self.has_sets = self.set_structure is not None
 
     def __getitem__(self, key) -> Optional['Structure']:
         if self.has_sets and Structure.is_photoset_name(key):
-            key = Structure.SETS_KEY
+            return self.set_structure
 
         return self.folders.get(key)
 
@@ -131,10 +109,13 @@ def parse_structure(description: dict, path: Path = None) -> Structure:
         assert len(description) == 1
         assert not any(i != Structure.SETS_KEY for i in description)
 
-        substructures = description
+        # !!!
+        set_structure = description
+    else:
+        set_structure = None
 
     return Structure(
-        has_sets=has_implicit_sets,
+        set_structure=set_structure,
         has_files=has_files,
         has_parts=has_parts,
         files=files,

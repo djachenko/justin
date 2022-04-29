@@ -10,7 +10,7 @@ class GifMaker:
 
     __MB = 1024 * 1024
 
-    __MAX_DESIRED_SIZE = 300 * __MB
+    __MAX_DESIRED_SIZE = 400 * __MB
     __MIN_DESIRED_SIZE = 250 * __MB
 
     # https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
@@ -91,7 +91,13 @@ class GifMaker:
         resized_path.rename(sources)
 
     # noinspection PyMethodMayBeStatic
-    def make_gif(self, sources_path: Path, name: str):
+    def make_gif(self, sources_path: Path, name: str, min_size: int = None, max_size: int = None):
+        if not min_size:
+            min_size = GifMaker.__START_MIN_SIZE
+
+        if not max_size:
+            max_size = GifMaker.__START_MAX_SIZE
+
         if not name.endswith(".gif"):
             name = name + ".gif"
 
@@ -102,15 +108,14 @@ class GifMaker:
 
             return
 
-        max_available_size = min(GifMaker.__START_MAX_SIZE, GifMaker.__long_side(sources_path))
+        max_available_size = min(max_size, GifMaker.__long_side(sources_path))
 
-        min_size = GifMaker.__START_MIN_SIZE
         max_size = max_available_size
 
         while True:
             iteration_size = round((min_size + max_size) / 2)
 
-            print(f"Starting iteration with size {iteration_size}... ", end="")
+            print(f"Starting iteration with size {iteration_size}... ", end="", flush=True)
 
             GifMaker.__make_gif(sources_path, name, iteration_size)
 

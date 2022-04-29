@@ -24,13 +24,13 @@ def __validate_join(join: Iterable[Tuple[str, Any]], name: str):
 class JpegType(Flag):
     SELECTION = auto()
     JUSTIN = auto()
+    MEETING = auto()
+    KOT_I_KIT = auto()
     OUR_PEOPLE = auto()
     CLOSED = auto()
     PHOTOCLUB = auto()
-    INSTAGRAM = auto()
-    MEETING = auto()
-    SIGNED = JUSTIN | OUR_PEOPLE | CLOSED | PHOTOCLUB | MEETING
-    ALL = SELECTION | SIGNED | INSTAGRAM
+    SIGNED = JUSTIN | OUR_PEOPLE | CLOSED | PHOTOCLUB | MEETING | KOT_I_KIT
+    ALL = SELECTION | SIGNED
 
 
 def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegType = None) -> List[PathBased]:
@@ -44,8 +44,8 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
         JpegType.OUR_PEOPLE: photoset.our_people,
         JpegType.CLOSED: photoset.closed,
         JpegType.PHOTOCLUB: photoset.photoclub,
-        JpegType.INSTAGRAM: photoset.instagram,
         JpegType.MEETING: photoset.meeting,
+        JpegType.KOT_I_KIT: photoset.kot_i_kit,
     }
 
     for t, tree in mapping.items():

@@ -6,23 +6,24 @@ from datetime import time, date, datetime, timedelta
 from pathlib import Path
 from typing import List, Union, Optional, Iterator
 
-from py_linq import Enumerable
 from pyvko.attachment.attachment import Attachment
 from pyvko.models.active_models import Event
 from pyvko.models.models import Post
 from pyvko.shared.mixins import Wall, Albums, Events
 
+from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
-from justin.actions.named.named_action import NamedAction, Context, Extra
+from justin.actions.named.named_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import PostMetafile, PostStatus
+from justin.shared.metafile2 import PostMetafile, PostStatus, GroupMetafile
 from justin.shared.models.photoset import Photoset
+from justin_utils.pylinq import Sequence
 from justin_utils.util import ask_for_permission
 
 
-class UploadAction(NamedAction, EventUtils):
+class UploadAction(DestinationsAwareAction, EventUtils):
     __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
     __JUSTIN_DATE_GENERATOR = "date_generator"
 
@@ -31,9 +32,8 @@ class UploadAction(NamedAction, EventUtils):
 
     __ROOT = "root_itself"
     __ROOT_PATH = "root_path"
-    __POSTED_PATHS = "posted_paths"
     __PART_NAME = "part_name"
-    __CLOSED_NAMES = "closed_names"
+    __SINGLE_NAME = "closed_names"
 
     # region date generator
 
@@ -76,30 +76,23 @@ class UploadAction(NamedAction, EventUtils):
     # endregion date generator
 
     def get_extra(self, context: Context) -> Extra:
-        return {
-            **super().get_extra(context),
-            **{
-                UploadAction.__JUSTIN_DATE_GENERATOR: UploadAction.__generator_for_group(context.justin_group)
-            },
+        return super().get_extra(context) | {
+            UploadAction.__JUSTIN_DATE_GENERATOR: UploadAction.__generator_for_group(context.justin_group)
         }
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        names = Enumerable([photoset]) \
-            .select(lambda p: p.closed) \
-            .where(lambda e: e is not None) \
-            .select_many(lambda p: p.subtrees) \
-            .select(lambda p: p.name) \
-            .to_list()
-
-        names_count = defaultdict(lambda: 0)
-
-        for name in names:
-            names_count[name] += 1
+        only_one_closed_name = Sequence \
+            .with_single(photoset) \
+            .flat_map(lambda ps: ps.parts) \
+            .map(lambda pt: pt.closed) \
+            .not_null() \
+            .flat_map(lambda pt: pt.subtrees) \
+            .is_distinct(lambda nm: nm.name)
 
         extra.update({
             UploadAction.__SET_NAME: photoset.name,
-            UploadAction.__SET_CONTEXT: {},
-            UploadAction.__CLOSED_NAMES: names_count,
+            UploadAction.__SET_CONTEXT: defaultdict(lambda: {}),
+            UploadAction.__SINGLE_NAME: only_one_closed_name,
         })
 
         super().perform_for_photoset(photoset, args, context, extra)
@@ -108,41 +101,18 @@ class UploadAction(NamedAction, EventUtils):
 
         print(f"Scheduling {extra[UploadAction.__SET_NAME]}... ")
 
-        destinations = [
-            (part.justin, UploadAction.__upload_justin),
-            (part.closed, UploadAction.__upload_closed),
-            (part.meeting, UploadAction.__upload_meeting),
-        ]
-
-        part_metafile = part.get_metafile()
-
-        posted_paths = Enumerable(part_metafile.posts.values()) \
-            .select_many() \
-            .select(lambda p: p.path) \
-            .to_list()
-
-        posted_paths = set(posted_paths)
-
-        extra[UploadAction.__POSTED_PATHS] = posted_paths
         extra[UploadAction.__ROOT] = part
         extra[UploadAction.__ROOT_PATH] = part.path
         extra[UploadAction.__PART_NAME] = part.name
 
-        for destination, handler in destinations:
-            if destination is None:
-                continue
-
-            handler(destination, context, extra)
+        super().perform_for_part(part, args, context, extra)
 
     # region utils
 
     @staticmethod
-    def __check_all_posted(extra: Extra, *posts_folders: FolderTree) -> bool:
-        root_path = extra[UploadAction.__ROOT_PATH]
-        posted_paths = extra[UploadAction.__POSTED_PATHS]
-
+    def __check_all_posted(*posts_folders: FolderTree) -> bool:
         for post_folder in posts_folders:
-            if post_folder.path.relative_to(root_path) not in posted_paths:
+            if not post_folder.has_metafile(PostMetafile):
                 return False
 
         return True
@@ -166,8 +136,7 @@ class UploadAction(NamedAction, EventUtils):
 
     # region upload strategies
 
-    @staticmethod
-    def __upload_justin(folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_justin(self, justin_folder: FolderTree, context: Context, extra: Extra) -> None:
         justin_group = context.justin_group
         set_name = extra[UploadAction.__SET_NAME]
         part_name = extra[UploadAction.__PART_NAME]
@@ -175,57 +144,64 @@ class UploadAction(NamedAction, EventUtils):
         date_generator = extra[UploadAction.__JUSTIN_DATE_GENERATOR]
 
         if set_name != part_name:
-            album_name = f"{set_name}.{part_name}"
+            album_name = f"{set_name}_{part_name}"
         else:
-            album_name = part_name
+            album_name = set_name
 
-        for hashtag_folder in folder.subtrees:
+        justin_folder.save_metafile(GroupMetafile(
+            group_id=justin_group.id
+        ))
+
+        for hashtag_folder in justin_folder.subtrees:
+            if UploadAction.__check_all_posted(*folder_tree_parts(hashtag_folder)):
+                continue
+
+            hashtag_name = hashtag_folder.name
+
             UploadAction.__upload_bottom(
                 community=justin_group,
                 posts_folder=hashtag_folder,
                 extra=extra,
                 params=UploadAction.UploadParams(
                     album_name=album_name,
-                    text=f"#{hashtag_folder.name}@{justin_group.url}",
+                    text=f"#{hashtag_name}@{justin_group.url}",
                     date_generator=date_generator
                 )
             )
 
-    @staticmethod
-    def __upload_closed(closed_folder: FolderTree, context: Context, extra: Extra) -> None:
-        set_name = extra[UploadAction.__SET_NAME]
-        names_count = extra[UploadAction.__CLOSED_NAMES]
+    def handle_closed(self, closed_folder: FolderTree, context: Context, extra: Extra) -> None:
+        set_name: str = extra[UploadAction.__SET_NAME]
+        only_one_name: bool = extra[UploadAction.__SINGLE_NAME]
 
         event_date = UploadAction.__get_date(set_name)
 
         for name_folder in closed_folder.subtrees:
-            if UploadAction.__check_all_posted(extra, *folder_tree_parts(name_folder)):
+            if UploadAction.__check_all_posted(*folder_tree_parts(name_folder)):
                 continue
 
             closed_name = name_folder.name
 
             print(f"Handling closed for {closed_name}...")
 
-            if names_count[closed_name] > 1:
-                event_name = set_name
-            else:
+            if not only_one_name:
                 event_name = f"{set_name}_{closed_name}"
+            else:
+                event_name = set_name
 
             UploadAction.__upload_event(
-                context=context,
                 extra=extra,
                 folder=name_folder,
                 params=UploadAction.EventParams(
                     destination=closed_folder.name,
                     category=closed_name,
                     event_name=event_name,
-                    event_date=event_date
+                    event_date=event_date,
+                    owner=context.closed_group,
                 )
             )
 
-    @staticmethod
-    def __upload_meeting(meeting_folder: FolderTree, context: Context, extra: Extra) -> None:
-        if UploadAction.__check_all_posted(extra, *folder_tree_parts(meeting_folder)):
+    def handle_meeting(self, meeting_folder: FolderTree, context: Context, extra: Extra) -> None:
+        if UploadAction.__check_all_posted(*folder_tree_parts(meeting_folder)):
             return
 
         print("Handling meeting...")
@@ -235,15 +211,48 @@ class UploadAction(NamedAction, EventUtils):
         event_date = UploadAction.__get_date(set_name)
 
         UploadAction.__upload_event(
-            context=context,
             extra=extra,
             folder=meeting_folder,
             params=UploadAction.EventParams(
                 destination=meeting_folder.name,
                 event_name=set_name,
-                event_date=event_date
+                event_date=event_date,
+                owner=context.meeting_group,
             )
         )
+
+    def handle_kot_i_kit(self, kot_i_kit_folder: FolderTree, context: Context, extra: Extra) -> None:
+        kot_i_kit_group = context.kot_i_kit_group
+
+        skip_subtrees = [
+            "logo",
+            "market",
+            "service",
+        ]
+
+        kot_i_kit_folder.save_metafile(GroupMetafile(
+            group_id=kot_i_kit_group.id
+        ))
+
+        for hashtag_folder in kot_i_kit_folder.subtrees:
+            hashtag_name = hashtag_folder.name
+
+            if hashtag_name in skip_subtrees or hashtag_name.isdecimal():
+                continue
+
+            if UploadAction.__check_all_posted(*folder_tree_parts(hashtag_folder)):
+                continue
+
+            UploadAction.__upload_bottom(
+                community=kot_i_kit_group,
+                posts_folder=hashtag_folder,
+                extra=extra,
+                params=UploadAction.UploadParams(
+                    album_name="",
+                    text=f"#{hashtag_name}@{kot_i_kit_group.url}",
+                    date_generator=UploadAction.__generator_for_group(kot_i_kit_group)
+                )
+            )
 
     # endregion upload strategies
 
@@ -254,16 +263,25 @@ class UploadAction(NamedAction, EventUtils):
         destination: str
         event_name: str
         event_date: date
+        owner: Events
         category: Optional[str] = None
 
     @staticmethod
-    def __upload_event(context: Context, extra: Extra, folder: FolderTree, params: EventParams) -> None:
+    def __upload_event(extra: Extra, folder: FolderTree, params: EventParams) -> None:
         event = UploadAction.__get_event(
-            owner=context.meeting_group,
             extra=extra,
             params=params,
             folder=folder
         )
+
+        if event is None:
+            print("Event was not acquired. Aborting.")
+
+            return
+
+        folder.save_metafile(GroupMetafile(
+            group_id=event.id
+        ))
 
         set_name: str = extra[UploadAction.__SET_NAME]
         date_generator = UploadAction.__generator_for_group(event)
@@ -279,15 +297,14 @@ class UploadAction(NamedAction, EventUtils):
         )
 
     @staticmethod
-    def __get_event(owner: Events, folder: FolderTree, extra: Extra, params: EventParams) -> Event:
+    def __get_event(folder: FolderTree, extra: Extra, params: EventParams) -> Optional[Event]:
         set_context: Extra = extra[UploadAction.__SET_CONTEXT]
         root: Photoset = extra[UploadAction.__ROOT]
 
+        owner = params.owner
         destination = params.destination
 
         if params.category is not None:
-            set_context[destination] = set_context.get(destination, {})
-
             set_context = set_context[destination]
             event_key = params.category
         else:
@@ -296,13 +313,18 @@ class UploadAction(NamedAction, EventUtils):
         if event_key not in set_context:
             event_url = UploadAction.get_community_id(folder, root)
 
-            if event_url != "":
+            if event_url is not None:
                 event = owner.get_event(event_url)
+                commentary = f"with url \"{event_url}\""
             else:
                 event = None
+                commentary = "url provided"
 
-            if event is None and ask_for_permission(f"No event with url \"{event_url}\". Create?"):
-                event = UploadAction.__create_event(owner, params)
+            if event is None:
+                if ask_for_permission(f"No event {commentary}. Create?"):
+                    event = UploadAction.__create_event(owner, params)
+                else:
+                    return None
 
             if event is not None:
                 set_context[event_key] = event
@@ -343,22 +365,20 @@ class UploadAction(NamedAction, EventUtils):
     @staticmethod
     def __upload_bottom(community: Union[Wall, Albums], posts_folder: FolderTree, extra: Extra, params: UploadParams) \
             -> None:
-        posted_paths: List[Path] = extra[UploadAction.__POSTED_PATHS]
         root_path: Path = extra[UploadAction.__ROOT_PATH]
-        root: Photoset = extra[UploadAction.__ROOT]
-
-        photoset_metafile = root.get_metafile()
 
         post_parts = folder_tree_parts(posts_folder)
         base_album_name = params.album_name
 
         for post_folder in post_parts:
-            if UploadAction.__check_all_posted(extra, post_folder):
+            if UploadAction.__check_all_posted(post_folder):
                 continue
 
             post_path = post_folder.path.relative_to(root_path)
 
-            if post_path in posted_paths:
+            if post_folder.has_metafile(PostMetafile):
+                print(f"{post_path} is good, skipping.")
+
                 continue
 
             print(f"Uploading {post_path}...")
@@ -372,13 +392,12 @@ class UploadAction(NamedAction, EventUtils):
 
             post_id = UploadAction.__upload_folder(community, post_folder, params)
 
-            photoset_metafile.posts[community.id].append(PostMetafile(
-                path=post_path,
+            post_metafile = PostMetafile(
                 post_id=post_id,
                 status=PostStatus.SCHEDULED
-            ))
+            )
 
-            root.save_metafile(photoset_metafile)
+            post_folder.save_metafile(post_metafile)
 
     @staticmethod
     def __upload_folder(community: Union[Wall, Albums], folder: FolderTree, params: UploadParams) -> int:
@@ -407,8 +426,20 @@ class UploadAction(NamedAction, EventUtils):
     def __get_album_attachments(community: Albums, folder: FolderTree, params: UploadParams) -> [Attachment]:
         album = community.create_album(params.album_name)
 
-        for file in folder.files:
-            album.add_photo(file.path)
+        file_count = folder.file_count()
+
+        for i, file in enumerate(folder.files, start=1):
+            success = False
+
+            print(f"Uploading {file.name} ({i}/{file_count})")
+
+            while not success:
+                try:
+                    album.add_photo(file.path)
+
+                    success = True
+                except:
+                    print("Retrying")
 
         return [album]
 

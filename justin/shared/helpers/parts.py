@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import List
 
 from justin.shared.filesystem import FolderTree
@@ -12,6 +13,9 @@ def is_part(tree: FolderTree) -> bool:
 
 
 def is_parted(tree: FolderTree) -> bool:
+    if tree is None:
+        return False
+
     return all([is_part(tree) for tree in tree.subtrees]) and len(tree.files) == 0
 
 
@@ -23,3 +27,25 @@ def folder_tree_parts(tree: FolderTree) -> List[FolderTree]:
         return tree.subtrees
     else:
         return [tree]
+
+
+class PartsMixin:
+    # noinspection PyTypeChecker
+    @property
+    @abstractmethod
+    def tree(self) -> FolderTree:
+        assert False
+
+    @property
+    def is_parted(self) -> bool:
+        return is_parted(self.tree)
+
+    @property
+    def parts(self) -> List[FolderTree]:
+        if self.tree is None:
+            return []
+
+        if is_parted(self.tree):
+            return self.tree.subtrees
+        else:
+            return [self.tree]
