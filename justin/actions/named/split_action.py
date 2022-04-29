@@ -1,19 +1,26 @@
 from argparse import Namespace
-from typing import List, Optional, Dict
+from typing import List, Optional
 
-from justin_utils import util
-
-from justin.actions.named.named_action import NamedAction, Context, Extra
+from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import PatternAction
 from justin.shared.filesystem import FolderTree
 from justin.shared.filesystem import RelativeFileset, File
 from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.photoset_utils import JpegType
 from justin.shared.models.photoset import Photoset
+from justin_utils import util
+from justin_utils.cli import Parameter
 
 
-class SplitAction(NamedAction):
+class SplitAction(PatternAction):
     __PHOTOSET_ROOT_KEY = "photoset_root"
     __PHOTOSET_NAME_KEY = "photoset_name"
+
+    @property
+    def parameters(self) -> List[Parameter]:
+        return super().parameters + [
+            Parameter("split_pattern", nargs="+"),
+        ]
 
     @staticmethod
     def flat_or_empty(tree: Optional[FolderTree]) -> List[File]:
@@ -22,7 +29,6 @@ class SplitAction(NamedAction):
 
         return tree.flatten()
 
-    # todo: looks like shit, needs refactoring
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         print("hello this is split")
 
@@ -39,44 +45,11 @@ class SplitAction(NamedAction):
 
         print(f"Splitting {part.name}")
 
-        justin_full = SplitAction.flat_or_empty(part.justin)
+        split_patterns = args.split_pattern
+        split_paths = list(util.resolve_patterns(split_patterns))
+        split_files = [File(path) for path in split_paths]
 
-        if part.justin is not None:
-            justin_report = SplitAction.flat_or_empty(part.justin["report"])
-            justin_unpublished = part.justin.files
-        else:
-            justin_report = []
-            justin_unpublished = []
-
-        justin_nonreport = list(set(justin_full).difference(justin_report))
-
-        bases = {
-            "All in justin": justin_full,
-            "Justin except report": justin_nonreport,
-            "Justin unpublished": justin_unpublished,
-        }
-
-        files_in_bases = set()
-        files_in_bases.update(*bases.values())
-
-        jpegs_not_in_bases = [jpeg for jpeg in part.results if jpeg not in files_in_bases]
-
-        bases["Other"] = jpegs_not_in_bases
-
-        bases: Dict[str, List[File]] = {k: v for k, v in bases.items() if v}
-
-        choice_options = list(bases.keys())
-
-        nothing_option = "Nothing"
-
-        choice_options.append(nothing_option)
-
-        chosen_key = util.ask_for_choice("Which base should be extracted?", choice_options)
-
-        if chosen_key == nothing_option:
-            return 
-
-        chosen_base = bases[chosen_key]
+        chosen_base = split_files
         not_chosen_files = [result for result in part.results if result not in chosen_base]
 
         chosen_stems = util.distinct([file.stem() for file in chosen_base])

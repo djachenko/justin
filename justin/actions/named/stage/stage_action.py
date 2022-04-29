@@ -35,22 +35,31 @@ class StageAction(NamedAction):
 
         transfer_checks = current_stage.outcoming_checks + new_stage.incoming_checks
 
+        checks_runner = ChecksRunner.instance()
+
+        root = context.world.location_of_path(photoset.path)
+
+        new_stage_folder = root / "stages" / new_stage.folder
+
         try:
-            current_stage.cleanup(photoset)
+            photoset_parts = photoset.parts
 
-            for check in transfer_checks:
-                check.rollback(photoset)
+            for photoset_part in photoset_parts:
+                current_stage.cleanup(photoset_part)
 
-            checks_runner = ChecksRunner.instance()
+                for check in transfer_checks:
+                    check.rollback(photoset_part)
 
-            print("Running checks")
+                print(f"Running checks")
 
-            checks_runner.run(photoset, transfer_checks)
+                checks_runner.run(photoset_part, transfer_checks)
 
             if new_stage != current_stage:
-                new_stage.transfer(photoset)
+                photoset.move(new_stage_folder)
 
-            new_stage.prepare(photoset)
+            for photoset_part in photoset_parts:
+                new_stage.prepare(photoset_part)
+
         except (ExtractorError, CheckFailedError) as error:
             print(f"Unable to {new_stage.name} {photoset.name}: {error}")
         else:

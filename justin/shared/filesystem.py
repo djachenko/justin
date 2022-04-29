@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import List, Optional, Dict, Callable
 
 from justin_utils.data import DataSize
-from justin_utils.multiplexer import Multiplexable
 from justin_utils.time_formatter import format_time
 from justin_utils.transfer import TransferSpeedMeter, TransferTimeEstimator
 
-
 # region helpers
+from justin.shared.metafile2 import MetafileMixin
 
 
 def __subfolders(path: Path) -> List[Path]:
@@ -151,14 +150,14 @@ def __move_file(file_path: Path, new_path: Path):
 
     try:
         __copy_file(file_path, new_path)
-    except KeyboardInterrupt:
+    except:
         __remove_file(new_path)
 
         raise
 
     try:
         __remove_file(file_path)
-    except KeyboardInterrupt:
+    except:
         __remove_file(file_path)
 
         raise
@@ -171,6 +170,9 @@ def move(src_path: Path, dst_path: Path):
     __check_paths(src_path, dst_path)
 
     new_file_path = dst_path / src_path.name
+
+    if src_path == new_file_path:
+        return
 
     if __get_mount(src_path) == __get_mount(dst_path):
         new_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -334,7 +336,7 @@ class File(PathBased):
         return o.path == self.path
 
 
-class FolderTree(PathBased, Multiplexable):
+class FolderTree(PathBased, MetafileMixin):
     # noinspection PyTypeChecker
     def __init__(self, path: Path) -> None:
         super().__init__(path)
@@ -403,12 +405,17 @@ class FolderTree(PathBased, Multiplexable):
                 if not child_tree.empty():
                     self.__subtrees[child.name] = child_tree
                 else:
-                    child_tree.remove()
+                    try:
+                        child_tree.remove()
+                    except:
+                        print(f"Failed to remove empty tree: \"{child_tree}\"")
+                        pass
 
             elif child.is_file():
                 if child.name.lower() == ".DS_store".lower():
                     child.unlink()
-                else:
+                elif child.stem.lower() != "_meta":
+                # else:
                     self.files.append(File(child))
 
             else:
@@ -426,6 +433,10 @@ class FolderTree(PathBased, Multiplexable):
 
     def __repr__(self) -> str:
         return str(self)
+
+
+class MetafiledFolderTree(FolderTree, MetafileMixin):
+    pass
 
 
 class TreeBased(PathBased):

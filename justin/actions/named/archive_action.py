@@ -2,7 +2,7 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List, Optional
 
-from py_linq import Enumerable
+from justin_utils.pylinq import Sequence
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.shared.filesystem import FolderTree
@@ -10,6 +10,8 @@ from justin.shared.models.photoset import Photoset
 
 
 # todo: may be reduced to stage
+
+
 class ArchiveAction(NamedAction):
     @staticmethod
     def __get_biggest_tree(trees: List[FolderTree]) -> FolderTree:
@@ -29,6 +31,7 @@ class ArchiveAction(NamedAction):
             "justin",
             "photoclub",
             "closed",
+            "meeting",
         ]
 
         root_paths = [Path(root) for root in roots]
@@ -45,10 +48,10 @@ class ArchiveAction(NamedAction):
             return root
 
         def get_count(path: Path) -> int:
-            int_sum = Enumerable(photoset.parts) \
-                .select(lambda part: downstride_tree(part.tree, path)) \
-                .where(lambda e: e is not None) \
-                .select(lambda tree: tree.file_count()) \
+            int_sum = Sequence(photoset.parts) \
+                .map(lambda part: downstride_tree(part.tree, path)) \
+                .filter(lambda e: e is not None) \
+                .map(lambda tree: tree.file_count()) \
                 .sum()
 
             return int_sum
@@ -66,19 +69,21 @@ class ArchiveAction(NamedAction):
 
         assert primary_destination is not None
 
+        print(f"Moving {photoset.name} to {final_path.relative_to(archive.path)}")
+
         if primary_destination.has_categories:
-            primary_category_name = Enumerable(photoset.parts) \
-                .select(lambda part: downstride_tree(part.tree, primary_path)) \
-                .where(lambda e: e is not None) \
-                .select_many(lambda t: t.subtrees) \
-                .group_by(key_names=["name"], key=lambda x: x.name) \
-                .select(lambda g: (g.key.name, g.sum(lambda e: e.file_count()))) \
-                .order_by_descending(lambda e: e[1]) \
-                .first()[0]
+            primary_category_name = Sequence(photoset.parts)\
+                .map(lambda part: downstride_tree(part.tree, primary_path)) \
+                .cache() \
+                .filter(lambda e: e is not None) \
+                .flat_map(lambda t: t.subtrees) \
+                .group_by(lambda x: x.name) \
+                .map(lambda t: (t[0], t[1].map(lambda e: e.file_count()).sum())) \
+                .max(lambda e: e[1])[0]
 
             final_path /= primary_category_name
 
-        print(f"Moving {photoset.name} to {final_path.relative_to(archive.path)}")
+            print(f"Moving {photoset.name} to {final_path.relative_to(archive.path)}")
 
         photoset.move(path=final_path)
 

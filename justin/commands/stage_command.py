@@ -12,6 +12,7 @@ class StageCommand(Command):
 
         self.__action = action
         self.__stages_factory = factory
+        self.name = "stage"
 
     def configure_parser(self, parser_adder):
         for stage in self.__stages_factory.stages():

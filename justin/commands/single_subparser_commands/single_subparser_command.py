@@ -9,6 +9,10 @@ class SingleSubparserCommand(Command, ABC):
     def command(self) -> str:
         pass
 
+    @property
+    def name(self):
+        return self.command()
+
     def configure_parser(self, parser_adder):
         subparser: ArgumentParser = parser_adder.add_parser(self.command())
 

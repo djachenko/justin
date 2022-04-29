@@ -24,7 +24,7 @@ class NamedAction(Action):
 
         self.__perform_for_pattern(names, args, context, extra)
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def get_extra(self, context: Context) -> Extra:
         return {}
 

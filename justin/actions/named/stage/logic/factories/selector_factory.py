@@ -7,6 +7,7 @@ from justin.actions.named.stage.logic.gif_sources import GifSourcesSelector
 from justin.actions.named.stage.logic.metadata import MetadataSelector
 from justin.actions.named.stage.logic.missing_gifs import MissingGifsSelector
 from justin.actions.named.stage.logic.odd_selection import OddSelectionSelector
+from justin.actions.named.stage.logic.progress import ProgressResultsSelector
 from justin.actions.named.stage.logic.structure import StructureSelector
 from justin.actions.named.stage.logic.unselected import UnselectedSelector
 from justin.shared.structure import Structure
@@ -50,3 +51,7 @@ class SelectorFactory:
     @lru_cache()
     def everything_is_published(self) -> Selector:
         return EverythingIsPublishedSelector()
+
+    @lru_cache()
+    def progress_has_results(self) -> Selector:
+        return ProgressResultsSelector()
