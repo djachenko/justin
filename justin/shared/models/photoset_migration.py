@@ -3,9 +3,9 @@ from abc import abstractmethod
 from pathlib import Path
 
 from justin.shared.filesystem import FolderTree
-from justin.shared.metafile2 import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile
+from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile
 from justin.shared.models.photoset import Photoset
-from justin.shared.old_metafile import Json
+from justin.shared.metafile import Json
 
 
 class PhotosetMigration:

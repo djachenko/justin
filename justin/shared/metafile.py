@@ -9,9 +9,9 @@ from typing import Optional, Dict, Type, TypeVar, List
 
 from justin_utils.singleton import Singleton
 
-from justin.shared.old_metafile import Json
-
 T = TypeVar('T', bound='RootMetafile')
+
+Json = Dict[str, 'Json'] | List['Json'] | str
 
 
 # region metafile classes
@@ -173,6 +173,8 @@ class MetafileReadWriter(Singleton):
 
         new_json = metafile.as_json()
 
+        # assert set(old_json.keys()).intersection(new_json.keys()) == {"type", }
+
         result_json = old_json | new_json
 
         result_json[RootMetafile.TYPE_KEY] = list(set(
@@ -244,5 +246,8 @@ class MetafileMixin(ABC):
 
         for metafile in saved_metafiles:
             self.save_metafile(metafile)
+
+    def collect_metafile_paths(self) -> List[Path]:
+        return [self.metafile_path]
 
 # endregion metafile mixins

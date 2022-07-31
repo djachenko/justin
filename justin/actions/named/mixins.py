@@ -3,7 +3,7 @@ from typing import Optional
 
 from justin.shared import filesystem
 from justin.shared.filesystem import FolderTree
-from justin.shared.metafile2 import GroupMetafile
+from justin.shared.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 
 

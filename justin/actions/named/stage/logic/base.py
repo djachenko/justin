@@ -1,17 +1,18 @@
 from abc import abstractmethod
-from typing import Optional, List
+from typing import Optional, List, Iterable
 
-from justin_utils import util
-
-from justin.actions.named.stage.logic.exceptions.extractor_error import ExtractorError
-from justin.shared.filesystem import PathBased, RelativeFileset
+from justin.shared.filesystem import PathBased, RelativeFileset, File
 from justin.shared.helpers import photoset_utils
 from justin.shared.models.photoset import Photoset
+from justin_utils import util
+from justin_utils.util import flatten
+
+Problem = str
 
 
 class AbstractCheck:
     @abstractmethod
-    def is_good(self, photoset: Photoset) -> bool:
+    def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
         pass
 
 
@@ -38,10 +39,8 @@ class Extractor:
     def selector(self) -> Selector:
         return self.__selector
 
-    def __run_prechecks(self, photoset: Photoset) -> bool:
-        results = [precheck.is_good(photoset) for precheck in self.__prechecks]
-
-        return all(results)
+    def __run_prechecks(self, photoset: Photoset) -> Iterable[Problem]:
+        return flatten(precheck.get_problems(photoset) for precheck in self.__prechecks)
 
     def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         selection = self.__selector.select(photoset)
@@ -50,9 +49,11 @@ class Extractor:
 
         return files_to_move
 
-    def forward(self, photoset: Photoset):
-        if not self.__run_prechecks(photoset):
-            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor forward on {photoset.name}")
+    def forward(self, photoset: Photoset) -> Iterable[Problem]:
+        prechecks_result = self.__run_prechecks(photoset)
+
+        if prechecks_result:
+            return prechecks_result
 
         files_to_move = self.files_to_extract(photoset)
         files_to_move = list(set(files_to_move))
@@ -63,26 +64,35 @@ class Extractor:
 
         photoset.tree.refresh()
 
-    def backwards(self, photoset: Photoset):
-        if not self.__run_prechecks(photoset):
-            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {photoset.name}")
+        return []
+
+    def backwards(self, photoset: Photoset) -> Iterable[Problem]:
+        prechecks_result = self.__run_prechecks(photoset)
+
+        if prechecks_result:
+            return prechecks_result
 
         filtered = photoset.tree[self.__filter_folder]
 
         if not filtered:
-            return
+            return []
 
         filtered_photoset = Photoset(filtered)
 
-        if not self.__run_prechecks(filtered_photoset):
-            raise ExtractorError(f"Failed prechecks while running {self.__name} extractor backwards on {photoset.name}/"
-                                 f"{self.__filter_folder}")
+        prechecks_result = self.__run_prechecks(filtered_photoset)
 
-        filtered_set = RelativeFileset(filtered.path, filtered.flatten())
+        if prechecks_result:
+            return prechecks_result
+
+        metafiles = [File(path) for path in filtered.collect_metafile_paths() if path.exists()]
+
+        filtered_set = RelativeFileset(filtered.path, filtered.flatten() + metafiles)
 
         filtered_set.move_up()
 
         photoset.tree.refresh()
+
+        return []
 
 
 class Check(AbstractCheck):
@@ -106,10 +116,15 @@ class Check(AbstractCheck):
     def __check_part(self, photoset: Photoset) -> bool:
         return len(self.__selector.select(photoset)) == 0
 
-    def is_good(self, photoset: Photoset) -> bool:
-        result = all(self.__check_part(part) for part in photoset.parts)
+    def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
+        problems = []
 
-        return result
+        for part in photoset.parts:
+            selection = self.__selector.select(part)
+
+            problems += selection
+
+        return problems
 
     def ask_for_extract(self):
         if self.__hook is None:
@@ -131,3 +146,15 @@ class Check(AbstractCheck):
 
     def __repr__(self) -> str:
         return self.name.capitalize()
+
+
+class MetaCheck(Check):
+    def __init__(self, name: str, inner_checks: Iterable[Check]) -> None:
+        super().__init__(name)
+
+        self.__inner = inner_checks
+
+    def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
+        return flatten(inner_check.get_problems(photoset) for inner_check in self.__inner)
+
+
