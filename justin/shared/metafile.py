@@ -1,46 +1,47 @@
+import dataclasses
 import json
-from abc import abstractmethod
-from dataclasses import dataclass
+from abc import abstractmethod, ABC
+from dataclasses import dataclass, asdict
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Union, ClassVar
+from typing import Optional, Dict, Type, TypeVar, List
 
-from justin_utils.json_migration import JsonMigrator
+from justin_utils.singleton import Singleton
 
-Json = Union[
-    Dict[str, 'Json'],
-    List['Json'],
-    str,
-]
+T = TypeVar('T', bound='RootMetafile')
 
+Json = Dict[str, 'Json'] | List['Json'] | str
+
+
+# region metafile classes
 
 class Metafile:
-    @abstractmethod
-    def encode(self) -> Json:
-        pass
 
     @classmethod
     @abstractmethod
-    def decode(cls, d: Json) -> 'Metafile':
+    def from_json(cls: Type[T], json_object: Json) -> T:
         pass
 
+    @abstractmethod
+    def as_json(self) -> Json:
+        return {}
+
+
+@dataclass
+class RootMetafile(Metafile):
+    TYPE_KEY = "type"
+
     @classmethod
-    def read(cls, path: Path):
-        if path.exists() and path.stat().st_size > 0:
-            with path.open() as metafile_file:
-                json_dict = json.load(metafile_file)
+    @lru_cache()
+    @abstractmethod
+    def type(cls) -> str:
+        pass
 
-            JsonMigrator.instance().migrate(json_dict)
-        else:
-            json_dict = {}
-
-        return cls.decode(json_dict)
-
-    def write(self, path: Path):
-        with path.open(mode="w") as metafile_file:
-            json_dict = self.encode()
-
-            json.dump(json_dict, metafile_file, indent=4)
+    def as_json(self) -> Json:
+        return super().as_json() | {
+            RootMetafile.TYPE_KEY: self.type()
+        }
 
 
 class PostStatus(Metafile, Enum):
@@ -48,70 +49,205 @@ class PostStatus(Metafile, Enum):
     PUBLISHED = "published"
 
     @classmethod
-    def decode(cls, string: Json) -> 'PostStatus':
-        string = string.upper()
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        assert isinstance(json_object, str)
 
-        return PostStatus[string]
+        return cls(json_object)
 
-    def encode(self) -> Json:
+    def as_json(self) -> Json:
         return self.value
 
 
 @dataclass
-class PostMetafile(Metafile):
-    __PATH_KEY: ClassVar[str] = "path"
-    __POST_ID_KEY: ClassVar[str] = "id"
-    __STATUS_KEY: ClassVar[str] = "post_status"
-    __GROUP_ID_KEY: ClassVar[str] = "group_id"
-
-    path: Path
+class PostMetafile(RootMetafile):
     post_id: int
     status: PostStatus
 
-    def encode(self) -> Json:
-        return {
-            PostMetafile.__PATH_KEY: self.path.as_posix(),
-            PostMetafile.__POST_ID_KEY: self.post_id,
-            PostMetafile.__STATUS_KEY: self.status.encode(),
-        }
+    @classmethod
+    def type(cls) -> str:
+        return "post"
 
     @classmethod
-    def decode(cls, d: Json) -> 'PostMetafile':
-        if PostMetafile.__STATUS_KEY in d:
-            status = PostStatus.decode(d[PostMetafile.__STATUS_KEY])
-        else:
-            status = PostStatus.SCHEDULED
-
+    def from_json(cls: Type[T], json_object: Json) -> T:
         return PostMetafile(
-            path=Path(d[PostMetafile.__PATH_KEY]),
-            post_id=d[PostMetafile.__POST_ID_KEY],
-            status=status,
+            post_id=json_object["post_id"],
+            status=PostStatus.from_json(json_object["status"])
         )
+
+    def as_json(self) -> Json:
+        self_as_dict = asdict(self)
+
+        self_as_dict["status"] = self.status.as_json()
+
+        return super().as_json() | self_as_dict
 
 
 @dataclass
-class PhotosetMetafile(Metafile):
-    __POSTS_KEY: ClassVar[str] = "posts"
-
-    posts: Dict[int, List[PostMetafile]]
+class GroupMetafile(RootMetafile):
+    group_id: int
 
     @classmethod
-    def decode(cls, d: Json) -> 'PhotosetMetafile':
-        group_posts_mapping = {}
+    def type(cls) -> str:
+        return "group"
 
-        for group_id, group_posts in d.get(PhotosetMetafile.__POSTS_KEY, {}).items():
-            group_posts_mapping[group_id] = [PostMetafile.decode(group_post) for group_post in group_posts]
-
-        return PhotosetMetafile(
-            posts=group_posts_mapping
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return GroupMetafile(
+            group_id=json_object["group_id"]
         )
 
-    def encode(self) -> Json:
-        jsons_mapping = {}
+    def as_json(self) -> Json:
+        return super().as_json() | asdict(self)
 
-        for group_id, posts in self.posts.items():
-            jsons_mapping[group_id] = [post.encode() for post in posts]
 
-        return {
-            PhotosetMetafile.__POSTS_KEY: jsons_mapping
-        }
+# endregion metafile classes
+
+
+# region metafile reading
+
+class MetafileReadWriter(Singleton):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.__mapping: Dict[str, Type[RootMetafile]] = {}
+
+    def register(self, *types: Type[RootMetafile]) -> None:
+        fields = []
+
+        for type_ in types:
+            fields += dataclasses.fields(type_)
+
+        assert len(set(fields)) == len(fields)
+
+        self.__mapping |= {type_.type(): type_ for type_ in types}
+
+    def read(self, path: Path, metafile_type: T = None) -> Optional[T]:
+        metafiles = self.read_all(path)
+
+        if len(metafiles) == 0:
+            return None
+
+        if len(metafiles) == 1 and metafile_type is None:
+            return metafiles[0]
+
+        for metafile in metafiles:
+            if type(metafile) == metafile_type:
+                return metafile
+
+        return None
+
+    def read_all(self, path: Path) -> List[T]:
+        if not path.exists() or path.stat().st_size <= 0:
+            return []
+
+        with path.open() as metafile_file:
+            json_dict = json.load(metafile_file)
+
+        if RootMetafile.TYPE_KEY not in json_dict:
+            return []
+
+        metafile_types = json_dict[RootMetafile.TYPE_KEY]
+
+        metafiles = []
+
+        for metafile_type in metafile_types:
+            assert metafile_type in self.__mapping
+
+            parser = self.__mapping[metafile_type]
+
+            metafile = parser.from_json(json_dict)
+
+            metafiles.append(metafile)
+
+        return metafiles
+
+    # noinspection PyMethodMayBeStatic
+    def write(self, metafile: RootMetafile, path: Path) -> None:
+        if path.exists():
+            with path.open() as metafile_file:
+                old_json = json.load(metafile_file)
+        else:
+            old_json = {
+                RootMetafile.TYPE_KEY: []
+            }
+
+        new_json = metafile.as_json()
+
+        # assert set(old_json.keys()).intersection(new_json.keys()) == {"type", }
+
+        result_json = old_json | new_json
+
+        result_json[RootMetafile.TYPE_KEY] = list(set(
+            old_json[RootMetafile.TYPE_KEY] + [new_json[RootMetafile.TYPE_KEY]]
+        ))
+
+        with path.open(mode="w") as metafile_file:
+            json.dump(result_json, metafile_file, indent=4)
+
+
+MetafileReadWriter.instance().register(
+    PostMetafile,
+    GroupMetafile,
+)
+
+
+# endregion metafile reading
+
+
+# region metafile mixins
+
+class MetafileMixin(ABC):
+    __METAFILE_NAME = "_meta.json"
+
+    # noinspection PyTypeChecker
+    @property
+    @abstractmethod
+    def path(self) -> Path:
+        assert False
+
+    @property
+    def metafile_path(self) -> Path:
+        return self.path / MetafileMixin.__METAFILE_NAME
+
+    @property
+    @lru_cache()
+    def __reader(self):
+        return MetafileReadWriter.instance()
+
+    def has_metafile(self, metafile_type: Type[T] = None) -> bool:
+        if not self.metafile_path.exists():
+            return False
+
+        if metafile_type is None:
+            return True
+
+        return self.get_metafile(metafile_type) is not None
+
+    def get_metafile(self, metafile_type: Type[T] = None) -> T | None:
+        if not self.metafile_path.exists():
+            return None
+
+        return self.__reader.read(self.metafile_path, metafile_type)
+
+    def save_metafile(self, metafile: RootMetafile):
+        self.__reader.write(metafile, self.metafile_path)
+
+    def remove_metafile(self, metafile_type: Type[RootMetafile] = None):
+        if metafile_type is None:
+            self.metafile_path.unlink(missing_ok=True)
+
+            return
+
+        metafiles = self.__reader.read_all(self.metafile_path)
+
+        saved_metafiles = [metafile for metafile in metafiles if type(metafile) != metafile_type]
+
+        self.metafile_path.unlink(missing_ok=True)
+
+        for metafile in saved_metafiles:
+            self.save_metafile(metafile)
+
+    def collect_metafile_paths(self) -> List[Path]:
+        return [self.metafile_path]
+
+# endregion metafile mixins

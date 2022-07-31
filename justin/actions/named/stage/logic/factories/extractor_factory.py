@@ -4,7 +4,7 @@ from justin.actions.named.stage.logic.base import Extractor
 from justin.actions.named.stage.logic.factories.selector_factory import SelectorFactory
 from justin.actions.named.stage.logic.metadata import MetadataCheck
 from justin.actions.named.stage.logic.missing_gifs import MissingGifsHandler
-from justin.actions.named.stage.logic.progress import ProgressExtractor
+from justin.actions.named.stage.logic.progress import ProgressExtractor, ProgressResultsCheck
 from justin.actions.named.stage.logic.structure import StructureExtractor
 
 
@@ -76,4 +76,5 @@ class ExtractorFactory:
     def progress(self) -> Extractor:
         return ProgressExtractor(prechecks=[
             self.__metadata_check,
+            ProgressResultsCheck(self.__selector_factory.progress_has_results())
         ])

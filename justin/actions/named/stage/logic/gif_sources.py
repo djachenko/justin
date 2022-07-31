@@ -1,8 +1,8 @@
-from typing import List
+from typing import List, Iterable
 
 from justin_utils import joins, util
 
-from justin.actions.named.stage.logic.base import Check
+from justin.actions.named.stage.logic.base import Check, Problem
 from justin.actions.named.stage.logic.base import Selector
 from justin.shared.models.photoset import Photoset
 
@@ -27,10 +27,10 @@ class GifSourcesSelector(Selector):
 
 
 class GifSourcesCheck(Check):
-    def is_good(self, photoset: Photoset) -> bool:
-        super_result = super().is_good(photoset)
+    def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
+        super_problems = super().get_problems(photoset)
 
-        if super_result:
-            return super_result
+        if super_problems and util.ask_for_permission("\n" + self.message):
+            return []
 
-        return util.ask_for_permission("\n" + self.message)
+        return super_problems

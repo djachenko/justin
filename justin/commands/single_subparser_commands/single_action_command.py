@@ -1,12 +1,13 @@
+from abc import ABC
 from argparse import Namespace, ArgumentParser
 
-from justin.actions.action_id import ActionId
+from justin.actions.action import Action
 from justin.commands.single_subparser_commands.single_subparser_command import SingleSubparserCommand
-from justin.shared.justin import Justin
+from justin.shared.context import Context
 
 
-class SingleActionCommand(SingleSubparserCommand):
-    def __init__(self, command: str, action: ActionId) -> None:
+class SingleActionCommand(SingleSubparserCommand, ABC):
+    def __init__(self, command: str, action: Action) -> None:
         super().__init__()
 
         self.__command = command
@@ -15,8 +16,5 @@ class SingleActionCommand(SingleSubparserCommand):
     def command(self) -> str:
         return self.__command
 
-    def configure_subparser(self, subparser: ArgumentParser):
-        super().configure_subparser(subparser)
-
-    def run(self, args: Namespace, justin: Justin) -> None:
-        justin[self.__action](args)
+    def run(self, args: Namespace, context: Context) -> None:
+        self.__action.perform(args, context)

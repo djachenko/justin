@@ -63,3 +63,8 @@ class Stage:
 
     def transfer(self, photoset: Photoset):
         photoset.move(photoset.path.parent / self.__path)
+
+
+stub_stage = Stage(
+    path=Path()
+)
