@@ -70,10 +70,33 @@ class SplitMetafilesMigration(PhotosetMigration):
         # old_metafile_path.unlink()
 
 
+class RenameFoldersMigration(PhotosetMigration):
+    def migrate(self, photoset: Photoset) -> None:
+        renamings = [
+            ("our_people", "my_people",),
+            ("selection", "not_signed",),
+        ]
+
+        for src, dst in renamings:
+            src_tree = photoset.tree[src]
+
+            if src_tree is None:
+                continue
+
+            src_tree.rename(dst)
+
+
+ALL_MIGRATIONS = [
+    SplitMetafilesMigration(),
+    RenameFoldersMigration(),
+]
+
+
 def main():
     migration = SplitMetafilesMigration()
 
-    migration.migrate(Photoset(FolderTree(Path("C:/Users/justin/photos/stages/stage3.schedule/21.12.18.loading_party"))))
+    migration.migrate(
+        Photoset(FolderTree(Path("C:/Users/justin/photos/stages/stage3.schedule/21.12.18.loading_party"))))
 
 
 if __name__ == '__main__':

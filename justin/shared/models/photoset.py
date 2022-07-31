@@ -14,16 +14,17 @@ class Photoset(TreeBased, PartsMixin):
     __JUSTIN = "justin"
     __MEETING = "meeting"
     __KOT_I_KIT = "kot_i_kit"
-    __SELECTION = "selection"
+    __SELECTION = "not_signed"
     __PHOTOCLUB = "photoclub"
-    __OUR_PEOPLE = "our_people"
+    __OUR_PEOPLE = "my_people"
 
     def __init__(self, tree: FolderTree) -> None:
         super().__init__(tree)
 
-        from justin.shared.models.photoset_migration import SplitMetafilesMigration
+        from justin.shared.models.photoset_migration import ALL_MIGRATIONS
 
-        SplitMetafilesMigration().migrate(self)
+        for migration in ALL_MIGRATIONS:
+            migration.migrate(self)
 
     def __str__(self) -> str:
         return "Photoset: " + self.tree.name
@@ -56,7 +57,7 @@ class Photoset(TreeBased, PartsMixin):
             return None
 
     @property
-    def photoclub(self) -> Optional[List[File]]:
+    def photoclub(self) -> Optional[FolderTree]:
         return self.tree[Photoset.__PHOTOCLUB]
 
     @property
