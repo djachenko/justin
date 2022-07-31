@@ -1,7 +1,6 @@
 import runpy
 from enum import Enum
 from pathlib import Path
-from typing import Union
 
 from justin.shared.structure import Structure
 
@@ -23,7 +22,7 @@ class Config:
 
         self.__internal_dict[Config.Keys.PYVKO_CONFIG] = Path(self.__internal_dict[Config.Keys.PYVKO_CONFIG])
 
-    def __getitem__(self, key: Keys) -> Union[str, Path, Structure]:
+    def __getitem__(self, key: Keys) -> str | Path | Structure:
         return self.__internal_dict[key]
 
     @staticmethod
