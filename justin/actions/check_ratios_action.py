@@ -43,4 +43,3 @@ class CheckRatiosAction(PatternAction):
 
             for ratio in minority_ratios:
                 print(", ".join(ratio))
-

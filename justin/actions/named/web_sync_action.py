@@ -6,7 +6,7 @@ from justin.actions.named.destinations_aware_action import DestinationsAwareActi
 from justin.actions.named.named_action import Context, Extra
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile2 import GroupMetafile, PostMetafile, PostStatus
+from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
 
@@ -57,10 +57,16 @@ class WebSyncAction(DestinationsAwareAction):
         self.__handle_tagged(kot_i_kit_folder, context)
 
     def __warmup_cache(self, group_id: int, context: Context):
+
         if group_id in self.__cache:
             return
 
-        group = context.pyvko.groups.get_group(str(group_id))
+        if group_id > 0:
+            group_id_api = -group_id
+        else:
+            group_id_api = group_id
+
+        group = context.pyvko.get(str(group_id_api))
 
         scheduled_posts = group.get_scheduled_posts()
         published_posts = group.get_posts()

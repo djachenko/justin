@@ -4,7 +4,7 @@ from typing import Iterable, Tuple, Any, List
 from justin_utils import util, joins
 
 from justin.actions.named.stage.exceptions.no_files_for_name_error import NoFilesForNameError
-from justin.shared.filesystem import PathBased
+from justin.shared.filesystem import PathBased, File
 from justin.shared.models.photoset import Photoset
 
 
@@ -76,6 +76,9 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
     jpegs_to_move = [jpeg for _, jpeg in jpegs_join]
     sources_contents_to_move = util.flatten(source.files() for _, source in sources_join)
 
-    files_to_move = jpegs_to_move + sources_contents_to_move
+    metafile_paths = util.flatten(tree.collect_metafile_paths() for tree in jpeg_trees)
+    metafiles = [File(path) for path in metafile_paths if path.exists()]
+
+    files_to_move = jpegs_to_move + sources_contents_to_move + metafiles
 
     return files_to_move

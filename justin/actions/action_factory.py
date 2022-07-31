@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from justin.actions.action import Action
 from justin.actions.check_ratios_action import CheckRatiosAction
+from justin.actions.create_event_action import CreateEventAction, SetupEventAction
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.move_action import MoveAction
@@ -84,7 +85,10 @@ class ActionFactory:
 
     @lru_cache()
     def upload_action(self) -> CLIAction:
-        return UploadAction()
+        return UploadAction(
+            create=self.create_event(),
+            setup=self.setup_event()
+        )
 
     @lru_cache()
     def check_ratios(self) -> CLIAction:
@@ -93,3 +97,12 @@ class ActionFactory:
     @lru_cache()
     def sequence(self) -> CLIAction:
         return SequenceAction()
+
+    @lru_cache()
+    def create_event(self) -> CreateEventAction:
+        return CreateEventAction()
+
+    @lru_cache()
+    def setup_event(self) -> SetupEventAction:
+        return SetupEventAction()
+
