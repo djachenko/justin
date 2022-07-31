@@ -42,10 +42,10 @@ def __run(config_path: Path, args: List[str] = None):
 
     context: Context = Context(
         world=Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE])),
-        justin_group=Proxy(lambda: pyvko.get(config[Config.Keys.JUSTIN_URL])),
-        closed_group=Proxy(lambda: pyvko.get(config[Config.Keys.CLOSED_URL])),
-        meeting_group=Proxy(lambda: pyvko.get(config[Config.Keys.MEETING_URL])),
-        kot_i_kit_group=Proxy(lambda: pyvko.get(config[Config.Keys.KOT_I_KIT_URL])),
+        justin_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.JUSTIN_URL])),
+        closed_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.CLOSED_URL])),
+        meeting_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.MEETING_URL])),
+        kot_i_kit_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.KOT_I_KIT_URL])),
         pyvko=pyvko,
     )
 
@@ -54,7 +54,10 @@ def __run(config_path: Path, args: List[str] = None):
         PostStatusMigration(),
     )
 
-    App(commands, context).run(args)
+    try:
+        App(commands, context).run(args)
+    except KeyboardInterrupt:
+        print("^C")
 
 
 # endregion general
