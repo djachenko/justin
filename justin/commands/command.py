@@ -14,4 +14,4 @@ class Command:
         pass
 
     def setup_callback(self, parser: ArgumentParser):
-        parser.set_defaults(func=self.run)
+        parser.set_defaults(command=self)

@@ -53,8 +53,11 @@ def __check_paths(src_path: Path, dst_path: Path):
 
 
 def open_file_manager(path: Path):
+
+    print("ofm", path)
+
     # noinspection PyTypeChecker
-    webbrowser.open(path)
+    webbrowser.open(str(path))
 
 
 # endregion
@@ -285,6 +288,13 @@ class PathBased(Movable):
     def move_up(self) -> None:
         self.move(self.path.parent.parent)
 
+    def rename(self, new_name: str) -> None:
+        new_path = self.path.with_stem(new_name)
+
+        self.path.rename(new_path)
+
+        self.__path = new_path
+
 
 class File(PathBased):
 
@@ -325,7 +335,10 @@ class File(PathBased):
         return self.path.suffix
 
     def __str__(self) -> str:
-        return "File {name}".format(name=self.name)
+        return f"File({self.path})"
+
+    def __repr__(self) -> str:
+        return str(self)
 
     def __hash__(self):
         return hash(self.path)
@@ -365,7 +378,7 @@ class FolderTree(PathBased, MetafileMixin):
 
     @property
     def subtrees(self) -> List['FolderTree']:
-        return list(self.__subtrees.values())
+        return sorted(list(self.__subtrees.values()), key=lambda x: x.name)
 
     def __getitem__(self, key: str) -> Optional['FolderTree']:
         return self.__subtrees.get(key)
@@ -410,13 +423,14 @@ class FolderTree(PathBased, MetafileMixin):
                         child_tree.remove()
                     except:
                         print(f"Failed to remove empty tree: \"{child_tree}\"")
-                        pass
+
+                        self.__subtrees[child.name] = child_tree
 
             elif child.is_file():
                 if child.name.lower() == ".DS_store".lower():
                     child.unlink()
                 elif child.stem.lower() != "_meta":
-                # else:
+                    # else:
                     self.files.append(File(child))
 
             else:
@@ -424,8 +438,15 @@ class FolderTree(PathBased, MetafileMixin):
 
                 exit(1)
 
+        self.__files.sort(key=lambda x: x.name)
+
     def move(self, path: Path):
         super().move(path)
+
+        self.refresh()
+
+    def rename(self, new_name: str) -> None:
+        super().rename(new_name)
 
         self.refresh()
 
@@ -435,9 +456,9 @@ class FolderTree(PathBased, MetafileMixin):
     def __repr__(self) -> str:
         return str(self)
 
-
-class MetafiledFolderTree(FolderTree, MetafileMixin):
-    pass
+    def collect_metafile_paths(self) -> List[Path]:
+        return super().collect_metafile_paths() + \
+               util.flatten(subtree.collect_metafile_paths() for subtree in self.subtrees)
 
 
 class TreeBased(PathBased):
