@@ -79,8 +79,8 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
             ],
             preparation_hooks=[
-                self.__extractors_factory.edited(),
                 self.__extractors_factory.progress(),
+                self.__extractors_factory.edited(),
             ]
         )
 

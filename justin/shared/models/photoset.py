@@ -1,59 +1,40 @@
-from abc import abstractmethod, ABC
-from pathlib import Path
 from typing import List, Optional
 
 from justin_utils import util
-from justin_utils.multiplexer import Multiplexable
 
 from justin.shared.filesystem import FolderTree, File, TreeBased
-from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import PhotosetMetafile
+from justin.shared.helpers.parts import PartsMixin
 from justin.shared.models import sources
 from justin.shared.models.sources import Source
 
 
-class Metafiled(ABC):
-    @property
-    @abstractmethod
-    def metafile_path(self) -> Path:
-        pass
-
-    def has_metafile(self) -> bool:
-        return self.metafile_path.exists()
-
-    def get_metafile(self) -> PhotosetMetafile:
-        return PhotosetMetafile.read(self.metafile_path)
-
-    def save_metafile(self, metafile: PhotosetMetafile):
-        metafile.write(self.metafile_path)
-
-
-class Photoset(TreeBased, Multiplexable, Metafiled):
+class Photoset(TreeBased, PartsMixin):
     __GIF = "gif"
     __CLOSED = "closed"
     __JUSTIN = "justin"
-    __SELECTION = "selection"
+    __MEETING = "meeting"
+    __KOT_I_KIT = "kot_i_kit"
+    __SELECTION = "not_signed"
     __PHOTOCLUB = "photoclub"
-    __OUR_PEOPLE = "our_people"
-    __INSTAGRAM = "instagram"
+    __OUR_PEOPLE = "my_people"
 
-    __METAFILE = "_meta.json"
+    def __init__(self, tree: FolderTree) -> None:
+        super().__init__(tree)
 
-    @property
-    def metafile_path(self) -> Path:
-        return self.tree.path / Photoset.__METAFILE
+        from justin.shared.models.photoset_migration import ALL_MIGRATIONS
+
+        for migration in ALL_MIGRATIONS:
+            migration.migrate(self)
 
     def __str__(self) -> str:
         return "Photoset: " + self.tree.name
 
     @property
-    def instagram(self) -> Optional[FolderTree]:
-        return self.tree[Photoset.__INSTAGRAM]
-
-    @property
     def parts(self) -> List['Photoset']:
-        parts_folders = folder_tree_parts(self.tree)
-        parts = [Photoset(part_folder) for part_folder in parts_folders]
+        if not self.is_parted:
+            return [self]
+
+        parts = [Photoset(part_folder) for part_folder in super().parts]
 
         return parts
 
@@ -76,7 +57,7 @@ class Photoset(TreeBased, Multiplexable, Metafiled):
             return None
 
     @property
-    def photoclub(self) -> Optional[List[File]]:
+    def photoclub(self) -> Optional[FolderTree]:
         return self.tree[Photoset.__PHOTOCLUB]
 
     @property
@@ -101,13 +82,22 @@ class Photoset(TreeBased, Multiplexable, Metafiled):
         return self.tree[Photoset.__CLOSED]
 
     @property
+    def meeting(self) -> Optional[FolderTree]:
+        return self.tree[Photoset.__MEETING]
+
+    @property
+    def kot_i_kit(self) -> Optional[FolderTree]:
+        return self.tree[Photoset.__KOT_I_KIT]
+
+    @property
     def results(self) -> List[File]:
         possible_subtrees = [
-            self.instagram,
             self.our_people,
             self.justin,
             self.closed,
             self.photoclub,
+            self.meeting,
+            self.kot_i_kit,
         ]
 
         possible_subtrees = [i for i in possible_subtrees if i is not None]

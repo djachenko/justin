@@ -1,15 +1,13 @@
 from argparse import Namespace
 from typing import Iterable, List
 
-from pyvko.models.group import Group
-
 from justin.actions.action import Action
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.base import Check
 from justin.actions.scheduled.scheduled_action import ScheduledAction
+from justin.shared.context import Context
 from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
 
 
 # todo: maybe just replace with publish *
@@ -20,7 +18,7 @@ class LocalSyncAction(ScheduledAction):
         self.__prechecks = prechecks
         self.__all_published_action = all_published_action
 
-    def __check_for_publishing(self, photosets: Iterable[Photoset], world: World, group: Group):
+    def __check_for_publishing(self, photosets: Iterable[Photoset], context: Context):
         paths_of_published_sets = []
 
         for photoset in photosets:
@@ -51,11 +49,11 @@ class LocalSyncAction(ScheduledAction):
             name=str_paths
         )
 
-        self.__all_published_action.perform(internal_args, world, group)
+        self.__all_published_action.perform(internal_args, context)
 
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
-        stage_tree = self.tree_with_sets(world)
+    def perform(self, args: Namespace, context: Context) -> None:
+        stage_tree = self.tree_with_sets(context.world)
 
         photosets = [Photoset(subtree) for subtree in stage_tree.subtrees]
 
-        self.__check_for_publishing(photosets, world, group)
+        self.__check_for_publishing(photosets, context)

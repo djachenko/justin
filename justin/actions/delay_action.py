@@ -1,16 +1,24 @@
 from argparse import Namespace
 from datetime import timedelta
+from typing import List
 
-from pyvko.models.group import Group
+from justin_utils.cli import Parameter
+from pyvko.models.active_models import Group
 
-from justin.actions.action import Action
-from justin.shared.models.world import World
+from justin.actions.rearrange_action import GroupAction
+from justin.shared.context import Context
 
 
-class DelayAction(Action):
-    DEFAULT_DAYS = 1
+class DelayAction(GroupAction):
+    __DEFAULT_DAYS = 1
 
-    def perform(self, args: Namespace, world: World, group: Group) -> None:
+    @property
+    def parameters(self) -> List[Parameter]:
+        return super().parameters + [
+            Parameter("days", type=int)
+        ]
+
+    def perform_for_group(self, group: Group, args: Namespace, context: Context) -> None:
         posts = group.get_scheduled_posts()
 
         delay_days = args.days

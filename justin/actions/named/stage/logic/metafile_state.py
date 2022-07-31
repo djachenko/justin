@@ -1,63 +1,81 @@
-from typing import List
+from abc import abstractmethod
+from typing import Iterable
 
-from justin_utils import util
-
-from justin.actions.named.stage.logic.base import Check
+from justin.actions.named.stage.logic.base import Check, MetaCheck, Problem
+from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import PostMetafile, PhotosetMetafile, PostStatus
+from justin.shared.metafile import PostMetafile, GroupMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
 
-class MetafileStateCheck(Check):
+class DestinationsAwareCheck(Check):
+    @abstractmethod
+    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        pass
+
+    @abstractmethod
+    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        pass
+
+    def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
+        problems = []
+
+        if photoset.justin is not None:
+            problems += self.check_group_metafile(photoset.justin)
+
+            for name_folder in photoset.justin.subtrees:
+                for post_folder in folder_tree_parts(name_folder):
+                    problems += self.check_post_metafile(post_folder)
+
+        def check_event(event_folder: FolderTree) -> Iterable[Problem]:
+            local_problems = self.check_group_metafile(event_folder)
+
+            for post_folder_ in folder_tree_parts(event_folder):
+                local_problems += self.check_post_metafile(post_folder_)
+
+            return local_problems
+
+        if photoset.closed is not None:
+            for name_folder in photoset.closed.subtrees:
+                problems += check_event(name_folder)
+
+        if photoset.meeting is not None:
+            problems += check_event(photoset.meeting)
+
+        return problems
+
+
+class MetafilesExistCheck(DestinationsAwareCheck):
+    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        if not folder.has_metafile(PostMetafile):
+            return [f"Folder {folder.path} doesn't have post metafile"]
+
+        return []
+
+    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        if not folder.has_metafile(GroupMetafile):
+            return [f"Folder {folder.path} doesn't have group metafile"]
+
+        return []
+
+
+class MetafilesPublishedCheck(DestinationsAwareCheck):
+
+    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        return []
+
+    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        post_metafile = folder.get_metafile(PostMetafile)
+
+        if post_metafile.status != PostStatus.PUBLISHED:
+            return [f"Metafile at {folder.path} is not published."]
+
+        return []
+
+
+class MetafileStateCheck(MetaCheck):
     def __init__(self) -> None:
-        super().__init__("metafile check")
-
-    @staticmethod
-    def __metafile_required(photoset: Photoset) -> bool:
-        return photoset.justin is not None
-
-    @staticmethod
-    def __metafile_has_no_group_entries(photoset_metafile: PhotosetMetafile) -> bool:
-        return len(photoset_metafile.posts) == 0
-
-    @staticmethod
-    def __group_entry_has_no_post_entries(post_metafiles: List[PostMetafile]) -> bool:
-        return len(post_metafiles) == 0
-
-    @staticmethod
-    def __metafile_has_not_published_entries(post_metafiles: List[PostMetafile]) -> bool:
-        return any(post_metafile.status != PostStatus.PUBLISHED for post_metafile in post_metafiles)
-
-    @staticmethod
-    def __photoset_has_folders_not_in_metafile(photoset: Photoset, post_metafiles: List[PostMetafile]) -> bool:
-        posted_paths = {post_metafile.path for post_metafile in post_metafiles}
-
-        subtrees_parts = util.flatten([
-            util.flatten([folder_tree_parts(tag_subtree) for tag_subtree in photoset.justin.subtrees]),
-            util.flatten([folder_tree_parts(name_subtree) for name_subtree in photoset.closed.subtrees]),
-            # todo: meeting
-        ])
-
-        relative_paths = [part.path.relative_to(photoset.path) for part in subtrees_parts]
-
-        return any(path not in posted_paths for path in relative_paths)
-
-    def is_good(self, photoset: Photoset) -> bool:
-        if not MetafileStateCheck.__metafile_required(photoset):
-            return True
-
-        if not photoset.has_metafile():
-            return False
-
-        photoset_metafile = photoset.get_metafile()
-
-        if MetafileStateCheck.__metafile_has_no_group_entries(photoset_metafile):
-            return False
-
-        all_metafiles = util.flatten(photoset_metafile.posts.values())
-
-        return not any([
-            MetafileStateCheck.__group_entry_has_no_post_entries(all_metafiles),
-            MetafileStateCheck.__metafile_has_not_published_entries(all_metafiles),
-            MetafileStateCheck.__photoset_has_folders_not_in_metafile(photoset, all_metafiles),
+        super().__init__("metafile_check", [
+            MetafilesExistCheck("metafiles exist"),
+            MetafilesPublishedCheck("metafiles published"),
         ])

@@ -1,92 +1,145 @@
 from argparse import Namespace
 
-from justin.actions.named.named_action import NamedAction, Context, Extra
-from justin.shared.metafile import PostStatus
+from justin_utils.pylinq import Sequence
+
+from justin.actions.named.destinations_aware_action import DestinationsAwareAction
+from justin.actions.named.named_action import Context, Extra
+from justin.shared.filesystem import FolderTree
+from justin.shared.helpers.parts import folder_tree_parts
+from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
 
-class WebSyncAction(NamedAction):
-    __SCHEDULED_IDS = "scheduled_ids"
-    __PUBLISHED_IDS = "published_ids"
-    __TIMED_IDS = "timed_ids"
-    __PUBLISHED_MAPPING = "published_mapping"
+class WebSyncAction(DestinationsAwareAction):
+    def __init__(self) -> None:
+        super().__init__()
 
-    def get_extra(self, context: Context) -> Extra:
-        scheduled_posts = context.group.get_scheduled_posts()
-        published_posts = context.group.get_posts()
+        self.__cache = {}
 
-        scheduled_ids = [post.id for post in scheduled_posts]
-
-        published_ids = [post.id for post in published_posts]
-        published_timed_ids = [post.timer_id for post in published_posts]
-        published_mapping = dict(zip(published_timed_ids, published_ids))
-
-        return {
-            **super().get_extra(context),
-            **{
-                WebSyncAction.__SCHEDULED_IDS: scheduled_ids,
-                WebSyncAction.__PUBLISHED_IDS: published_ids,
-                WebSyncAction.__TIMED_IDS: published_timed_ids,
-                WebSyncAction.__PUBLISHED_MAPPING: published_mapping,
-            },
-        }
+        self.checked = []
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        scheduled_ids = extra[WebSyncAction.__SCHEDULED_IDS]
-
-        published_ids = extra[WebSyncAction.__PUBLISHED_IDS]
-        published_timed_ids = extra[WebSyncAction.__TIMED_IDS]
-        published_mapping = extra[WebSyncAction.__PUBLISHED_MAPPING]
-
-        group = context.group
-
         print(f"Web syncing {part.name}...")
 
-        part_metafile = part.get_metafile()
-
-        existing_posts = []
-
-        for post_metafile in part_metafile.posts[group.id]:
-            post_id = post_metafile.post_id
-
-            print(f"Syncing post with id {post_id}... ", end="")
-
-            if post_metafile.status is PostStatus.SCHEDULED:
-
-                if post_id in scheduled_ids:
-                    print("still scheduled")
-
-                    existing_posts.append(post_metafile)
-
-                elif post_id in published_timed_ids:
-                    post_metafile.status = PostStatus.PUBLISHED
-                    post_metafile.post_id = published_mapping[post_id]
-
-                    print(f"was published, now has id {post_metafile.post_id}")
-
-                    existing_posts.append(post_metafile)
-                elif post_id in published_ids:
-                    # scheduled id can't become an id for published post
-
-                    print("somehow ended in posted array, aborting...")
-
-                    assert False
-
-                else:
-                    print("was deleted")
-
-            elif post_metafile.status is PostStatus.PUBLISHED:
-                assert post_id not in scheduled_ids
-                assert post_id not in published_timed_ids
-
-                if post_id in published_ids:
-                    print("still published")
-
-                    existing_posts.append(post_metafile)
-                else:
-                    print("was deleted")
-
-        part_metafile.posts[group.id] = existing_posts
-        part.save_metafile(part_metafile)
+        super().perform_for_part(part, args, context, extra)
 
         print("Performed successfully")
+
+    def handle_justin(self, justin_folder: FolderTree, context: Context, extra: Extra) -> None:
+        self.__handle_tagged(justin_folder, context)
+
+    def handle_closed(self, closed_folder: FolderTree, context: Context, extra: Extra) -> None:
+        for name_folder in closed_folder.subtrees:
+            if not name_folder.has_metafile():
+                continue
+
+            group_metafile: GroupMetafile = name_folder.get_metafile(GroupMetafile)
+            group_id = group_metafile.group_id
+
+            self.__warmup_cache(group_id, context)
+
+            for post_folder in folder_tree_parts(name_folder):
+                self.__handle_post(post_folder, group_id)
+
+    def handle_meeting(self, meeting_folder: FolderTree, context: Context, extra: Extra) -> None:
+        if not meeting_folder.has_metafile(GroupMetafile):
+            return
+
+        group_metafile: GroupMetafile = meeting_folder.get_metafile(GroupMetafile)
+        group_id = group_metafile.group_id
+
+        self.__warmup_cache(group_id, context)
+
+        for post_folder in folder_tree_parts(meeting_folder):
+            self.__handle_post(post_folder, group_id)
+
+    def handle_kot_i_kit(self, kot_i_kit_folder: FolderTree, context: Context, extra: Extra) -> None:
+        self.__handle_tagged(kot_i_kit_folder, context)
+
+    def __warmup_cache(self, group_id: int, context: Context):
+
+        if group_id in self.__cache:
+            return
+
+        if group_id > 0:
+            group_id_api = -group_id
+        else:
+            group_id_api = group_id
+
+        group = context.pyvko.get(str(group_id_api))
+
+        scheduled_posts = group.get_scheduled_posts()
+        published_posts = group.get_posts()
+
+        scheduled_ids = [post.id for post in scheduled_posts]
+        published_timed_ids = [post.timer_id for post in published_posts]
+        published_ids = [post.id for post in published_posts]
+
+        timed_to_published_mapping = {post.timer_id: post.id for post in published_posts if post.timer_id}
+
+        self.__cache[group_id] = (scheduled_ids, published_timed_ids, published_ids, timed_to_published_mapping)
+
+    def __handle_tagged(self, folder: FolderTree, context: Context) -> None:
+        if not folder.has_metafile():
+            return
+
+        group_metafile: GroupMetafile = folder.get_metafile()
+        group_id = group_metafile.group_id
+
+        self.__warmup_cache(group_id, context)
+
+        post_folders = Sequence \
+            .with_single(folder) \
+            .flat_map(lambda f: f.subtrees) \
+            .flat_map(lambda htf: folder_tree_parts(htf))
+
+        for post_folder in post_folders:
+            self.__handle_post(post_folder, group_id)
+
+    def __handle_post(self, post_folder: FolderTree, group_id: int) -> None:
+        if not post_folder.has_metafile(PostMetafile):
+            return
+
+        scheduled_ids, published_timed_ids, published_ids, timed_to_published_mapping = self.__cache[group_id]
+
+        post_metafile: PostMetafile = post_folder.get_metafile(PostMetafile)
+        post_id = post_metafile.post_id
+
+        print(f"Syncing post with id {post_id}... ", end="")
+
+        if post_metafile.status is PostStatus.SCHEDULED:
+            if post_id in scheduled_ids:
+                print("still scheduled")
+            elif post_id in published_timed_ids:
+                post_metafile.status = PostStatus.PUBLISHED
+                post_metafile.post_id = timed_to_published_mapping[post_id]
+
+                print(f"was published, now has id {post_metafile.post_id}")
+
+                post_folder.save_metafile(post_metafile)
+
+            elif post_id in published_ids:
+                # scheduled id can't become an id for published post
+
+                print("somehow ended in posted array, aborting...")
+            else:
+                print("was deleted")
+
+                post_folder.remove_metafile()
+
+        elif post_metafile.status is PostStatus.PUBLISHED:
+            # assert post_id not in scheduled_ids
+            # assert post_id not in published_timed_ids
+
+            if post_id in published_ids:
+                print("still published")
+            else:
+                print("was deleted")
+
+                return
+
+                post_folder.remove_metafile(PostMetafile)
+        else:
+            assert False
+
+        self.checked.append(post_metafile.post_id)
