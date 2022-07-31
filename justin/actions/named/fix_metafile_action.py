@@ -11,7 +11,7 @@ from justin.actions.named.named_action import Context, Extra
 from justin.shared import filesystem
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts, is_part
-from justin.shared.metafile2 import PostStatus, PostMetafile, GroupMetafile
+from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile
 from justin.shared.models.photoset import Photoset
 
 
@@ -70,7 +70,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
     def handle_meeting(self, meeting_folder: FolderTree, context: Context, extra: Extra) -> None:
         # noinspection PyTypeChecker
         self.__fix_categories(
-            meeting_folder.subtrees,
+            [meeting_folder],
             partial(self.__get_event, context.meeting_group),
             extra
         )
@@ -94,6 +94,8 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
     def __fix_group(self, folder: FolderTree, group: Wall) -> None:
         if folder.has_metafile(GroupMetafile):
             return
+
+        # todo: здесь групповой метафайл может записаться в папку части внутри митинга
 
         folder.save_metafile(GroupMetafile(
             group_id=group.id
