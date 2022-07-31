@@ -4,23 +4,24 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import time, date, datetime, timedelta
 from pathlib import Path
-from typing import List, Union, Optional, Iterator
+from typing import List, Optional, Iterator
 
-from pyvko.attachment.attachment import Attachment
-from pyvko.models.active_models import Event
-from pyvko.models.models import Post
-from pyvko.shared.mixins import Wall, Albums, Events
-
+from justin.actions.create_event_action import CreateEventAction, SetupEventAction
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
 from justin.actions.named.named_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile2 import PostMetafile, PostStatus, GroupMetafile
+from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
-from justin_utils.util import ask_for_permission
+from pyvko.attachment.attachment import Attachment
+from pyvko.models.active_models import Event, Group
+from pyvko.models.models import Post
+from pyvko.shared.mixins import Wall, Albums
+
+Community = Wall | Albums
 
 
 class UploadAction(DestinationsAwareAction, EventUtils):
@@ -72,6 +73,12 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         date_generator = UploadAction.__date_generator(last_date)
 
         return date_generator
+
+    def __init__(self, create: CreateEventAction, setup: SetupEventAction) -> None:
+        super().__init__()
+
+        self.__create = create
+        self.__setup = setup
 
     # endregion date generator
 
@@ -153,10 +160,10 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         ))
 
         for hashtag_folder in justin_folder.subtrees:
+            hashtag_name = hashtag_folder.name
+
             if UploadAction.__check_all_posted(*folder_tree_parts(hashtag_folder)):
                 continue
-
-            hashtag_name = hashtag_folder.name
 
             UploadAction.__upload_bottom(
                 community=justin_group,
@@ -263,7 +270,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         destination: str
         event_name: str
         event_date: date
-        owner: Events
+        owner: Group
         category: Optional[str] = None
 
     @staticmethod
@@ -315,42 +322,15 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
             if event_url is not None:
                 event = owner.get_event(event_url)
-                commentary = f"with url \"{event_url}\""
             else:
                 event = None
-                commentary = "url provided"
 
             if event is None:
-                if ask_for_permission(f"No event {commentary}. Create?"):
-                    event = UploadAction.__create_event(owner, params)
-                else:
-                    return None
+                return None
 
-            if event is not None:
-                set_context[event_key] = event
+            set_context[event_key] = event
 
         return set_context[event_key]
-
-    @staticmethod
-    def __create_event(community: Events, params: EventParams) -> Event:
-        event: Event = community.create_event(params.event_name)
-
-        event.event_category = Event.Category.CIRCUS
-
-        event.start_date = datetime.combine(params.event_date, time(hour=12))
-        event.end_date = event.start_date + timedelta(hours=4)
-
-        for section in Event.Section:
-            event.set_section_state(section, Event.SectionState.DISABLED)
-
-        event.set_section_state(Event.Section.PHOTOS, Event.SectionState.LIMITED)
-        event.set_section_state(Event.Section.WALL, Event.SectionState.LIMITED)
-        event.is_closed = True
-        event.main_section = Event.Section.PHOTOS
-
-        event.save()
-
-        return event
 
     # endregion event
 
@@ -363,7 +343,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         text: Optional[str] = None
 
     @staticmethod
-    def __upload_bottom(community: Union[Wall, Albums], posts_folder: FolderTree, extra: Extra, params: UploadParams) \
+    def __upload_bottom(community: Community, posts_folder: FolderTree, extra: Extra, params: UploadParams) \
             -> None:
         root_path: Path = extra[UploadAction.__ROOT_PATH]
 
@@ -400,7 +380,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             post_folder.save_metafile(post_metafile)
 
     @staticmethod
-    def __upload_folder(community: Union[Wall, Albums], folder: FolderTree, params: UploadParams) -> int:
+    def __upload_folder(community: Community, folder: FolderTree, params: UploadParams) -> int:
         if folder.file_count() <= 10:
             attachments = UploadAction.__get_post_attachments(community, folder)
         else:
@@ -433,13 +413,20 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
             print(f"Uploading {file.name} ({i}/{file_count})")
 
+            counter = 1
+
             while not success:
+                # noinspection PyBroadException
                 try:
                     album.add_photo(file.path)
 
                     success = True
+                except KeyboardInterrupt:
+                    raise
                 except:
-                    print("Retrying")
+                    print(f"Retrying {counter}")
+
+                    counter += 1
 
         return [album]
 
