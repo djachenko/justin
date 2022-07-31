@@ -8,7 +8,7 @@ from justin.actions.named.stage.logic.metadata import MetadataSelector
 from justin.actions.named.stage.logic.missing_gifs import MissingGifsSelector
 from justin.actions.named.stage.logic.odd_selection import OddSelectionSelector
 from justin.actions.named.stage.logic.progress import ProgressResultsSelector
-from justin.actions.named.stage.logic.structure import StructureSelector
+from justin.actions.named.stage.logic.structure import ValidateStructureVisitor
 from justin.actions.named.stage.logic.unselected import UnselectedSelector
 from justin.shared.structure import Structure
 
@@ -46,7 +46,7 @@ class SelectorFactory:
 
     @lru_cache()
     def structure(self) -> Selector:
-        return StructureSelector(self.__photoset_structure)
+        return ValidateStructureVisitor(self.__photoset_structure)
 
     @lru_cache()
     def everything_is_published(self) -> Selector:
