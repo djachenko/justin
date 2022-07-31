@@ -2,7 +2,6 @@ from argparse import Namespace
 
 from justin.actions.named.named_action import NamedAction, Context, Extra
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
-from justin.actions.named.stage.logic.exceptions.extractor_error import ExtractorError
 from justin.actions.named.stage.models.stage import stub_stage
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.shared.helpers.checks_runner import ChecksRunner
@@ -23,7 +22,7 @@ class StageAction(NamedAction):
         # move
         # prepare
 
-        new_stage = self.__stages_factory.stage_by_command(args.command)
+        new_stage = self.__stages_factory.stage_by_command(args.command_name)
         current_stage = self.__stages_factory.stage_by_path(photoset.path)
 
         if current_stage is None:
@@ -60,7 +59,7 @@ class StageAction(NamedAction):
             for photoset_part in photoset_parts:
                 new_stage.prepare(photoset_part)
 
-        except (ExtractorError, CheckFailedError) as error:
+        except CheckFailedError as error:
             print(f"Unable to {new_stage.name} {photoset.name}: {error}")
         else:
             print("Moved successfully")

@@ -1,76 +1,81 @@
 from abc import abstractmethod
+from typing import Iterable
 
-from justin.actions.named.stage.logic.base import Check
+from justin.actions.named.stage.logic.base import Check, MetaCheck, Problem
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile2 import PostMetafile, GroupMetafile, PostStatus
+from justin.shared.metafile import PostMetafile, GroupMetafile, PostStatus
 from justin.shared.models.photoset import Photoset
 
 
 class DestinationsAwareCheck(Check):
     @abstractmethod
-    def check_post_metafile(self, folder: FolderTree) -> bool:
+    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
         pass
 
     @abstractmethod
-    def check_group_metafile(self, folder: FolderTree) -> bool:
+    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
         pass
 
-    def is_good(self, photoset: Photoset) -> bool:
+    def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
+        problems = []
+
         if photoset.justin is not None:
-            if not self.check_group_metafile(photoset.justin):
-                return False
+            problems += self.check_group_metafile(photoset.justin)
 
             for name_folder in photoset.justin.subtrees:
                 for post_folder in folder_tree_parts(name_folder):
-                    if not self.check_post_metafile(post_folder):
-                        return False
+                    problems += self.check_post_metafile(post_folder)
 
-        def check_event(event_folder: FolderTree) -> bool:
-            if not self.check_group_metafile(event_folder):
-                return False
+        def check_event(event_folder: FolderTree) -> Iterable[Problem]:
+            local_problems = self.check_group_metafile(event_folder)
 
             for post_folder_ in folder_tree_parts(event_folder):
-                if not self.check_post_metafile(post_folder_):
-                    return False
+                local_problems += self.check_post_metafile(post_folder_)
+
+            return local_problems
 
         if photoset.closed is not None:
             for name_folder in photoset.closed.subtrees:
-                check_event(name_folder)
+                problems += check_event(name_folder)
 
         if photoset.meeting is not None:
-            check_event(photoset.meeting)
+            problems += check_event(photoset.meeting)
 
-        return True
+        return problems
 
 
 class MetafilesExistCheck(DestinationsAwareCheck):
-    def check_post_metafile(self, folder: FolderTree) -> bool:
-        return folder.has_metafile(PostMetafile)
+    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        if not folder.has_metafile(PostMetafile):
+            return [f"Folder {folder.path} doesn't have post metafile"]
 
-    def check_group_metafile(self, folder: FolderTree) -> bool:
-        return folder.has_metafile(GroupMetafile)
+        return []
+
+    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        if not folder.has_metafile(GroupMetafile):
+            return [f"Folder {folder.path} doesn't have group metafile"]
+
+        return []
 
 
 class MetafilesPublishedCheck(DestinationsAwareCheck):
 
-    def check_group_metafile(self, folder: FolderTree) -> bool:
-        return True
+    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        return []
 
-    def check_post_metafile(self, folder: FolderTree) -> bool:
+    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
         post_metafile = folder.get_metafile(PostMetafile)
 
-        return post_metafile.status == PostStatus.PUBLISHED
+        if post_metafile.status != PostStatus.PUBLISHED:
+            return [f"Metafile at {folder.path} is not published."]
+
+        return []
 
 
-class MetafileStateCheck(Check):
+class MetafileStateCheck(MetaCheck):
     def __init__(self) -> None:
-        super().__init__("metafile check")
-
-        self.__inner = [
+        super().__init__("metafile_check", [
             MetafilesExistCheck("metafiles exist"),
             MetafilesPublishedCheck("metafiles published"),
-        ]
-
-    def is_good(self, photoset: Photoset) -> bool:
-        return all(inner_check.is_good(photoset) for inner_check in self.__inner)
+        ])
