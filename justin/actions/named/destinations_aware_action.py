@@ -13,7 +13,8 @@ class DestinationsAwareAction(PatternAction):
             (part.justin, self.handle_justin),
             (part.closed, self.handle_closed),
             (part.meeting, self.handle_meeting),
-            (part.kot_i_kit, self.handle_kot_i_kit)
+            (part.kot_i_kit, self.handle_kot_i_kit),
+            (part.my_people, self.handle_my_people),
         ]
 
         for destination, handler in destinations:
@@ -33,6 +34,9 @@ class DestinationsAwareAction(PatternAction):
 
     def handle_kot_i_kit(self, kot_i_kit_folder: FolderTree, context: Context, extra: Extra) -> None:
         self.handle_common(kot_i_kit_folder, context, extra)
+
+    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+        self.handle_common(my_people_folder, context, extra)
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def handle_common(self, folder: FolderTree, context: Context, extra: Extra) -> None:

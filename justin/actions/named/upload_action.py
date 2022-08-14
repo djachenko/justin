@@ -11,17 +11,19 @@ from justin.actions.named.destinations_aware_action import DestinationsAwareActi
 from justin.actions.named.mixins import EventUtils
 from justin.actions.named.named_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import FolderTree, File
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile
+from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
+from justin_utils.util import stride, flatten
 from pyvko.attachment.attachment import Attachment
 from pyvko.entities.event import Event
 from pyvko.entities.group import Group
 from pyvko.entities.post import Post
 from pyvko.models import PostModel
 from pyvko.shared.mixins.albums import Albums
+from pyvko.shared.mixins.comments import CommentModel
 from pyvko.shared.mixins.wall import Wall
 
 Community = Wall | Albums
@@ -264,6 +266,79 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 )
             )
 
+    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+        my_people_group = context.my_people_group
+
+        if not my_people_folder.has_metafile(PostMetafile):
+            post = my_people_group.add_post(PostModel(text=extra[UploadAction.__SET_NAME]))
+
+            my_people_folder.save_metafile(GroupMetafile(group_id=my_people_group.id))
+            my_people_folder.save_metafile(PostMetafile(post_id=post.id, status=PostStatus.PUBLISHED))
+
+        post_metafile = my_people_folder.get_metafile(PostMetafile)
+        post_id = post_metafile.post_id
+
+        post = my_people_group.get_post(post_id)
+
+        assert post is not None
+
+        for person_folder in my_people_folder.subtrees:
+            if not person_folder.has_metafile(PersonMetafile):
+                person_folder.save_metafile(PersonMetafile())
+
+            person_metafile = person_folder.get_metafile(PersonMetafile)
+
+            uploaded_images = flatten(c.files for c in person_metafile.comments)
+            images_to_upload: List[File] = []
+
+            for image in person_folder.files:
+                if image.name in uploaded_images:
+                    continue
+
+                images_to_upload.append(image)
+
+            if not images_to_upload:
+                continue
+
+            print(f"Uploading {person_folder.name}")
+
+            for chunk_index, images_chunk in enumerate(stride(images_to_upload, 10), 1):
+                print(f"Uploading chunk {chunk_index}")
+
+                links = []
+
+                for image in images_chunk:
+                    print(f"Uploading {image.name}...", end="")
+
+                    photo = my_people_group.upload_photo_to_wall(image.path)
+
+                    link = photo.largest_link()
+                    short_link = context.pyvko.shorten_link(link)
+
+                    links.append(short_link)
+
+                    print(" done.", flush=True)
+
+                text = "\n\n".join([
+                    person_folder.name,
+                    "\n".join(links),
+                    f"{len(links)} total.",
+                ])
+
+                print(text)
+
+                comment = post.add_comment(CommentModel(text, from_group=True))
+
+                comment_metafile = CommentMetafile(
+                    id=comment.id,
+                    files=[image.name for image in images_chunk],
+                    status=PostStatus.SCHEDULED,
+                )
+
+                person_metafile.comments.append(comment_metafile)
+
+                person_folder.save_metafile(person_metafile)
+
     # endregion upload strategies
 
     # region event
@@ -389,15 +464,15 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         else:
             attachments = UploadAction.__get_album_attachments(community, folder, params)
 
-        post = Post(
+        post_model = PostModel(
             text=params.text,
             attachments=attachments,
             date=next(params.date_generator)
         )
 
-        post_id = community.add_post(post)
+        post = community.add_post(post_model)
 
-        return post_id
+        return post.id
 
     @staticmethod
     def __get_post_attachments(community: Wall, folder: FolderTree) -> [Attachment]:

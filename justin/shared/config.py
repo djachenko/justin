@@ -11,6 +11,8 @@ class Config:
         CLOSED_URL = "closed_url"
         MEETING_URL = "meeting_url"
         KOT_I_KIT_URL = "kot_i_kit_url"
+        MY_PEOPLE_URL = "my_people_url"
+
         PYVKO_CONFIG = "pyvko_config"
         PHOTOSET_STRUCTURE = "photoset_structure"
         DISK_STRUCTURE = "global_structure"

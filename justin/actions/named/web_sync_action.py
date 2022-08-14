@@ -56,6 +56,9 @@ class WebSyncAction(DestinationsAwareAction):
     def handle_kot_i_kit(self, kot_i_kit_folder: FolderTree, context: Context, extra: Extra) -> None:
         self.__handle_tagged(kot_i_kit_folder, context)
 
+    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+        pass
+
     def __warmup_cache(self, group_id: int, context: Context):
 
         if group_id in self.__cache:

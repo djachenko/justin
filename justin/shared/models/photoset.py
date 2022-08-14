@@ -16,7 +16,7 @@ class Photoset(TreeBased, PartsMixin):
     __KOT_I_KIT = "kot_i_kit"
     __SELECTION = "not_signed"
     __PHOTOCLUB = "photoclub"
-    __OUR_PEOPLE = "my_people"
+    __MY_PEOPLE = "my_people"
 
     def __init__(self, tree: FolderTree) -> None:
         super().__init__(tree)
@@ -37,10 +37,6 @@ class Photoset(TreeBased, PartsMixin):
         parts = [Photoset(part_folder) for part_folder in super().parts]
 
         return parts
-
-    @property
-    def our_people(self) -> Optional[FolderTree]:
-        return self.tree[Photoset.__OUR_PEOPLE]
 
     @property
     def sources(self) -> List[Source]:
@@ -90,9 +86,13 @@ class Photoset(TreeBased, PartsMixin):
         return self.tree[Photoset.__KOT_I_KIT]
 
     @property
+    def my_people(self) -> Optional[FolderTree]:
+        return self.tree[Photoset.__MY_PEOPLE]
+
+    @property
     def results(self) -> List[File]:
         possible_subtrees = [
-            self.our_people,
+            self.my_people,
             self.justin,
             self.closed,
             self.photoclub,
