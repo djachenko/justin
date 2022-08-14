@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from argparse import Namespace
 from typing import List
 
-from pyvko.models.active_models import Group
+from pyvko.entities.user import Group
 
 from justin_utils.cli import Action, Parameter, Context
 

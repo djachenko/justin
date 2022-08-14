@@ -1,7 +1,7 @@
 from argparse import Namespace
 from typing import List
 
-from pyvko.models.active_models import Group
+from pyvko.entities.group import Group
 
 from justin.actions.group_action import GroupAction
 from justin.shared.context import Context

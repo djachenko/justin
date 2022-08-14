@@ -2,12 +2,14 @@ from abc import abstractmethod
 from argparse import Namespace
 from dataclasses import dataclass
 from datetime import date, time, datetime, timedelta
-from typing import Optional, List
+from typing import List
 
 from justin_utils.cli import Action, Context, Parameter
 from justin_utils.util import parse_date
-from pyvko.models.active_models import Event, Group, User
-from pyvko.shared.mixins import Events
+from pyvko.entities.event import Event
+from pyvko.entities.group import Group
+from pyvko.entities.user import User
+from pyvko.shared.mixins.events import Events
 
 
 class CreateEventAction(Action):
@@ -36,7 +38,7 @@ class SetupEventAction(Action):
         event_name: str
         event_date: date
         owner: Events
-        category: Optional[str] = None
+        category: str | None = None
 
     @property
     def parameters(self) -> List[Parameter]:
@@ -54,9 +56,9 @@ class SetupEventAction(Action):
 
         date_: date = args.date
         name: str = args.name
-        parent_id: Optional[str] = args.parent
+        parent_id: str | None = args.parent
 
-        parent: Optional[Group | User] = None
+        parent: Group | User | None = None
 
         if parent_id:
             parent = context.pyvko.get(parent_id)
@@ -64,7 +66,7 @@ class SetupEventAction(Action):
         SetupEventAction.__setup_event(event, date_, name, parent)
 
     @staticmethod
-    def __setup_event(event: Event, date_: date, name: str, parent: Optional[Group | User]):
+    def __setup_event(event: Event, date_: date, name: str, parent: Group | User | None):
         event.name = name
         event.event_category = Event.Category.CIRCUS
 
