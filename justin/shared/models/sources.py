@@ -1,7 +1,9 @@
 from abc import abstractmethod
+from functools import lru_cache
 from pathlib import Path
 from typing import List, Iterable
 
+from justin.shared.models.exif import parse_exif, Exif
 from justin_utils import util, joins
 
 from justin.shared.filesystem import File, Movable
@@ -15,7 +17,12 @@ class Source(Movable):
 
     @property
     @abstractmethod
-    def name(self):
+    def name(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def exif(self) -> Exif:
         pass
 
     def stem(self) -> str:
@@ -48,6 +55,9 @@ class Source(Movable):
     def __str__(self) -> str:
         return f"{type(self).__name__}: {self.name}"
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}: {self.name}"
+
 
 class InternalMetadataSource(Source):
     def __init__(self, jpeg: File):
@@ -65,6 +75,11 @@ class InternalMetadataSource(Source):
 
     def files(self) -> List[File]:
         return [self.__jpeg]
+
+    @property
+    @lru_cache()
+    def exif(self) -> Exif:
+        return parse_exif(self.__jpeg.path)
 
 
 class ExternalMetadataSource(Source):
@@ -89,6 +104,11 @@ class ExternalMetadataSource(Source):
     @property
     def name(self):
         return self.raw.stem()
+
+    @property
+    @lru_cache()
+    def exif(self) -> Exif:
+        return parse_exif(self.raw.path)
 
     def files(self) -> List[File]:
         files = [self.raw]

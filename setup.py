@@ -11,6 +11,7 @@ setup(
         "six",
         "py_linq",
         'justin_utils',
+        "exif",
     ],
     url='',
     license='MIT',

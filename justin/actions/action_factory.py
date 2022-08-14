@@ -3,6 +3,7 @@ from functools import lru_cache
 from justin.actions.action import Action
 from justin.actions.check_ratios_action import CheckRatiosAction
 from justin.actions.create_event_action import CreateEventAction, SetupEventAction
+from justin.actions.date_split import DateSplitAction
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.move_action import MoveAction
@@ -105,4 +106,8 @@ class ActionFactory:
     @lru_cache()
     def setup_event(self) -> SetupEventAction:
         return SetupEventAction()
+
+    @lru_cache()
+    def date_split(self) -> CLIAction:
+        return DateSplitAction()
 
