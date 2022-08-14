@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 from functools import lru_cache
 from typing import List
 
-from pyvko.models.active_models import Group
+from pyvko.entities.user import Group
 
 from justin.actions.group_action import GroupAction
 from justin_utils.cli import Context, Parameter

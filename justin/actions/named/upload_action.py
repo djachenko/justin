@@ -17,9 +17,12 @@ from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 from pyvko.attachment.attachment import Attachment
-from pyvko.models.active_models import Event, Group
-from pyvko.models.models import Post
-from pyvko.shared.mixins import Wall, Albums
+from pyvko.entities.event import Event
+from pyvko.entities.group import Group
+from pyvko.entities.post import Post
+from pyvko.models import PostModel
+from pyvko.shared.mixins.albums import Albums
+from pyvko.shared.mixins.wall import Wall
 
 Community = Wall | Albums
 

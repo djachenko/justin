@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import lru_cache
 
-from pyvko.models.active_models import Group
+from pyvko.entities.group import Group
 from pyvko.pyvko_main import Pyvko
 
 from justin.shared.helpers.gif_maker import GifMaker

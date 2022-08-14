@@ -3,7 +3,6 @@ from functools import partial
 from pathlib import Path
 from typing import List, Callable
 
-from pyvko.shared.mixins import Wall, Events
 
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
@@ -13,6 +12,8 @@ from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts, is_part
 from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile
 from justin.shared.models.photoset import Photoset
+from pyvko.shared.mixins.events import Events
+from pyvko.shared.mixins.wall import Wall
 
 
 class FixMetafileAction(DestinationsAwareAction, EventUtils):
