@@ -40,12 +40,16 @@ def __run(config_path: Path, args: List[str] = None):
 
     commands = factories_container.commands_factory.commands()
 
+    def get_lazy_group(url_key):
+        return Proxy(lambda: pyvko.get_by_url(config[url_key]))
+
     context: Context = Context(
         world=Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE])),
-        justin_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.JUSTIN_URL])),
-        closed_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.CLOSED_URL])),
-        meeting_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.MEETING_URL])),
-        kot_i_kit_group=Proxy(lambda: pyvko.get_by_url(config[Config.Keys.KOT_I_KIT_URL])),
+        justin_group=get_lazy_group(Config.Keys.JUSTIN_URL),
+        closed_group=get_lazy_group(Config.Keys.CLOSED_URL),
+        meeting_group=get_lazy_group(Config.Keys.MEETING_URL),
+        kot_i_kit_group=get_lazy_group(Config.Keys.KOT_I_KIT_URL),
+        my_people_group=get_lazy_group(Config.Keys.MY_PEOPLE_URL),
         pyvko=pyvko,
     )
 

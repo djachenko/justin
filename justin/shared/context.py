@@ -6,6 +6,7 @@ from pyvko.pyvko_main import Pyvko
 
 from justin.shared.helpers.gif_maker import GifMaker
 from justin.shared.models.world import World
+from pyvko.shared.mixins.wall import Wall
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,8 @@ class Context:
     closed_group: Group
     meeting_group: Group
     kot_i_kit_group: Group
+    my_people_group: Wall
+
     pyvko: Pyvko
 
     @property

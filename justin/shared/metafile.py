@@ -1,7 +1,7 @@
 import dataclasses
 import json
 from abc import abstractmethod, ABC
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -9,7 +9,7 @@ from typing import Optional, Dict, Type, TypeVar, List
 
 from justin_utils.singleton import Singleton
 
-T = TypeVar('T', bound='RootMetafile')
+T = TypeVar('T', bound='Metafile')
 
 Json = Dict[str, 'Json'] | List['Json'] | str
 
@@ -38,6 +38,7 @@ class RootMetafile(Metafile):
     def type(cls) -> str:
         pass
 
+    @abstractmethod
     def as_json(self) -> Json:
         return super().as_json() | {
             RootMetafile.TYPE_KEY: self.type()
@@ -98,6 +99,48 @@ class GroupMetafile(RootMetafile):
 
     def as_json(self) -> Json:
         return super().as_json() | asdict(self)
+
+
+@dataclass
+class CommentMetafile(Metafile):
+    id: int
+    files: List[str]
+    status: PostStatus
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return CommentMetafile(
+            id=json_object["id"],
+            files=json_object["files"],
+            status=PostStatus.from_json(json_object["status"]),
+        )
+
+    def as_json(self) -> Json:
+        self_as_dict = asdict(self)
+
+        self_as_dict["status"] = self.status.as_json()
+
+        return super().as_json() | self_as_dict
+
+
+@dataclass
+class PersonMetafile(RootMetafile):
+    comments: List[CommentMetafile] = field(default_factory=lambda: [])
+
+    @classmethod
+    def type(cls) -> str:
+        return "person"
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return PersonMetafile(
+            comments=[CommentMetafile.from_json(comment) for comment in json_object["comments"]],
+        )
+
+    def as_json(self) -> Json:
+        return super().as_json() | {
+            "comments": [comment.as_json() for comment in self.comments]
+        }
 
 
 # endregion metafile classes
@@ -188,6 +231,7 @@ class MetafileReadWriter(Singleton):
 MetafileReadWriter.instance().register(
     PostMetafile,
     GroupMetafile,
+    PersonMetafile,
 )
 
 

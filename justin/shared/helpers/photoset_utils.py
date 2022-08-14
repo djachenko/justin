@@ -26,10 +26,10 @@ class JpegType(Flag):
     JUSTIN = auto()
     MEETING = auto()
     KOT_I_KIT = auto()
-    OUR_PEOPLE = auto()
+    MY_PEOPLE = auto()
     CLOSED = auto()
     PHOTOCLUB = auto()
-    SIGNED = JUSTIN | OUR_PEOPLE | CLOSED | PHOTOCLUB | MEETING | KOT_I_KIT
+    SIGNED = JUSTIN | MY_PEOPLE | CLOSED | PHOTOCLUB | MEETING | KOT_I_KIT
     ALL = SELECTION | SIGNED
 
 
@@ -41,7 +41,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
 
     mapping = {
         JpegType.JUSTIN: photoset.justin,
-        JpegType.OUR_PEOPLE: photoset.our_people,
+        JpegType.MY_PEOPLE: photoset.my_people,
         JpegType.CLOSED: photoset.closed,
         JpegType.PHOTOCLUB: photoset.photoclub,
         JpegType.MEETING: photoset.meeting,
