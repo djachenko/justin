@@ -51,6 +51,7 @@ class CommandFactory:
             SingleActionCommand("sequence", self.__action_factory.sequence()),
             SingleActionCommand("create_event", self.__action_factory.create_event()),
             SingleActionCommand("setup_event", self.__action_factory.setup_event()),
+            SingleActionCommand("group", self.__action_factory.date_split()),
 
             NamedCommand("local_sync", self.__action_factory.local_sync_action()),
             NamedCommand("archive", self.__action_factory.archive_action()),
