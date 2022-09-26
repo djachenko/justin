@@ -1,11 +1,12 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from typing import Optional, List, Iterable
 
-from justin.shared.filesystem import PathBased, RelativeFileset, File
+from justin.shared.filesystem import PathBased, RelativeFileset, File, FolderTree
 from justin.shared.helpers import photoset_utils
+from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
-from justin_utils.util import flatten
+from justin_utils.util import flatten, first
 
 Problem = str
 
@@ -18,7 +19,7 @@ class AbstractCheck:
 
 class Selector:
     @abstractmethod
-    def select(self, photoset: Photoset) -> List[str]:
+    def select(self, photoset: Photoset) -> List[Problem]:
         pass
 
 
@@ -117,14 +118,19 @@ class Check(AbstractCheck):
         return len(self.__selector.select(photoset)) == 0
 
     def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
-        problems = []
+        selections = []
 
         for part in photoset.parts:
             selection = self.__selector.select(part)
 
-            problems += selection
+            selections += selection
 
-        return problems
+        if selections:
+            represent = ", ".join(selections)
+
+            return [f"Failed {self.__name} for {represent}."]
+        else:
+            return []
 
     def ask_for_extract(self):
         if self.__hook is None:
@@ -132,13 +138,17 @@ class Check(AbstractCheck):
 
         return util.ask_for_permission(self.__message)
 
-    def extract(self, photoset: Photoset):
+    def extract(self, photoset: Photoset) -> Iterable[Problem]:
         if self.hookable:
-            self.__hook.forward(photoset)
+            return self.__hook.forward(photoset)
 
-    def rollback(self, photoset: Photoset):
+        return []
+
+    def rollback(self, photoset: Photoset) -> Iterable[Problem]:
         if self.hookable:
-            self.__hook.backwards(photoset)
+            return self.__hook.backwards(photoset)
+
+        return []
 
     @property
     def name(self):
@@ -155,6 +165,55 @@ class MetaCheck(Check):
         self.__inner = inner_checks
 
     def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
-        return flatten(inner_check.get_problems(photoset) for inner_check in self.__inner)
+        return first(inner_check.get_problems(photoset) for inner_check in self.__inner) or []
 
 
+class DestinationsAwareCheck(Check):
+    @abstractmethod
+    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        pass
+
+    @abstractmethod
+    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        pass
+
+    @abstractmethod
+    def check_person_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+        pass
+
+    def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
+        problems = []
+
+        if photoset.justin is not None:
+            problems += self.check_group_metafile(photoset.justin)
+
+            for name_folder in photoset.justin.subtrees:
+                for post_folder in folder_tree_parts(name_folder):
+                    problems += self.check_post_metafile(post_folder)
+
+        def check_event(event_folder: FolderTree) -> Iterable[Problem]:
+            local_problems = self.check_group_metafile(event_folder)
+
+            for post_folder_ in folder_tree_parts(event_folder):
+                local_problems += self.check_post_metafile(post_folder_)
+
+            return local_problems
+
+        if photoset.closed is not None:
+            for name_folder in photoset.closed.subtrees:
+                problems += check_event(name_folder)
+
+        if photoset.meeting is not None:
+            problems += check_event(photoset.meeting)
+
+        if photoset.my_people is not None:
+            problems += self.check_post_metafile(photoset.my_people)
+
+            for person_folder in photoset.my_people.subtrees:
+                problems += self.check_person_metafile(person_folder)
+
+        return problems
+
+
+class DestinationsAwareMetaCheck(MetaCheck, DestinationsAwareCheck, ABC):
+    pass
