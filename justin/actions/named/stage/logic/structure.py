@@ -6,8 +6,8 @@ from justin.shared import filesystem
 from justin.shared.filesystem import FolderTree, PathBased
 from justin.shared.helpers.parts import is_parted, folder_tree_parts
 from justin.shared.models.photoset import Photoset
-from justin.shared.structure import Structure as OldStructure
-from justin.shared.structure_new import Structure, StructureVisitor, XorStructure, TopStructure
+from justin.shared.structure_old import OldStructure
+from justin.shared.structure import Structure, StructureVisitor, XorStructure, TopStructure
 
 
 class ValidateStructureVisitor(StructureVisitor[List[Path]], Selector):
@@ -15,6 +15,7 @@ class ValidateStructureVisitor(StructureVisitor[List[Path]], Selector):
     def __init__(self, structure: Structure) -> None:
         super().__init__()
 
+        # noinspection PyTypeChecker
         self.__path: Path = None
         self.__structure = structure
 

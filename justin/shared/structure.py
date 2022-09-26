@@ -1,123 +1,69 @@
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import List, Dict, Optional, ClassVar
-
-from justin.shared.filesystem import FolderTree
-from justin.shared.helpers.parts import is_parted
+import re
+from abc import abstractmethod
+from dataclasses import dataclass
+from typing import List, Optional, Dict, Generic, TypeVar
 
 
-@dataclass
+@dataclass(frozen=True)
 class Structure:
-    SETS_KEY: ClassVar[str] = "%set_name%"
-    PARTS_KEY: ClassVar[str] = "parts"
-    FILES_KEY: ClassVar[str] = "files"
-    STANDALONE_FILE: ClassVar[str] = "file"
-
-    FLAG_KEYS: ClassVar[List[str]] = [
-        SETS_KEY,
-        FILES_KEY,
-        PARTS_KEY,
-        STANDALONE_FILE,
-    ]
-
-    folders: Dict[str, 'Structure']
-    files: List[str]
-    has_parts: bool
-    has_files: bool
-    has_sets: bool = field(init=False)
-    set_structure: Optional['Structure']
-
-    def __post_init__(self):
-        self.has_sets = self.set_structure is not None
-
-    def __getitem__(self, key) -> Optional['Structure']:
-        if self.has_sets and Structure.is_photoset_name(key):
-            return self.set_structure
-
-        return self.folders.get(key)
-
-    @staticmethod
-    def is_photoset_name(key: str) -> bool:
-        components = key.split(".")
-
-        if len(components) != 4:
-            return False
-
-        for date_component in components[:3]:
-            if len(date_component) != 2 and not date_component.isdecimal():
-                return False
-
-        name_component = components[3]
-
-        if not name_component.islower():
-            return False
-
-        name_parts = name_component.split("_")
-
-        for name_part in name_parts:
-            if not name_part.isalnum():
-                return False
-
-        return True
+    SET_MARKER = {}
 
 
-def validate(folder: FolderTree, structure: Structure) -> bool:
-    if is_parted(folder) and structure.has_parts:
-        return all(validate(subtree, structure) for subtree in folder.subtrees)
+@dataclass(frozen=True)
+class XorStructure(Structure):
+    options: List['Structure']
 
-    if structure.has_sets:
-        for subtree in folder.subtrees:
-            if not Structure.is_photoset_name(subtree.name):
-                return False
 
-            if not validate(subtree, structure[Structure.SETS_KEY]):
-                return False
+@dataclass(frozen=True)
+class TopStructure(Structure):
+    substructures: Dict[str, 'Structure'] = ()
 
+    def __getitem__(self, name: str) -> Optional['Structure']:
+        for pattern, substructure in self.substructures.items():
+            pattern = f"^{pattern.strip('^$')}$"
+
+            if re.search(pattern, name):
+                return substructure
+
+        return None
+
+
+T = TypeVar("T")
+
+
+# noinspection PyTypeChecker
+class StructureVisitor(Generic[T]):
+    @abstractmethod
+    def visit_xor(self, structure: XorStructure) -> T:
+        assert False
+
+    @abstractmethod
+    def visit_top(self, structure: TopStructure) -> T:
+        assert False
+
+    def visit_none(self) -> T:
+        assert False
+
+    def visit(self, structure: Structure) -> T:
+        if structure is None:
+            return self.visit_none()
+        elif isinstance(structure, XorStructure):
+            return self.visit_xor(structure)
+        elif isinstance(structure, TopStructure):
+            return self.visit_top(structure)
+        else:
+            print(structure.__class__.__name__)
+            assert False
+
+
+def parse_structure(structure_description) -> Structure:
+    if isinstance(structure_description, list):
+        return XorStructure(options=[parse_structure(option) for option in structure_description])
+    elif isinstance(structure_description, dict):
+        return TopStructure(substructures={
+            pattern: parse_structure(substructure_description)
+            for pattern, substructure_description
+            in structure_description.items()
+        })
     else:
-        for subtree in folder.subtrees:
-            if not validate(subtree, structure[subtree.name]):
-                return False
-
-    for file in folder.files:
-        if file not in structure.files:
-            return False
-
-    return True
-
-
-def parse_structure(description: dict, path: Path = None) -> Structure:
-    if path is None:
-        path = Path()
-
-    substructures = {}
-    files = [name for name, desc in description.items() if desc == Structure.STANDALONE_FILE]
-
-    for subname, subdesc in description.items():
-        if subname in Structure.FLAG_KEYS:
-            continue
-
-        substructures[subname] = parse_structure(subdesc, path / subname)
-
-    has_implicit_sets = Structure.SETS_KEY in description
-    has_files = Structure.FILES_KEY in description
-    has_parts = Structure.PARTS_KEY in description
-
-    assert not (has_implicit_sets and (has_parts or has_files))
-    # assert has_files != (len(files) == 0)
-
-    if has_implicit_sets:
-        assert len(description) == 1
-        assert not any(i != Structure.SETS_KEY for i in description)
-
-        # !!!
-        set_structure = description
-    else:
-        set_structure = None
-
-    return Structure(
-        set_structure=set_structure,
-        has_files=has_files,
-        has_parts=has_parts,
-        files=files,
-        folders=substructures
-    )
+        assert False

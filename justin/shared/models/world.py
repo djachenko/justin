@@ -4,12 +4,11 @@ from typing import List
 from justin.shared.filesystem import FolderTree
 from justin.shared.locations.locations_manager import LocationsManager
 from justin.shared.models.archive.archive import Archive
-from justin.shared.structure import Structure
 
 
 # todo: class is currently unused, review
 class World:
-    def __init__(self, disk_structure: Structure) -> None:
+    def __init__(self, disk_structure: OldStructure) -> None:
         super().__init__()
 
         self.__locations_manager = LocationsManager.instance()
