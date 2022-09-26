@@ -55,7 +55,7 @@ class MoveAction(PatternAction):
             return
 
         try:
-            ChecksRunner.instance().run(photoset, self.__prechecks)
+            ChecksRunner.instance().run_except(photoset, self.__prechecks)
 
             new_path = selected_location / photoset.path.parent.relative_to(from_location)
 
