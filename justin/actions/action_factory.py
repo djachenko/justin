@@ -110,4 +110,3 @@ class ActionFactory:
     @lru_cache()
     def date_split(self) -> CLIAction:
         return DateSplitAction()
-

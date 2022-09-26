@@ -3,7 +3,6 @@ from functools import partial
 from pathlib import Path
 from typing import List, Callable
 
-
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
 from justin.actions.named.named_action import Context, Extra
@@ -25,7 +24,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
 
         self.__cache = {}
 
-    def __warmup_cache(self, group: Wall):
+    def __warmup_cache(self, group: Posts):
         if group.id in self.__cache:
             return
 
@@ -90,6 +89,10 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
             lambda a, b: context.kot_i_kit_group,
             extra
         )
+
+    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+        # todo: notify if fixing required
+        pass
 
     # noinspection PyMethodMayBeStatic
     def __fix_group(self, folder: FolderTree, group: Posts) -> None:
