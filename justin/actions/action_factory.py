@@ -17,6 +17,7 @@ from justin.actions.named.stage.stage_action import StageAction
 from justin.actions.named.upload_action import UploadAction
 from justin.actions.named.web_sync_action import WebSyncAction
 from justin.actions.rearrange_action import RearrangeAction
+from justin.actions.register_people_action import RegisterPeopleAction
 from justin.actions.scheduled.local_sync_action import LocalSyncAction
 from justin.actions.sequence_action import SequenceAction
 from justin_utils.cli import Action as CLIAction
@@ -106,3 +107,7 @@ class ActionFactory:
     @lru_cache()
     def date_split(self) -> CLIAction:
         return DateSplitAction()
+
+    @lru_cache()
+    def register_people(self) -> CLIAction:
+        return RegisterPeopleAction()
