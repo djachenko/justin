@@ -12,8 +12,8 @@ from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts, is_part
 from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile
 from justin.shared.models.photoset import Photoset
-from pyvko.shared.mixins.events import Events
-from pyvko.shared.mixins.wall import Wall
+from pyvko.aspects.events import Events
+from pyvko.aspects.posts import Posts
 
 
 class FixMetafileAction(DestinationsAwareAction, EventUtils):
@@ -92,7 +92,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
         )
 
     # noinspection PyMethodMayBeStatic
-    def __fix_group(self, folder: FolderTree, group: Wall) -> None:
+    def __fix_group(self, folder: FolderTree, group: Posts) -> None:
         if folder.has_metafile(GroupMetafile):
             return
 
@@ -105,7 +105,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
     def __fix_categories(
             self,
             categories: List[FolderTree],
-            group_provider: Callable[[FolderTree, Photoset], Wall],
+            group_provider: Callable[[FolderTree, Photoset], Posts],
             extra: Extra
     ):
         root = extra[FixMetafileAction.__ROOT_KEY]
@@ -122,11 +122,13 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
                 community=community
             )
 
-    def __get_event(self, community: Events, category: FolderTree, root: Photoset) -> Wall | None:
+    def __get_event(self, community: Events, category: FolderTree, root: Photoset) -> Posts | None:
         event_id = FixMetafileAction.get_community_id(category, root)
 
         if event_id is None:
             return None
+
+        event_id = str(abs(int(event_id)))
 
         event = community.get_event(event_id)
 
@@ -135,7 +137,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
 
         return event
 
-    def __fix_posts(self, posts_folder: FolderTree, root: Photoset, community: Wall) -> None:
+    def __fix_posts(self, posts_folder: FolderTree, root: Photoset, community: Posts) -> None:
         posts_folders = folder_tree_parts(posts_folder)
 
         self.__warmup_cache(community)
