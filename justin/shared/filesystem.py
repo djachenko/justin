@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 from typing import List, Optional, Dict, Callable
 
+from justin.shared.models.exif import parse_exif
 from justin_utils import util
 from justin_utils.data import DataSize
 from justin_utils.time_formatter import format_time
@@ -53,9 +54,6 @@ def __check_paths(src_path: Path, dst_path: Path):
 
 
 def open_file_manager(path: Path):
-
-    print("ofm", path)
-
     # noinspection PyTypeChecker
     webbrowser.open(str(path))
 
@@ -380,11 +378,27 @@ class FolderTree(PathBased, MetafileMixin):
     def subtrees(self) -> List['FolderTree']:
         return sorted(list(self.__subtrees.values()), key=lambda x: x.name)
 
-    def __getitem__(self, key: str) -> Optional['FolderTree']:
+    def __contains__(self, key: str) -> bool:
+        return key in self.__subtrees
+
+    def __getitem__(self, key: str | Path) -> Optional['FolderTree']:
+        if isinstance(key, str):
+            return self.__get_by_str(key)
+        elif isinstance(key, Path):
+            return self.__get_by_path(key)
+
+        return None
+
+    def __get_by_str(self, key: str) -> Optional['FolderTree']:
         return self.__subtrees.get(key)
 
-    def __contains__(self, key: str) -> bool:
-        return key in self.subtrees
+    def __get_by_path(self, path: Path) -> Optional['FolderTree']:
+        root, *rest = path.parts
+
+        if root in self:
+            return self[root][Path(*rest)]
+        else:
+            return None
 
     def flatten(self) -> List[File]:
         result = self.files.copy()
@@ -438,7 +452,20 @@ class FolderTree(PathBased, MetafileMixin):
 
                 exit(1)
 
-        self.__files.sort(key=lambda x: x.name)
+        class Comparator:
+            def __init__(self, o: File) -> None:
+                super().__init__()
+
+                self.exif = parse_exif(o.path)
+                self.name = o.name
+
+            def __lt__(self, other: 'Comparator') -> bool:
+                if other.exif and self.exif:
+                    return self.exif.date_taken < other.exif.date_taken
+
+                return self.name < other.name
+
+        self.__files.sort(key=Comparator)
 
     def move(self, path: Path):
         super().move(path)
@@ -446,9 +473,25 @@ class FolderTree(PathBased, MetafileMixin):
         self.refresh()
 
     def rename(self, new_name: str) -> None:
-        super().rename(new_name)
+        new_path = self.path.with_stem(new_name)
+
+        if not new_path.exists():
+            super().rename(new_name)
+        elif new_path.is_dir():
+            self.merge_into(new_path)
+        else:
+            assert False
 
         self.refresh()
+
+    def merge_into(self, new_path):
+        for subtree in self.subtrees:
+            subtree.move(new_path)
+
+        for file in self.files:
+            file.move(new_path)
+
+        self.__path = new_path
 
     def __str__(self) -> str:
         return f"FolderTree: {self.path}"
