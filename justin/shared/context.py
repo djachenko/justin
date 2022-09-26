@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from functools import lru_cache
-
-from pyvko.entities.group import Group
-from pyvko.pyvko_main import Pyvko
 
 from justin.shared.helpers.gif_maker import GifMaker
+from justin.shared.models.person import PeopleRegister
 from justin.shared.models.world import World
-from pyvko.shared.mixins.wall import Wall
+from pyvko.aspects.groups import Group
+from pyvko.aspects.posts import Posts
+from pyvko.pyvko_main import Pyvko
 
 
 @dataclass(frozen=True)
@@ -16,15 +15,15 @@ class Context:
     closed_group: Group
     meeting_group: Group
     kot_i_kit_group: Group
-    my_people_group: Wall
+    my_people_group: Posts
 
     pyvko: Pyvko
+
+    gif_maker = GifMaker()
+
+    my_people: PeopleRegister
+    closed: PeopleRegister
 
     @property
     def default_group(self) -> Group:
         return self.justin_group
-
-    @property
-    @lru_cache()
-    def gif_maker(self) -> GifMaker:
-        return GifMaker()

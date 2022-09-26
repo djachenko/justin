@@ -4,7 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import time, date, datetime, timedelta
 from pathlib import Path
-from typing import List, Optional, Iterator
+from typing import List, Iterator
 
 from justin.actions.create_event_action import CreateEventAction, SetupEventAction
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
@@ -17,16 +17,14 @@ from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, Pers
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 from justin_utils.util import stride, flatten
+from pyvko.aspects.albums import Albums
+from pyvko.aspects.comments import CommentModel
+from pyvko.aspects.events import Event
+from pyvko.aspects.groups import Group
+from pyvko.aspects.posts import Post, PostModel, Posts
 from pyvko.attachment.attachment import Attachment
-from pyvko.entities.event import Event
-from pyvko.entities.group import Group
-from pyvko.entities.post import Post
-from pyvko.models import PostModel
-from pyvko.shared.mixins.albums import Albums
-from pyvko.shared.mixins.comments import CommentModel
-from pyvko.shared.mixins.wall import Wall
 
-Community = Wall | Albums
+Community = Posts | Albums
 
 
 class UploadAction(DestinationsAwareAction, EventUtils):
@@ -72,7 +70,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             yield post_datetime
 
     @staticmethod
-    def __generator_for_group(group: Wall):
+    def __generator_for_group(group: Posts):
         scheduled_posts = group.get_scheduled_posts()
         last_date = UploadAction.__get_start_date(scheduled_posts)
         date_generator = UploadAction.__date_generator(last_date)
@@ -300,15 +298,13 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             if not images_to_upload:
                 continue
 
-            print(f"Uploading {person_folder.name}")
-
             for chunk_index, images_chunk in enumerate(stride(images_to_upload, 10), 1):
-                print(f"Uploading chunk {chunk_index}")
+                print(f"Uploading {person_folder.name}, chunk {chunk_index}")
 
                 links = []
 
                 for image in images_chunk:
-                    print(f"Uploading {image.name}...", end="")
+                    print(f"Uploading {image.name}...", end="", flush=True)
 
                     photo = my_people_group.upload_photo_to_wall(image.path)
 
@@ -325,12 +321,10 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                     f"{len(links)} total.",
                 ])
 
-                print(text)
-
-                comment = post.add_comment(CommentModel(text, from_group=True))
+                comment = post.add_comment(CommentModel(text, from_group=abs(my_people_group.id)))
 
                 comment_metafile = CommentMetafile(
-                    id=comment.id,
+                    id=comment.item_id,
                     files=[image.name for image in images_chunk],
                     status=PostStatus.SCHEDULED,
                 )
@@ -349,7 +343,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         event_name: str
         event_date: date
         owner: Group
-        category: Optional[str] = None
+        category: str | None = None
 
     @staticmethod
     def __upload_event(extra: Extra, folder: FolderTree, params: EventParams) -> None:
@@ -382,7 +376,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         )
 
     @staticmethod
-    def __get_event(folder: FolderTree, extra: Extra, params: EventParams) -> Optional[Event]:
+    def __get_event(folder: FolderTree, extra: Extra, params: EventParams) -> Event | None:
         set_context: Extra = extra[UploadAction.__SET_CONTEXT]
         root: Photoset = extra[UploadAction.__ROOT]
 
@@ -418,7 +412,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
     class UploadParams:
         album_name: str
         date_generator: Iterator[datetime]
-        text: Optional[str] = None
+        text: str | None = None
 
     @staticmethod
     def __upload_bottom(community: Community, posts_folder: FolderTree, extra: Extra, params: UploadParams) \
@@ -475,7 +469,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         return post.id
 
     @staticmethod
-    def __get_post_attachments(community: Wall, folder: FolderTree) -> [Attachment]:
+    def __get_post_attachments(community: Posts, folder: FolderTree) -> [Attachment]:
         vk_photos = [community.upload_photo_to_wall(file.path) for file in folder.files]
 
         return vk_photos
