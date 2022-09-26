@@ -1,10 +1,10 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from justin.actions.named.stage.logic.factories.checks_factory import ChecksFactory
 from justin.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
-from justin.actions.named.stage.models.stage import Stage
+from justin.actions.named.stage.models.stage import Stage, Archive
 
 
 class StagesFactory:
@@ -34,12 +34,28 @@ class StagesFactory:
             self.ready(),
             self.published(),
             self.scheduled(),
+            self.archive(),
         ]
+    
+    @lru_cache()
+    def archive(self) -> Stage:
+        return Archive(
+            folder=".archive",
+            command="archive",
+            incoming_checks=[
+                self.__checks_factory.metadata(),
+                self.__checks_factory.everything_is_published(),
+                self.__checks_factory.unselected(),
+                self.__checks_factory.odd_selection(),
+                self.__checks_factory.structure(),
+                self.__checks_factory.missing_gifs()
+            ],
+        )
 
     @lru_cache()
     def gif(self) -> Stage:
         return Stage(
-            path=Path("stage0.gif"),
+            folder="stage0.gif",
             command="gif",
             outcoming_checks=[
                 self.__checks_factory.gif_sources(),
@@ -49,14 +65,14 @@ class StagesFactory:
     @lru_cache()
     def filter(self) -> Stage:
         return Stage(
-            path=Path("stage1.filter"),
+            folder="stage1.filter",
             command="filter"
         )
 
     @lru_cache()
     def develop(self) -> Stage:
         return Stage(
-            path=Path("stage2.develop"),
+            folder="stage2.develop",
             command="develop",
             outcoming_checks=[
                 self.__checks_factory.unselected(),
@@ -71,7 +87,7 @@ class StagesFactory:
     @lru_cache()
     def ourate(self) -> Stage:
         return Stage(
-            path=Path("stage2.ourate"),
+            folder="stage2.ourate",
             command="ourate",
             outcoming_checks=[
                 self.__checks_factory.unselected(),
@@ -87,7 +103,7 @@ class StagesFactory:
     @lru_cache()
     def ready(self) -> Stage:
         return Stage(
-            path=Path("stage3.ready"),
+            folder="stage3.ready",
             command="ready",
             incoming_checks=[
                 self.__checks_factory.metadata(),
@@ -107,7 +123,7 @@ class StagesFactory:
     @lru_cache()
     def published(self) -> Stage:
         return Stage(
-            path=Path("stage4.published"),
+            folder="stage4.published",
             command="publish",
             incoming_checks=[
                 self.__checks_factory.metadata(),
@@ -123,7 +139,7 @@ class StagesFactory:
     @lru_cache()
     def scheduled(self) -> Stage:
         return Stage(
-            path=Path("stage3.schedule"),
+            folder="stage3.schedule",
             command="schedule",
             incoming_checks=[
                 self.__checks_factory.metadata(),
@@ -137,17 +153,23 @@ class StagesFactory:
             ]
         )
 
-    def stage_by_folder(self, name: str) -> Optional[Stage]:
+    @lru_cache()
+    def stub(self) -> Stage:
+        return Stage(
+            folder=""
+        )
+
+    def stage_by_folder(self, name: str) -> Stage | None:
         return self.__stages_by_folders.get(name)
 
     def stage_by_command(self, command: str) -> Stage:
         return self.__stages_by_command[command]
 
-    def stage_by_path(self, path: Path) -> Optional[Stage]:
+    def stage_by_path(self, path: Path) -> Stage | None:
         for path_part in path.absolute().parts:
             possible_stage = self.stage_by_folder(path_part)
 
             if possible_stage is not None:
                 return possible_stage
 
-        return None
+        return self.archive()
