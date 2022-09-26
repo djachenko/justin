@@ -6,7 +6,7 @@ from justin.actions.named.destinations_aware_action import DestinationsAwareActi
 from justin.actions.named.named_action import Context, Extra
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus
+from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile
 from justin.shared.models.photoset import Photoset
 
 
@@ -57,19 +57,50 @@ class WebSyncAction(DestinationsAwareAction):
         self.__handle_tagged(kot_i_kit_folder, context)
 
     def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
-        pass
+        if not my_people_folder.has_metafile(PostMetafile):
+            return
+
+        post_metafile = my_people_folder.get_metafile(PostMetafile)
+
+        post = context.my_people_group.get_post(post_metafile.post_id)
+
+        comments = {comment.item_id: comment for comment in post.get_comments()}
+
+        print("Syncing my people...")
+
+        for person_folder in my_people_folder.subtrees:
+            if not person_folder.has_metafile(PersonMetafile):
+                continue
+
+            print(f"Syncing {person_folder.name}...", end="", flush=True)
+
+            person_metafile = person_folder.get_metafile(PersonMetafile)
+
+            for comment_metafile in person_metafile.comments:
+                if comment_metafile.status == PostStatus.PUBLISHED:
+                    continue
+
+                comment = comments[comment_metafile.id]
+
+                if comment.is_liked():
+                    comment_metafile.status = PostStatus.PUBLISHED
+
+                person_folder.save_metafile(person_metafile)
+
+            total_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments)
+            publish_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments if
+                                comment_metafile.status == PostStatus.PUBLISHED)
+
+            if publish_count == total_count:
+                print(" all sent.")
+            else:
+                print(f" {publish_count}/{total_count} sent.")
 
     def __warmup_cache(self, group_id: int, context: Context):
-
         if group_id in self.__cache:
             return
 
-        if group_id > 0:
-            group_id_api = -group_id
-        else:
-            group_id_api = group_id
-
-        group = context.pyvko.get(str(group_id_api))
+        group = context.pyvko.get(str(group_id))
 
         scheduled_posts = group.get_scheduled_posts()
         published_posts = group.get_posts()
@@ -86,8 +117,13 @@ class WebSyncAction(DestinationsAwareAction):
         if not folder.has_metafile():
             return
 
-        group_metafile: GroupMetafile = folder.get_metafile()
+        group_metafile = folder.get_metafile(GroupMetafile)
         group_id = group_metafile.group_id
+
+        if group_id > 0:
+            group_metafile.group_id = -group_id
+
+            folder.save_metafile(group_metafile)
 
         self.__warmup_cache(group_id, context)
 
@@ -138,8 +174,6 @@ class WebSyncAction(DestinationsAwareAction):
                 print("still published")
             else:
                 print("was deleted")
-
-                return
 
                 post_folder.remove_metafile(PostMetafile)
         else:

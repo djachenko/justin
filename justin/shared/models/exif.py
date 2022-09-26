@@ -80,6 +80,9 @@ class NativeExif(Exif):
 
 
 def parse_exif(path: Path) -> Exif | None:
+    if path.is_dir():
+        return None
+
     suffix = path.suffix.lower()
 
     if suffix in [".nef", ".dng", ]:

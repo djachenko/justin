@@ -1,15 +1,17 @@
 import dataclasses
 import json
 from abc import abstractmethod, ABC
+from collections import defaultdict
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Dict, Type, TypeVar, List
+from typing import Dict, Type, TypeVar, List, Set
 
 from justin_utils.singleton import Singleton
 
 T = TypeVar('T', bound='Metafile')
+V = TypeVar('V', bound='RootMetafile')
 
 Json = Dict[str, 'Json'] | List['Json'] | str
 
@@ -146,6 +148,86 @@ class PersonMetafile(RootMetafile):
 # endregion metafile classes
 
 
+# region metafile migrations
+
+
+class MetafileMigration(Singleton):
+    @property
+    @abstractmethod
+    def supported_types(self) -> List[str]:
+        pass
+
+    @abstractmethod
+    def migrate(self, json: Json) -> Json:
+        pass
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__
+
+    def __hash__(self):
+        return hash(self.__class__)
+
+
+class NegativeGroupIdMigration(MetafileMigration):
+    @property
+    def supported_types(self) -> List[str]:
+        return [
+            GroupMetafile.type(),
+        ]
+
+    def migrate(self, json_dict: Json) -> Json:
+        json_dict = json_dict.copy()
+
+        json_dict["group_id"] = -abs(json_dict["group_id"])
+
+        return json_dict
+
+
+class MetafileMigrator(Singleton):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.__migrations: Dict[str, Set[MetafileMigration]] = defaultdict(set)
+
+    def register(self, *migrations: MetafileMigration) -> None:
+        for migration in migrations:
+            for supported_type in migration.supported_types:
+                migrations_for_type = self.__migrations[supported_type]
+
+                assert migration not in migrations_for_type
+
+                migrations_for_type.add(migration)
+
+    def migrate(self, json_dict: Json) -> Json:
+        for json_type in json_dict[RootMetafile.TYPE_KEY]:
+            for migration in self.__migrations[json_type]:
+                json_dict = migration.migrate(json_dict)
+
+        return json_dict
+
+    def migrate_path(self, path: Path) -> None:
+        if not path.exists() or path.stat().st_size <= 0:
+            return
+
+        with path.open() as metafile_file:
+            json_dict = json.load(metafile_file)
+
+        if RootMetafile.TYPE_KEY not in json_dict:
+            return
+
+        migrated = self.migrate(json_dict)
+
+        with path.open(mode="w") as metafile_file:
+            json.dump(migrated, metafile_file, indent=4)
+
+
+MetafileMigrator.instance().register(
+    NegativeGroupIdMigration.instance(),
+)
+
+
+# endregion metafile migrations
+
 # region metafile reading
 
 class MetafileReadWriter(Singleton):
@@ -153,6 +235,7 @@ class MetafileReadWriter(Singleton):
         super().__init__()
 
         self.__mapping: Dict[str, Type[RootMetafile]] = {}
+        self.__migrator = MetafileMigrator.instance()
 
     def register(self, *types: Type[RootMetafile]) -> None:
         fields = []
@@ -164,7 +247,7 @@ class MetafileReadWriter(Singleton):
 
         self.__mapping |= {type_.type(): type_ for type_ in types}
 
-    def read(self, path: Path, metafile_type: T = None) -> Optional[T]:
+    def read(self, path: Path, metafile_type: V = None) -> V | None:
         metafiles = self.read_all(path)
 
         if len(metafiles) == 0:
@@ -179,7 +262,9 @@ class MetafileReadWriter(Singleton):
 
         return None
 
-    def read_all(self, path: Path) -> List[T]:
+    def read_all(self, path: Path) -> List[V]:
+        self.__migrator.migrate_path(path)
+
         if not path.exists() or path.stat().st_size <= 0:
             return []
 
@@ -258,7 +343,7 @@ class MetafileMixin(ABC):
     def __reader(self):
         return MetafileReadWriter.instance()
 
-    def has_metafile(self, metafile_type: Type[T] = None) -> bool:
+    def has_metafile(self, metafile_type: Type[V] = None) -> bool:
         if not self.metafile_path.exists():
             return False
 
@@ -267,7 +352,7 @@ class MetafileMixin(ABC):
 
         return self.get_metafile(metafile_type) is not None
 
-    def get_metafile(self, metafile_type: Type[T] = None) -> T | None:
+    def get_metafile(self, metafile_type: Type[V] = None) -> V | None:
         if not self.metafile_path.exists():
             return None
 

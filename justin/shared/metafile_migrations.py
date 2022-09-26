@@ -1,6 +1,9 @@
-from typing import Dict, List, Union
+from abc import abstractmethod
+from typing import Dict, List, Union, Type
 
+from justin.shared.metafile import Json, RootMetafile, GroupMetafile
 from justin_utils.json_migration import JsonMigration, JsonObject, Version
+from justin_utils.singleton import Singleton
 
 
 class PostFormatMigration(JsonMigration):
@@ -35,3 +38,4 @@ class PostStatusMigration(JsonMigration):
                     post["post_status"],
                     post["post_status"]
                 )
+
