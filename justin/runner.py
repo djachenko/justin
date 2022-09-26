@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Tuple
 
 from lazy_object_proxy import Proxy
+
+from justin.shared.models.person import PeopleRegister
 from pyvko.config.config import Config as PyvkoConfig
 from pyvko.pyvko_main import Pyvko
 
@@ -19,9 +21,10 @@ __CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
 
 
-def __prepare_configs(config_path: Path) -> Tuple[Config, PyvkoConfig]:
-    config = Config.from_source(config_path / __CONFIGS_FOLDER / __CONFIG_FILE)
-    pyvko_config = PyvkoConfig.read(config_path / __CONFIGS_FOLDER / config[Config.Keys.PYVKO_CONFIG])
+def __prepare_configs(configs_folder: Path) -> Tuple[Config, PyvkoConfig]:
+
+    config = Config.from_source(configs_folder / __CONFIG_FILE)
+    pyvko_config = PyvkoConfig.read(configs_folder / config[Config.Keys.PYVKO_CONFIG])
 
     return config, pyvko_config
 
@@ -34,11 +37,11 @@ def __prepare_containers(config: Config, pyvko_config: PyvkoConfig) -> Tuple[Fac
 
 
 def __run(config_path: Path, args: List[str] = None):
-    config, pyvko_config = __prepare_configs(config_path)
+    configs_folder = config_path / __CONFIGS_FOLDER
+
+    config, pyvko_config = __prepare_configs(configs_folder)
 
     factories_container, pyvko = __prepare_containers(config, pyvko_config)
-
-    commands = factories_container.commands_factory.commands()
 
     def get_lazy_group(url_key):
         return Proxy(lambda: pyvko.get_by_url(config[url_key]))
@@ -51,12 +54,15 @@ def __run(config_path: Path, args: List[str] = None):
         kot_i_kit_group=get_lazy_group(Config.Keys.KOT_I_KIT_URL),
         my_people_group=get_lazy_group(Config.Keys.MY_PEOPLE_URL),
         pyvko=pyvko,
+        my_people=PeopleRegister(configs_folder, "my_people", pyvko),
+        closed=PeopleRegister(configs_folder, "closed", pyvko),
     )
 
-    JsonMigrator.instance().register(
-        PostFormatMigration(),
-        PostStatusMigration(),
+    context.my_people.read()
+    context.closed.read()
+
     )
+    commands = factories_container.commands_factory.commands()
 
     try:
         App(commands, context).run(args)
