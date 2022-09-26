@@ -7,7 +7,6 @@ from justin.actions.date_split import DateSplitAction
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.move_action import MoveAction
-from justin.actions.named.archive_action import ArchiveAction
 from justin.actions.named.fix_metafile_action import FixMetafileAction
 from justin.actions.named.make_gifs_action import MakeGifAction
 from justin.actions.named.resize_gif_sources_action import ResizeGifSourcesAction
@@ -42,9 +41,6 @@ class ActionFactory:
             all_published_action=self.stage_action()
         )
 
-    @lru_cache()
-    def archive_action(self) -> Action:
-        return ArchiveAction()
 
     @lru_cache()
     def move_action(self) -> CLIAction:

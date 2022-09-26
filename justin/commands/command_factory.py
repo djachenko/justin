@@ -54,5 +54,5 @@ class CommandFactory:
             SingleActionCommand("group", self.__action_factory.date_split()),
 
             NamedCommand("local_sync", self.__action_factory.local_sync_action()),
-            NamedCommand("archive", self.__action_factory.archive_action()),
+            # NamedCommand("archive", self.__action_factory.archive_action()),
         ]

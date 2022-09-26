@@ -1,14 +1,11 @@
 from argparse import ArgumentParser, Namespace
 
-from justin.actions.action import Action
 from justin.actions.named.stage.models.stages_factory import StagesFactory
-from justin.commands.command import Command
 from justin.shared.context import Context
+from justin_utils.cli import Command, Action
 
-from justin_utils.cli import Command as CLICommand, Action
 
-
-class StageCommand(CLICommand):
+class StageCommand(Command):
     def __init__(self, action: Action, factory: StagesFactory) -> None:
         super().__init__(name="stage", actions=[])
 
