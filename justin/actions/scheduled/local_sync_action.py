@@ -26,7 +26,7 @@ class LocalSyncAction(ScheduledAction):
 
             try:
                 for part in photoset.parts:
-                    ChecksRunner.instance().run(part, self.__prechecks)
+                    ChecksRunner.instance().run_except(part, self.__prechecks)
 
                 paths_of_published_sets.append(photoset.path)
 
