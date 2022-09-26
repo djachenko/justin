@@ -6,10 +6,9 @@ from typing import List
 
 from justin_utils.cli import Action, Context, Parameter
 from justin_utils.util import parse_date
-from pyvko.entities.event import Event
-from pyvko.entities.group import Group
 from pyvko.entities.user import User
-from pyvko.shared.mixins.events import Events
+from pyvko.aspects.events import Events, Event
+from pyvko.aspects.groups import Group
 
 
 class CreateEventAction(Action):

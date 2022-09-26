@@ -1,12 +1,12 @@
 from argparse import Namespace
 from typing import List
 
-from pyvko.entities.group import Group
 
 from justin.actions.group_action import GroupAction
 from justin.shared.context import Context
 from justin_utils import util
 from justin_utils.cli import Parameter
+from pyvko.aspects.groups import Group
 
 
 class DeletePostsAction(GroupAction):
