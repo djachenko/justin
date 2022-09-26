@@ -11,21 +11,25 @@ from justin_utils.cli import Context, Parameter
 
 
 class CheckRatiosAction(PatternAction):
+    __DEFAULT_PRECISION = 3
 
     @property
     def parameters(self) -> List[Parameter]:
         return super().parameters + [
-            Parameter(flags=["-v", "--verbose"], action=Parameter.Action.STORE_TRUE)
+            Parameter(flags=["-v", "--verbose"], action=Parameter.Action.STORE_TRUE),
+            Parameter(flags=["-p", "--precision"], type=int, default=CheckRatiosAction.__DEFAULT_PRECISION),
         ]
 
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
         ratios = defaultdict(lambda: [])
 
-        for img_path in path.iterdir():
+        precision = args.precision
+
+        for img_path in sorted(path.iterdir()):
             with Image.open(img_path) as image:
                 ratio = image.width / image.height
 
-                ratio = round(ratio, 3)
+                ratio = round(ratio, precision)
 
                 ratios[ratio].append(img_path.name)
 
