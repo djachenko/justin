@@ -21,7 +21,7 @@ class PatternAction(Action, ABC):
     def perform(self, args: Namespace, context: Context) -> None:
         pattern: List[str] = args.pattern
 
-        paths = list(util.resolve_patterns(pattern))
+        paths = list(util.resolve_patterns(*pattern))
 
         if not any(paths):
             print("No items found for that pattern.")
