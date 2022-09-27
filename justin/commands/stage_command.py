@@ -18,7 +18,8 @@ class StageCommand(Command):
 
             subparser: ArgumentParser = parser_adder.add_parser(command)
 
-            subparser.add_argument("name", nargs="+")
+            self.__action.configure_subparser(subparser)
+
             subparser.set_defaults(command_name=command)
 
             self._Command__setup_callback(subparser)
