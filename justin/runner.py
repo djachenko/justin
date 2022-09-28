@@ -1,47 +1,40 @@
 from enum import Enum
 from pathlib import Path
-from typing import Tuple
 
 from lazy_object_proxy import Proxy
-
-from justin.shared.models.person import PeopleRegister
-from pyvko.config.config import Config as PyvkoConfig
-from pyvko.pyvko_main import Pyvko
 
 from justin.shared.config import Config
 from justin.shared.context import Context
 from justin.shared.factories_container import FactoriesContainer
 from justin.shared.metafile_migrations import *
+from justin.shared.models.person import PeopleRegister
 from justin.shared.models.world import World
 from justin_utils.cd import cd
 from justin_utils.cli import App
-from justin_utils.json_migration import JsonMigrator
+from pyvko.config.config import Config as PyvkoConfig
+from pyvko.pyvko_main import Pyvko
 
 __CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
-
-
-def __prepare_configs(configs_folder: Path) -> Tuple[Config, PyvkoConfig]:
-
-    config = Config.from_source(configs_folder / __CONFIG_FILE)
-    pyvko_config = PyvkoConfig.read(configs_folder / config[Config.Keys.PYVKO_CONFIG])
-
-    return config, pyvko_config
-
-
-def __prepare_containers(config: Config, pyvko_config: PyvkoConfig) -> Tuple[FactoriesContainer, Pyvko]:
-    pyvko = Pyvko(pyvko_config)
-    factories_container = FactoriesContainer(config)
-
-    return factories_container, pyvko
+__PYVKO_CONFIG_FILE = "pyvko_config.json"
 
 
 def __run(config_path: Path, args: List[str] = None):
     configs_folder = config_path / __CONFIGS_FOLDER
+    pyvko_config_file = configs_folder / __PYVKO_CONFIG_FILE
 
-    config, pyvko_config = __prepare_configs(configs_folder)
+    pyvko_config = PyvkoConfig.read(pyvko_config_file)
+    pyvko = Pyvko(pyvko_config)
 
-    factories_container, pyvko = __prepare_containers(config, pyvko_config)
+    my_people = PeopleRegister(configs_folder, "my_people", pyvko)
+    closed = PeopleRegister(configs_folder, "closed", pyvko)
+
+    config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
+        "my_people": my_people,
+        "closed": closed
+    })
+
+    factories_container = FactoriesContainer(config)
 
     def get_lazy_group(url_key):
         return Proxy(lambda: pyvko.get_by_url(config[url_key]))
@@ -54,14 +47,18 @@ def __run(config_path: Path, args: List[str] = None):
         kot_i_kit_group=get_lazy_group(Config.Keys.KOT_I_KIT_URL),
         my_people_group=get_lazy_group(Config.Keys.MY_PEOPLE_URL),
         pyvko=pyvko,
-        my_people=PeopleRegister(configs_folder, "my_people", pyvko),
-        closed=PeopleRegister(configs_folder, "closed", pyvko),
+        my_people=my_people,
+        closed=closed,
     )
 
     context.my_people.read()
     context.closed.read()
 
-    )
+    #    JsonMigrator.instance().register(
+    #       PostFormatMigration(),
+    #      PostStatusMigration(),
+    # )
+
     commands = factories_container.commands_factory.commands()
 
     try:
@@ -101,6 +98,7 @@ class Commands(str, Enum):
     SPLIT = "split"
     UPLOAD = "upload"
     WEB_SYNC = "web_sync"
+    REGISTER_PEOPLE = "register_people"
 
 
 class Locations(str, Enum):
@@ -124,27 +122,21 @@ class Stages(str, Enum):
 
 
 def main():
-    def build_command(command: Commands, location: Locations, stage: Stages, name: str) -> str:
-        return f"{command} {name}"
-
-    current_location = Locations.C
-    current_stage = Stages.DEVELOP
+    current_location = Locations.MAC_OS_HOME
+    current_stage = Stages.READY
+    current_command = Commands.PUBLISH
+    current_pattern = "*"
 
     commands = {
-        0: build_command(
-            command=Commands.READY,
-            location=current_location,
-            stage=current_stage,
-            name="*toka*",
-        ),
+        0: f"{current_command} {current_pattern}",
         1: "rearrange -s 1",
         2: "rearrange",
-        8: "rearrange --shuffle",
-        7: "rearrange --group kotikit --shuffle --step 2 --start_time 18:00 --end_time 19:00",
         3: "delay",
         4: "",
         5: "check_ratios",
         6: "delete_posts",
+        7: "rearrange --group kotikit --shuffle --step 2 --start_time 18:00 --end_time 19:00",
+        8: "rearrange --shuffle",
     }
 
     with cd(Path(f"{current_location}photos/stages/{current_stage}")):

@@ -368,6 +368,10 @@ class FolderTree(PathBased, MetafileMixin):
         return self.path.name
 
     @property
+    def stem(self) -> str:
+        return self.path.stem
+
+    @property
     def files(self) -> List[File]:
         if self.__files is None:
             self.refresh()
