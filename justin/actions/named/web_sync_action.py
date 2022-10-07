@@ -3,7 +3,7 @@ from argparse import Namespace
 from justin_utils.pylinq import Sequence
 
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
-from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile

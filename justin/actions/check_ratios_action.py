@@ -5,8 +5,7 @@ from typing import List, Tuple
 
 from PIL import Image
 
-from justin.actions.named.named_action import Extra
-from justin.actions.pattern_action import PatternAction
+from justin.actions.pattern_action import PatternAction, Extra
 from justin_utils.cli import Context, Parameter
 
 

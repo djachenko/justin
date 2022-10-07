@@ -1,6 +1,6 @@
 from argparse import Namespace
 
-from justin.actions.named.named_action import NamedAction, Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.actions.pattern_action import PatternAction
 from justin.shared.helpers.checks_runner import ChecksRunner

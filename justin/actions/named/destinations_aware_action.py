@@ -1,6 +1,6 @@
 from argparse import Namespace
 
-from justin.actions.named.named_action import Extra
+from justin.actions.pattern_action import Extra
 from justin.actions.pattern_action import PatternAction
 from justin.shared.context import Context
 from justin.shared.filesystem import FolderTree

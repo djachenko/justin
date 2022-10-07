@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from typing import Optional, List, Iterable
 
 from justin.shared.filesystem import PathBased, RelativeFileset, File, FolderTree
-from justin.shared.helpers import photoset_utils
+from justin.shared.helpers import utils
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin_utils import util

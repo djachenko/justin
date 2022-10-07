@@ -1,7 +1,7 @@
 from argparse import Namespace
 from typing import List
 
-from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.actions.pattern_action import PatternAction
 from justin.shared.models.photoset import Photoset
 from justin_utils.cli import Parameter

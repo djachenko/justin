@@ -9,7 +9,7 @@ from typing import List, Iterator
 from justin.actions.create_event_action import CreateEventAction, SetupEventAction
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
-from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import FolderTree, File
 from justin.shared.helpers.parts import folder_tree_parts

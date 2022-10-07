@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List
 
 from justin.actions.check_ratios_action import PatternAction
-from justin.actions.named.named_action import Extra
+from justin.actions.pattern_action import Extra
 from justin_utils.cli import Context, Parameter
 
 
