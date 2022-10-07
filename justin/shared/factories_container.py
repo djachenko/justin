@@ -3,7 +3,7 @@ from justin.actions.named.stage.logic.factories.checks_factory import ChecksFact
 from justin.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
 from justin.actions.named.stage.logic.factories.selector_factory import SelectorFactory
 from justin.actions.named.stage.models.stages_factory import StagesFactory
-from justin.commands.command_factory import CommandFactory
+from justin.commands import CommandFactory
 from justin.shared.config import Config
 
 
