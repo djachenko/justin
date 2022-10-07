@@ -94,6 +94,13 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
         # todo: notify if fixing required
         pass
 
+    def handle_timelapse(self, timelapse_folder: FolderTree, context: Context, extra: Extra) -> None:
+        self.__fix_posts(
+            posts_folder=timelapse_folder,
+            root=extra[FixMetafileAction.__ROOT_KEY],
+            community=context.justin_group
+        )
+
     # noinspection PyMethodMayBeStatic
     def __fix_group(self, folder: FolderTree, group: Posts) -> None:
         if folder.has_metafile(GroupMetafile):

@@ -14,6 +14,7 @@ from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import FolderTree, File
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile
+from justin.shared.models.exif import parse_exif
 from justin.shared.models.person import Person
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
@@ -504,7 +505,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
         file_count = folder.file_count()
 
-        for i, file in enumerate(folder.files, start=1):
+        for i, file in enumerate(sorted(folder.files, key=parse_exif), start=1):
             success = False
 
             print(f"Uploading {file.name} ({i}/{file_count})")

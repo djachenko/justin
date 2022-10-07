@@ -3,6 +3,8 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from justin.shared.filesystem import File
+
 
 class Exif:
     @property
@@ -14,6 +16,9 @@ class Exif:
     @abstractmethod
     def available_names(self):
         pass
+
+    def __lt__(self, other: 'Exif'):
+        return self.date_taken < other.date_taken
 
 
 class PillowExif(Exif):
@@ -79,7 +84,13 @@ class NativeExif(Exif):
             return NativeExif(my_image)
 
 
-def parse_exif(path: Path) -> Exif | None:
+def parse_exif(path: Path | File) -> Exif | None:
+    if path is None:
+        return None
+
+    if isinstance(path, File):
+        path = path.path
+
     if path.is_dir():
         return None
 

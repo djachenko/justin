@@ -345,6 +345,9 @@ class File(PathBased):
 
         return o.path == self.path
 
+    def __lt__(self, other: 'File') -> bool:
+        return self.name < other.name
+
 
 class FolderTree(PathBased, MetafileMixin):
     # noinspection PyTypeChecker
@@ -454,20 +457,7 @@ class FolderTree(PathBased, MetafileMixin):
 
                 exit(1)
 
-        class Comparator:
-            def __init__(self, o: File) -> None:
-                super().__init__()
-
-                self.exif = parse_exif(o.path)
-                self.name = o.name
-
-            def __lt__(self, other: 'Comparator') -> bool:
-                if other.exif and self.exif:
-                    return self.exif.date_taken < other.exif.date_taken
-
-                return self.name < other.name
-
-        self.__files.sort(key=Comparator)
+        self.__files.sort(key=lambda x: x.name)
 
     def move(self, path: Path):
         super().move(path)

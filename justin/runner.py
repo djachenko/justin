@@ -114,6 +114,7 @@ class Locations(str, Enum):
 
 class Stages(str, Enum):
     GIF = "stage0.gif"
+    FILTER = "stage1.filter"
     DEVELOP = "stage2.develop"
     OURATE = "stage2.ourate"
     READY = "stage3.ready"
@@ -123,9 +124,9 @@ class Stages(str, Enum):
 
 def main():
     current_location = Locations.MAC_OS_HOME
-    current_stage = Stages.READY
-    current_command = Commands.PUBLISH
-    current_pattern = "*"
+    current_stage = Stages.FILTER
+    current_command = Commands.UPLOAD
+    current_pattern = "*litsky*"
 
     commands = {
         0: f"{current_command} {current_pattern}",
@@ -137,12 +138,16 @@ def main():
         6: "delete_posts",
         7: "rearrange --group kotikit --shuffle --step 2 --start_time 18:00 --end_time 19:00",
         8: "rearrange --shuffle",
+        9: "setup_event --parent_id 143472211 206107409 21.05.22 22.05.21.night_with_bet",
+        10: "setup_event https://vk.com/event206314876 24.06.22 22.06.24.bakina_prom --parent https://vk.com/mothilda",
+        11: "upload -h",
+        12: "people_fix -a",
     }
 
     with cd(Path(f"{current_location}photos/stages/{current_stage}")):
         __run(
             Path(__file__).parent.parent,
-            commands[0].split()
+            commands[12].split()
         )
 
 

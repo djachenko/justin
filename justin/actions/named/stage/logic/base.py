@@ -191,6 +191,9 @@ class DestinationsAwareCheck(Check):
                 for post_folder in folder_tree_parts(name_folder):
                     problems += self.check_post_metafile(post_folder)
 
+        if photoset.timelapse:
+            problems += self.check_post_metafile(photoset.timelapse)
+
         def check_event(event_folder: FolderTree) -> Iterable[Problem]:
             local_problems = self.check_group_metafile(event_folder)
 

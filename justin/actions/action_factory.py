@@ -15,6 +15,7 @@ from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.actions.named.stage.stage_action import StageAction
 from justin.actions.named.upload_action import UploadAction
 from justin.actions.named.web_sync_action import WebSyncAction
+from justin.actions.pano_extract_action import PanoExtractAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.people import RegisterPeopleAction, FixPeopleAction
 from justin.actions.sequence_action import SequenceAction
@@ -101,3 +102,11 @@ class ActionFactory:
     @lru_cache()
     def register_people(self) -> Action:
         return RegisterPeopleAction()
+
+    @lru_cache()
+    def pano_extract(self) -> Action:
+        return PanoExtractAction()
+
+    @lru_cache()
+    def fix_people(self) -> Action:
+        return FixPeopleAction()
