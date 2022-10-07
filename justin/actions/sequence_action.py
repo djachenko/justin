@@ -4,6 +4,8 @@ from typing import List
 
 from justin.actions.check_ratios_action import PatternAction
 from justin.actions.pattern_action import Extra
+from justin.shared.filesystem import FolderTree
+from justin.shared.helpers.utils import exif_sorted
 from justin_utils.cli import Context, Parameter
 
 
@@ -19,9 +21,12 @@ class SequenceAction(PatternAction):
         prefix = args.prefix
         start = args.start
 
-        files = list(path.iterdir())
+        tree = FolderTree(path)
 
-        files.sort(key=lambda x: x.name)
+        files = exif_sorted(tree.files)
+        files = [file.path for file in files]
+
+        # files.sort(key=lambda x: x.name)
 
         for index, file in enumerate(files, start=start):
             new_stem = f"{index:04}"

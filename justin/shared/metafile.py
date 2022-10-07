@@ -58,7 +58,25 @@ class PostStatus(Metafile, Enum):
         return cls(json_object)
 
     def as_json(self) -> Json:
-        return self.value
+        return str(self.value)
+
+
+@dataclass
+class PhotosetMetafile(RootMetafile):
+    total_size: int
+
+    @classmethod
+    def type(cls) -> str:
+        return "photoset"
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return PhotosetMetafile(
+            total_size=json_object["total_size"]
+        )
+
+    def as_json(self) -> Json:
+        return asdict(self)
 
 
 @dataclass
@@ -317,6 +335,7 @@ MetafileReadWriter.instance().register(
     PostMetafile,
     GroupMetafile,
     PersonMetafile,
+    PhotosetMetafile,
 )
 
 
