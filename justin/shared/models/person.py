@@ -63,6 +63,8 @@ class PeopleRegister:
         return (self.__root / self.__category).with_suffix(".json")
 
     def read(self) -> None:
+        print(f"reAD {self.__path()}")
+
         if not self.__path().exists():
             return
 
@@ -75,51 +77,19 @@ class PeopleRegister:
         with self.__path().open("w", encoding='utf8') as people_json_file:
             json.dump([person.as_json() for person in self.__people], people_json_file, indent=4, ensure_ascii=False)
 
-    def register(self, folder: Path):
-        assert self.__pyvko is not None
+    def add_person(self, person: Person) -> None:
+        self.__validate_and_add(person)
 
-        my_people_folder = folder / self.__category
-
-        if not my_people_folder.exists():
-            return
-
-        tree = FolderTree(my_people_folder)
-
-        source = folder.name
-
-        for my_person in tree.subtrees:
-            if my_person.name in self:
-                continue
-
-            url = input(f"Who is {my_person.name}? ")
-
-            if url == "-":
-                continue
-
-            user: User = self.__pyvko.get(url)
-
-            assert isinstance(user, User)
-
-            vk_id = user.id
-            name = f"{user.first_name} {user.last_name}"
-
-            person = Person(
-                vk_id=vk_id,
-                name=name,
-                folder=my_person.stem,
-                source=source,
-            )
-
-            self.__register(person)
-
-    def __register(self, person: Person) -> None:
+    def __validate_and_add(self, person: Person) -> None:
         assert Person.is_valid(person)
 
         for existing_person in self.__people:
-            assert person.vk_id != existing_person.vk_id
-            assert person.folder != existing_person.folder
+            assert person.vk_id != existing_person.vk_id, "This vk id already registered"
+            assert person.folder != existing_person.folder, "This folder is already registered"
 
-            # todo: prefixes
+            assert not person.folder.startswith(existing_person.folder) and \
+                   not existing_person.folder.startswith(person.folder), \
+                f"Folder prefixes collision with {existing_person.folder}"
 
         self.__people.append(person)
 
@@ -132,6 +102,11 @@ class PeopleRegister:
 
         return False
 
+    def __iter__(self):
+        print(f"self pe {len(self.__people)}")
+
+        return iter(self.__people)
+
     def get_all_folders(self) -> List[str]:
         return [person.folder for person in self.__people]
 
@@ -142,11 +117,9 @@ class PeopleRegister:
 
         return None
 
-    def fix_person(self, folder: str) -> None:
-        person = self.get_by_folder(folder)
+    def fix_person(self, person: Person) -> None:
+        folder = person.folder
+
         self.__people.remove(person)
 
-        person.vk_id = input(f"Enter {folder}'s vk_id (current {person.vk_id}):") or person.vk_id
-        person.name = input(f"Enter {folder}'s name (current {person.name}):") or person.name
-
-        self.__register(person)
+        self.__validate_and_add(person)

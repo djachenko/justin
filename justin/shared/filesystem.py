@@ -6,14 +6,12 @@ from functools import partial
 from pathlib import Path
 from typing import List, Optional, Dict, Callable
 
-from justin.shared.models.exif import parse_exif
+# region helpers
+from justin.shared.metafile import MetafileMixin
 from justin_utils import util
 from justin_utils.data import DataSize
 from justin_utils.time_formatter import format_time
 from justin_utils.transfer import TransferSpeedMeter, TransferTimeEstimator
-
-# region helpers
-from justin.shared.metafile import MetafileMixin
 
 
 def __subfolders(path: Path) -> List[Path]:
