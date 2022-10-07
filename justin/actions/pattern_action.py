@@ -6,9 +6,10 @@ from typing import List
 from justin_utils import util
 from justin_utils.cli import Parameter, Action, Context
 
-from justin.actions.named.named_action import Extra
 from justin.shared.filesystem import FolderTree
 from justin.shared.models.photoset import Photoset
+
+Extra = Dict[str, Any]
 
 
 class PatternAction(Action, ABC):
