@@ -349,16 +349,16 @@ class File(PathBased):
         return self.name < other.name
 
 
-class FolderTree(PathBased, MetafileMixin):
+class Folder(PathBased, MetafileMixin):
     # noinspection PyTypeChecker
     def __init__(self, path: Path) -> None:
         super().__init__(path)
 
-        self.__backing_subtrees: Dict[str, FolderTree] = None
+        self.__backing_subtrees: Dict[str, Folder] = None
         self.__files: List[File] = None
 
     @property
-    def __subtrees(self) -> Dict[str, 'FolderTree']:
+    def __subtrees(self) -> Dict[str, 'Folder']:
         if self.__backing_subtrees is None:
             self.refresh()
 
@@ -380,13 +380,13 @@ class FolderTree(PathBased, MetafileMixin):
         return self.__files
 
     @property
-    def subtrees(self) -> List['FolderTree']:
+    def subfolders(self) -> List['Folder']:
         return sorted(list(self.__subtrees.values()), key=lambda x: x.name)
 
     def __contains__(self, key: str) -> bool:
         return key in self.__subtrees
 
-    def __getitem__(self, key: str | Path) -> Optional['FolderTree']:
+    def __getitem__(self, key: str | Path) -> Optional['Folder']:
         if isinstance(key, str):
             return self.__get_by_str(key)
         elif isinstance(key, Path):
@@ -394,10 +394,10 @@ class FolderTree(PathBased, MetafileMixin):
 
         return None
 
-    def __get_by_str(self, key: str) -> Optional['FolderTree']:
+    def __get_by_str(self, key: str) -> Optional['Folder']:
         return self.__subtrees.get(key)
 
-    def __get_by_path(self, path: Path) -> Optional['FolderTree']:
+    def __get_by_path(self, path: Path) -> Optional['Folder']:
         root, *rest = path.parts
 
         if root in self:
@@ -408,13 +408,13 @@ class FolderTree(PathBased, MetafileMixin):
     def flatten(self) -> List[File]:
         result = self.files.copy()
 
-        for subtree in self.subtrees:
+        for subtree in self.subfolders:
             result += subtree.flatten()
 
         return result
 
     def file_count(self) -> int:
-        return sum(subtree.file_count() for subtree in self.subtrees) + len(self.files)
+        return sum(subtree.file_count() for subtree in self.subfolders) + len(self.files)
 
     def empty(self) -> bool:
         return self.file_count() == 0
@@ -422,7 +422,7 @@ class FolderTree(PathBased, MetafileMixin):
     def remove(self):
         assert len(self.files) == 0
 
-        for subtree in self.subtrees:
+        for subtree in self.subfolders:
             subtree.remove()
 
         self.path.rmdir()
@@ -433,7 +433,7 @@ class FolderTree(PathBased, MetafileMixin):
 
         for child in self.path.iterdir():
             if child.is_dir():
-                child_tree = FolderTree(child)
+                child_tree = Folder(child)
 
                 if not child_tree.empty():
                     self.__subtrees[child.name] = child_tree
@@ -477,7 +477,7 @@ class FolderTree(PathBased, MetafileMixin):
         self.refresh()
 
     def merge_into(self, new_path):
-        for subtree in self.subtrees:
+        for subtree in self.subfolders:
             subtree.move(new_path)
 
         for file in self.files:
@@ -493,29 +493,29 @@ class FolderTree(PathBased, MetafileMixin):
 
     def collect_metafile_paths(self) -> List[Path]:
         return super().collect_metafile_paths() + \
-               util.flatten(subtree.collect_metafile_paths() for subtree in self.subtrees)
+               util.flatten(subtree.collect_metafile_paths() for subtree in self.subfolders)
 
 
-class TreeBased(PathBased):
-    def __init__(self, tree: FolderTree) -> None:
+class FolderBased(PathBased):
+    def __init__(self, tree: Folder) -> None:
         super().__init__(tree.path)
 
         self.__tree = tree
 
     @property
-    def tree(self) -> FolderTree:
+    def folder(self) -> Folder:
         return self.__tree
 
     @property
     def name(self) -> str:
-        return self.tree.name
+        return self.folder.name
 
     @property
     def path(self) -> Path:
-        return self.tree.path
+        return self.folder.path
 
     def move(self, path: Path) -> None:
-        self.tree.move(path)
+        self.folder.move(path)
 
 
 def parse_paths(paths: List[Path]) -> List[PathBased]:
@@ -525,7 +525,7 @@ def parse_paths(paths: List[Path]) -> List[PathBased]:
         if path.is_file():
             result.append(File(path))
         elif path.is_dir():
-            result.append(FolderTree(path))
+            result.append(Folder(path))
         else:
             assert False
 

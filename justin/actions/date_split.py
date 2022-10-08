@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List
 
 from justin.actions.pattern_action import PatternAction, Extra
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.models.sources import parse_sources
 from justin_utils.cli import Context, Parameter
 from justin_utils.util import group_by
@@ -18,7 +18,7 @@ class DateSplitAction(PatternAction):
         ]
 
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        sources = parse_sources(FolderTree(path).files)
+        sources = parse_sources(Folder(path).files)
 
         if not sources:
             return

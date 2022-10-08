@@ -5,7 +5,7 @@ from typing import List
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.models.person import PeopleRegister, Person
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
@@ -60,21 +60,21 @@ class FixPeopleMixin:
 
 
 class RegisterPeopleAction(DestinationsAwareAction, FixPeopleMixin):
-    def handle_closed(self, closed_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
         super().handle_closed(closed_folder, context, extra)
 
         self.__register_from_path(closed_folder, context.pyvko, context.closed)
 
-    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
         super().handle_my_people(my_people_folder, context, extra)
 
         self.__register_from_path(my_people_folder, context.pyvko, context.my_people)
 
-    def handle_common(self, folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_common(self, folder: Folder, context: Context, extra: Extra) -> None:
         pass
 
-    def __register_from_path(self, tree: FolderTree, pyvko: Pyvko, register: PeopleRegister):
-        for my_person in tree.subtrees:
+    def __register_from_path(self, tree: Folder, pyvko: Pyvko, register: PeopleRegister):
+        for my_person in tree.subfolders:
             if my_person.name in register:
                 continue
 
@@ -144,7 +144,7 @@ class FixPeopleAction(Action, FixPeopleMixin):
             else:
                 assert False
 
-            names_in_folder = {name_tree.name for name_tree in names_root.subtrees}
+            names_in_folder = {name_tree.name for name_tree in names_root.subfolders}
 
             registered_people = [register.get_by_folder(name) for name in names_in_folder]
             people_to_fix = filter(None, registered_people)

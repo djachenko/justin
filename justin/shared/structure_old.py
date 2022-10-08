@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Optional, ClassVar
 
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import is_parted
 
 
@@ -61,12 +61,12 @@ class OldStructure:
         return True
 
 
-def validate(folder: FolderTree, structure: OldStructure) -> bool:
+def validate(folder: Folder, structure: OldStructure) -> bool:
     if is_parted(folder) and structure.has_parts:
-        return all(validate(subtree, structure) for subtree in folder.subtrees)
+        return all(validate(subtree, structure) for subtree in folder.subfolders)
 
     if structure.has_sets:
-        for subtree in folder.subtrees:
+        for subtree in folder.subfolders:
             if not OldStructure.is_photoset_name(subtree.name):
                 return False
 
@@ -74,7 +74,7 @@ def validate(folder: FolderTree, structure: OldStructure) -> bool:
                 return False
 
     else:
-        for subtree in folder.subtrees:
+        for subtree in folder.subfolders:
             if not validate(subtree, structure[subtree.name]):
                 return False
 

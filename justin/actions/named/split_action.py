@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from justin.actions.pattern_action import Context, Extra
 from justin.actions.pattern_action import PatternAction
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.filesystem import RelativeFileset, File
 from justin.shared.helpers import utils
 from justin.shared.helpers.utils import JpegType
@@ -23,7 +23,7 @@ class SplitAction(PatternAction):
         ]
 
     @staticmethod
-    def flat_or_empty(tree: Optional[FolderTree]) -> List[File]:
+    def flat_or_empty(tree: Optional[Folder]) -> List[File]:
         if tree is None:
             return []
 
@@ -37,7 +37,7 @@ class SplitAction(PatternAction):
 
         super().perform_for_photoset(photoset, args, context, extra)
 
-        photoset.tree.refresh()
+        photoset.folder.refresh()
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         assert SplitAction.__PHOTOSET_NAME_KEY in extra

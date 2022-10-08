@@ -8,7 +8,7 @@ from justin.shared.models.photoset import Photoset
 
 class OddSelectionSelector(Selector):
     def select(self, photoset: Photoset) -> List[str]:
-        selection = photoset.selection
+        selection = photoset.not_signed
 
         if selection is None:
             return []

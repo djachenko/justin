@@ -91,14 +91,14 @@ class Archive(Stage):
             "my_people",
         ]
 
-        existing_destinations = [d for d in destinations if d in photoset.tree]
+        existing_destinations = [d for d in destinations if d in photoset.folder]
 
-        largest_destination = max(existing_destinations, key=lambda x: len(photoset.tree[x].flatten()))
+        largest_destination = max(existing_destinations, key=lambda x: len(photoset.folder[x].flatten()))
 
-        largest_subtree = photoset.tree[largest_destination]
+        largest_subtree = photoset.folder[largest_destination]
 
         if largest_destination in ["justin", "closed"]:
-            largest_subtree = max(largest_subtree.subtrees, key=lambda t: len(t.flatten()))
+            largest_subtree = max(largest_subtree.subfolders, key=lambda t: len(t.flatten()))
 
         relative_path = largest_subtree.path.relative_to(photoset.path)
 

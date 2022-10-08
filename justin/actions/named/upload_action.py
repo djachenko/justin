@@ -11,7 +11,7 @@ from justin.actions.named.destinations_aware_action import DestinationsAwareActi
 from justin.actions.named.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
-from justin.shared.filesystem import FolderTree, File
+from justin.shared.filesystem import Folder, File
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
     AlbumMetafile
@@ -99,7 +99,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             .flat_map(lambda ps: ps.parts) \
             .map(lambda pt: pt.closed) \
             .not_null() \
-            .flat_map(lambda pt: pt.subtrees) \
+            .flat_map(lambda pt: pt.subfolders) \
             .is_distinct(lambda nm: nm.name)
 
         extra.update({
@@ -123,7 +123,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
     # region utils
 
     @staticmethod
-    def __check_all_posted(*posts_folders: FolderTree) -> bool:
+    def __check_all_posted(*posts_folders: Folder) -> bool:
         for post_folder in posts_folders:
             if not post_folder.has_metafile(PostMetafile):
                 return False
@@ -149,7 +149,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     # region upload strategies
 
-    def handle_justin(self, justin_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
         justin_group = context.justin_group
         set_name = extra[UploadAction.__SET_NAME]
         part_name = extra[UploadAction.__PART_NAME]
@@ -165,7 +165,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             group_id=justin_group.id
         ))
 
-        for hashtag_folder in justin_folder.subtrees:
+        for hashtag_folder in justin_folder.subfolders:
             hashtag_name = hashtag_folder.name
 
             if UploadAction.__check_all_posted(*folder_tree_parts(hashtag_folder)):
@@ -182,13 +182,13 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 )
             )
 
-    def handle_closed(self, closed_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
         set_name: str = extra[UploadAction.__SET_NAME]
         only_one_name: bool = extra[UploadAction.__SINGLE_NAME]
 
         event_date = UploadAction.__get_date(set_name)
 
-        for name_folder in closed_folder.subtrees:
+        for name_folder in closed_folder.subfolders:
             if UploadAction.__check_all_posted(*folder_tree_parts(name_folder)):
                 continue
 
@@ -213,7 +213,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 )
             )
 
-    def handle_meeting(self, meeting_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_meeting(self, meeting_folder: Folder, context: Context, extra: Extra) -> None:
         if UploadAction.__check_all_posted(*folder_tree_parts(meeting_folder)):
             return
 
@@ -234,7 +234,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             )
         )
 
-    def handle_kot_i_kit(self, kot_i_kit_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, context: Context, extra: Extra) -> None:
         kot_i_kit_group = context.kot_i_kit_group
 
         skip_subtrees = [
@@ -247,7 +247,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             group_id=kot_i_kit_group.id
         ))
 
-        for hashtag_folder in kot_i_kit_folder.subtrees:
+        for hashtag_folder in kot_i_kit_folder.subfolders:
             hashtag_name = hashtag_folder.name
 
             if hashtag_name in skip_subtrees or hashtag_name.isdecimal():
@@ -267,7 +267,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 )
             )
 
-    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
         my_people_group = context.my_people_group
 
         if not my_people_folder.has_metafile(PostMetafile):
@@ -283,7 +283,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
         assert post is not None
 
-        for person_folder in my_people_folder.subtrees:
+        for person_folder in my_people_folder.subfolders:
             person = context.my_people.get_by_folder(person_folder.name)
 
             if not person:
@@ -370,7 +370,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         category: str | None = None
 
     @staticmethod
-    def __upload_event(extra: Extra, folder: FolderTree, params: EventParams) -> None:
+    def __upload_event(extra: Extra, folder: Folder, params: EventParams) -> None:
         event = UploadAction.__get_event(
             extra=extra,
             params=params,
@@ -400,7 +400,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         )
 
     @staticmethod
-    def __get_event(folder: FolderTree, extra: Extra, params: EventParams) -> Event | None:
+    def __get_event(folder: Folder, extra: Extra, params: EventParams) -> Event | None:
         set_context: Extra = extra[UploadAction.__SET_CONTEXT]
         root: Photoset = extra[UploadAction.__ROOT]
 
@@ -439,7 +439,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         text: str | None = None
 
     @staticmethod
-    def __upload_bottom(community: Community, posts_folder: FolderTree, extra: Extra, params: UploadParams) \
+    def __upload_bottom(community: Community, posts_folder: Folder, extra: Extra, params: UploadParams) \
             -> None:
         root_path: Path = extra[UploadAction.__ROOT_PATH]
 
@@ -476,7 +476,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             post_folder.save_metafile(post_metafile)
 
     @staticmethod
-    def __upload_folder(community: Community, folder: FolderTree, params: UploadParams) -> int:
+    def __upload_folder(community: Community, folder: Folder, params: UploadParams) -> int:
         if folder.file_count() <= 10:
             attachments = UploadAction.__get_post_attachments(community, folder)
         else:
@@ -493,13 +493,13 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         return post.id
 
     @staticmethod
-    def __get_post_attachments(community: Posts, folder: FolderTree) -> [Attachment]:
+    def __get_post_attachments(community: Posts, folder: Folder) -> [Attachment]:
         vk_photos = [community.upload_photo_to_wall(file.path) for file in folder.files]
 
         return vk_photos
 
     @staticmethod
-    def __get_album_attachments(community: Albums, folder: FolderTree, params: UploadParams) -> [Attachment]:
+    def __get_album_attachments(community: Albums, folder: Folder, params: UploadParams) -> [Attachment]:
 
         if folder.has_metafile(AlbumMetafile):
             metafile = folder.get_metafile(AlbumMetafile)

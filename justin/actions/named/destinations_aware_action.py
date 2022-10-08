@@ -3,7 +3,7 @@ from argparse import Namespace
 from justin.actions.pattern_action import Extra
 from justin.actions.pattern_action import PatternAction
 from justin.shared.context import Context
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.models.photoset import Photoset
 
 
@@ -24,24 +24,24 @@ class DestinationsAwareAction(PatternAction):
 
             handler(destination, context, extra)
 
-    def handle_closed(self, closed_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(closed_folder, context, extra)
 
-    def handle_justin(self, justin_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(justin_folder, context, extra)
 
-    def handle_kot_i_kit(self, kot_i_kit_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(kot_i_kit_folder, context, extra)
 
-    def handle_meeting(self, meeting_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_meeting(self, meeting_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(meeting_folder, context, extra)
 
-    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(my_people_folder, context, extra)
 
-    def handle_timelapse(self, timelapse_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_timelapse(self, timelapse_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(timelapse_folder, context, extra)
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
-    def handle_common(self, folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_common(self, folder: Folder, context: Context, extra: Extra) -> None:
         assert False
