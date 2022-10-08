@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import List
 
-from justin.shared.filesystem import FolderTree
+from justin.actions.named.stage.models.stage import Archive
 from justin.shared.locations.locations_manager import LocationsManager
-from justin.shared.models.archive.archive import Archive
+from justin.shared.structure_old import OldStructure
 
 
 # todo: class is currently unused, review
@@ -12,11 +12,11 @@ class World:
         super().__init__()
 
         self.__locations_manager = LocationsManager.instance()
-        self.__archive = Archive(FolderTree(self.current_location), disk_structure)
+        # self.__archive = None
 
     @property
     def archive(self) -> Archive:
-        return self.__archive
+        return None  # self.__archive
 
     @property
     def current_location(self) -> Path:

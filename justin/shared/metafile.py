@@ -58,7 +58,25 @@ class PostStatus(Metafile, Enum):
         return cls(json_object)
 
     def as_json(self) -> Json:
-        return self.value
+        return str(self.value)
+
+
+@dataclass
+class PhotosetMetafile(RootMetafile):
+    total_size: int
+
+    @classmethod
+    def type(cls) -> str:
+        return "photoset"
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return PhotosetMetafile(
+            total_size=json_object["total_size"]
+        )
+
+    def as_json(self) -> Json:
+        return asdict(self)
 
 
 @dataclass
@@ -143,6 +161,26 @@ class PersonMetafile(RootMetafile):
         return super().as_json() | {
             "comments": [comment.as_json() for comment in self.comments]
         }
+
+
+@dataclass
+class AlbumMetafile(RootMetafile):
+    album_id: int
+    images: List[str]
+
+    @classmethod
+    def type(cls) -> str:
+        return "album"
+
+    def as_json(self) -> Json:
+        return super().as_json() | asdict(self)
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return AlbumMetafile(
+            album_id=json_object["album_id"],
+            images=json_object["images"]
+        )
 
 
 # endregion metafile classes
@@ -317,6 +355,8 @@ MetafileReadWriter.instance().register(
     PostMetafile,
     GroupMetafile,
     PersonMetafile,
+    PhotosetMetafile,
+    AlbumMetafile,
 )
 
 

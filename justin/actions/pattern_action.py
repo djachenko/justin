@@ -1,27 +1,28 @@
 from abc import ABC
 from argparse import Namespace
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
 
 from justin_utils import util
 from justin_utils.cli import Parameter, Action, Context
 
-from justin.actions.named.named_action import Extra
 from justin.shared.filesystem import FolderTree
 from justin.shared.models.photoset import Photoset
+
+Extra = Dict[str, Any]
 
 
 class PatternAction(Action, ABC):
     @property
     def parameters(self) -> List[Parameter]:
-        return [
+        return super().parameters + [
             Parameter("pattern", nargs="*", default=[Path.cwd().as_posix()])
         ]
 
     def perform(self, args: Namespace, context: Context) -> None:
         pattern: List[str] = args.pattern
 
-        paths = list(util.resolve_patterns(*pattern))
+        paths = sorted(list(util.resolve_patterns(*pattern)))
 
         if not any(paths):
             print("No items found for that pattern.")

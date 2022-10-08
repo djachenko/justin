@@ -5,7 +5,7 @@ from typing import List, Callable
 
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
-from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.shared import filesystem
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts, is_part
@@ -93,6 +93,13 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
     def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
         # todo: notify if fixing required
         pass
+
+    def handle_timelapse(self, timelapse_folder: FolderTree, context: Context, extra: Extra) -> None:
+        self.__fix_posts(
+            posts_folder=timelapse_folder,
+            root=extra[FixMetafileAction.__ROOT_KEY],
+            community=context.justin_group
+        )
 
     # noinspection PyMethodMayBeStatic
     def __fix_group(self, folder: FolderTree, group: Posts) -> None:

@@ -2,7 +2,7 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List
 
-from justin.actions.named.named_action import Extra
+from justin.actions.pattern_action import Extra
 from justin.actions.named.stage.exceptions.check_failed_error import CheckFailedError
 from justin.actions.named.stage.logic.base import Check
 from justin.actions.pattern_action import PatternAction

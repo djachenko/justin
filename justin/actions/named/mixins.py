@@ -11,7 +11,7 @@ class EventUtils:
     def get_community_id(posts_folder: FolderTree, root_photoset: Photoset) -> str | None:
         root_path = root_photoset.path
 
-        group_metafile: GroupMetafile = posts_folder.get_metafile(GroupMetafile)
+        group_metafile = posts_folder.get_metafile(GroupMetafile)
 
         if group_metafile is not None:
             return str(group_metafile.group_id)

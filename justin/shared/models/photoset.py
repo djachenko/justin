@@ -1,11 +1,11 @@
-from typing import List, Optional
-
-from justin_utils import util
+from pathlib import Path
+from typing import List
 
 from justin.shared.filesystem import FolderTree, File, TreeBased
 from justin.shared.helpers.parts import PartsMixin
 from justin.shared.models import sources
 from justin.shared.models.sources import Source
+from justin_utils import util
 
 
 class Photoset(TreeBased, PartsMixin):
@@ -44,7 +44,7 @@ class Photoset(TreeBased, PartsMixin):
 
         return sources_
 
-    def __subtree_files(self, key: str) -> Optional[List[File]]:
+    def __subtree_files(self, key: str) -> List[File] | None:
         subtree = self.tree[key]
 
         if subtree is not None:
@@ -53,11 +53,11 @@ class Photoset(TreeBased, PartsMixin):
             return None
 
     @property
-    def photoclub(self) -> Optional[FolderTree]:
+    def photoclub(self) -> FolderTree | None:
         return self.tree[Photoset.__PHOTOCLUB]
 
     @property
-    def selection(self) -> Optional[List[File]]:
+    def selection(self) -> List[File] | None:
         result = self.__subtree_files(Photoset.__SELECTION)
 
         if result is None:
@@ -66,27 +66,31 @@ class Photoset(TreeBased, PartsMixin):
         return result
 
     @property
-    def justin(self) -> Optional[FolderTree]:
+    def justin(self) -> FolderTree | None:
         return self.tree[Photoset.__JUSTIN]
 
     @property
-    def gif(self) -> FolderTree:
+    def gif(self) -> FolderTree | None:
         return self.tree[Photoset.__GIF]
 
     @property
-    def closed(self) -> Optional[FolderTree]:
+    def timelapse(self) -> FolderTree | None:
+        return self.tree["timelapse"]
+
+    @property
+    def closed(self) -> FolderTree | None:
         return self.tree[Photoset.__CLOSED]
 
     @property
-    def meeting(self) -> Optional[FolderTree]:
+    def meeting(self) -> FolderTree | None:
         return self.tree[Photoset.__MEETING]
 
     @property
-    def kot_i_kit(self) -> Optional[FolderTree]:
+    def kot_i_kit(self) -> FolderTree | None:
         return self.tree[Photoset.__KOT_I_KIT]
 
     @property
-    def my_people(self) -> Optional[FolderTree]:
+    def my_people(self) -> FolderTree | None:
         return self.tree[Photoset.__MY_PEOPLE]
 
     @property
@@ -116,3 +120,7 @@ class Photoset(TreeBased, PartsMixin):
             jpegs += self.selection
 
         return jpegs
+
+    @classmethod
+    def from_path(cls, path: Path) -> 'Photoset':
+        return Photoset(FolderTree(path))
