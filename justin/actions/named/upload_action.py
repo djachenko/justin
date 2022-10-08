@@ -13,7 +13,8 @@ from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import FolderTree, File
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile
+from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
+    AlbumMetafile
 from justin.shared.models.exif import parse_exif
 from justin.shared.models.person import Person
 from justin.shared.models.photoset import Photoset
@@ -416,8 +417,6 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             event_url = UploadAction.get_community_id(folder, root)
 
             if event_url is not None:
-                event_url = str(abs(int(event_url)))
-
                 event = owner.get_event(event_url)
             else:
                 event = None
@@ -501,11 +500,22 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     @staticmethod
     def __get_album_attachments(community: Albums, folder: FolderTree, params: UploadParams) -> [Attachment]:
-        album = community.create_album(params.album_name)
+
+        if folder.has_metafile(AlbumMetafile):
+            metafile = folder.get_metafile(AlbumMetafile)
+            album = community.get_album_by_id(metafile.album_id)
+        else:
+            album = community.create_album(params.album_name)
+            metafile = AlbumMetafile(album_id=album.id, images=[])
+
+            folder.save_metafile(metafile)
 
         file_count = folder.file_count()
 
         for i, file in enumerate(sorted(folder.files, key=parse_exif), start=1):
+            if file.name in metafile.images:
+                continue
+
             success = False
 
             print(f"Uploading {file.name} ({i}/{file_count})")
@@ -524,6 +534,12 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                     print(f"Retrying {counter}")
 
                     counter += 1
+
+            metafile.images.append(file.name)
+
+            folder.save_metafile(metafile)
+
+        folder.remove_metafile(AlbumMetafile)
 
         return [album]
 

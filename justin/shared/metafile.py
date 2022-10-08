@@ -163,6 +163,26 @@ class PersonMetafile(RootMetafile):
         }
 
 
+@dataclass
+class AlbumMetafile(RootMetafile):
+    album_id: int
+    images: List[str]
+
+    @classmethod
+    def type(cls) -> str:
+        return "album"
+
+    def as_json(self) -> Json:
+        return super().as_json() | asdict(self)
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return AlbumMetafile(
+            album_id=json_object["album_id"],
+            images=json_object["images"]
+        )
+
+
 # endregion metafile classes
 
 
@@ -336,6 +356,7 @@ MetafileReadWriter.instance().register(
     GroupMetafile,
     PersonMetafile,
     PhotosetMetafile,
+    AlbumMetafile,
 )
 
 
