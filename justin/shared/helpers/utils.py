@@ -6,7 +6,7 @@ from justin.shared.models.exif import parse_exif
 from justin_utils import util, joins
 
 from justin.actions.named.stage.exceptions.no_files_for_name_error import NoFilesForNameError
-from justin.shared.filesystem import PathBased, File, FolderTree
+from justin.shared.filesystem import PathBased, File, Folder
 from justin.shared.models.photoset import Photoset
 
 
@@ -56,8 +56,8 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
 
     jpegs_lists = [tree.flatten() for tree in jpeg_trees]
 
-    if JpegType.SELECTION in jpeg_types and photoset.selection is not None:
-        jpegs_lists.append(photoset.selection)
+    if JpegType.SELECTION in jpeg_types and photoset.not_signed is not None:
+        jpegs_lists.append(photoset.not_signed)
 
     jpegs_join = joins.left(
         stems,
@@ -80,13 +80,13 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
 
     jpegs_set = set(jpegs_to_move)
 
-    def collect_metafiles(tree_: FolderTree):
+    def collect_metafiles(tree_: Folder):
         result = []
 
         if jpegs_set.issuperset(tree_.flatten()):
             result.append(tree_.metafile_path)
 
-        for subtree in tree_.subtrees:
+        for subtree in tree_.subfolders:
             result += collect_metafiles(subtree)
 
         return result

@@ -5,7 +5,7 @@ from datetime import date, time, datetime, timedelta
 from typing import List
 
 from justin.shared.context import Context
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
@@ -93,9 +93,9 @@ class SetupEventAction(Action):
 
             path = paths[0]
 
-            photoset = Photoset(FolderTree(path))
+            photoset = Photoset.from_path(path)
 
-            def needs_event(folder: FolderTree | None) -> bool:
+            def needs_event(folder: Folder | None) -> bool:
                 return folder and not folder.has_metafile(GroupMetafile)
 
             if args.parent:

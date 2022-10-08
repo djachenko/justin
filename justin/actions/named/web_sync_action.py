@@ -4,7 +4,7 @@ from justin_utils.pylinq import Sequence
 
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.pattern_action import Context, Extra
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile
 from justin.shared.models.photoset import Photoset
@@ -25,11 +25,11 @@ class WebSyncAction(DestinationsAwareAction):
 
         print("Performed successfully")
 
-    def handle_justin(self, justin_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
         self.__handle_tagged(justin_folder, context)
 
-    def handle_closed(self, closed_folder: FolderTree, context: Context, extra: Extra) -> None:
-        for name_folder in closed_folder.subtrees:
+    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
+        for name_folder in closed_folder.subfolders:
             if not name_folder.has_metafile():
                 continue
 
@@ -41,7 +41,7 @@ class WebSyncAction(DestinationsAwareAction):
             for post_folder in folder_tree_parts(name_folder):
                 self.__handle_post(post_folder, group_id)
 
-    def handle_meeting(self, meeting_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_meeting(self, meeting_folder: Folder, context: Context, extra: Extra) -> None:
         if not meeting_folder.has_metafile(GroupMetafile):
             return
 
@@ -53,10 +53,10 @@ class WebSyncAction(DestinationsAwareAction):
         for post_folder in folder_tree_parts(meeting_folder):
             self.__handle_post(post_folder, group_id)
 
-    def handle_kot_i_kit(self, kot_i_kit_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, context: Context, extra: Extra) -> None:
         self.__handle_tagged(kot_i_kit_folder, context)
 
-    def handle_my_people(self, my_people_folder: FolderTree, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
         if not my_people_folder.has_metafile(PostMetafile):
             return
 
@@ -68,7 +68,7 @@ class WebSyncAction(DestinationsAwareAction):
 
         print("Syncing my people...")
 
-        for person_folder in my_people_folder.subtrees:
+        for person_folder in my_people_folder.subfolders:
             if not person_folder.has_metafile(PersonMetafile):
                 continue
 
@@ -120,7 +120,7 @@ class WebSyncAction(DestinationsAwareAction):
 
         self.__cache[group_id] = (scheduled_ids, published_timed_ids, published_ids, timed_to_published_mapping)
 
-    def __handle_tagged(self, folder: FolderTree, context: Context) -> None:
+    def __handle_tagged(self, folder: Folder, context: Context) -> None:
         if not folder.has_metafile():
             return
 
@@ -136,13 +136,13 @@ class WebSyncAction(DestinationsAwareAction):
 
         post_folders = Sequence \
             .with_single(folder) \
-            .flat_map(lambda f: f.subtrees) \
+            .flat_map(lambda f: f.subfolders) \
             .flat_map(lambda htf: folder_tree_parts(htf))
 
         for post_folder in post_folders:
             self.__handle_post(post_folder, group_id)
 
-    def __handle_post(self, post_folder: FolderTree, group_id: int) -> None:
+    def __handle_post(self, post_folder: Folder, group_id: int) -> None:
         if not post_folder.has_metafile(PostMetafile):
             return
 

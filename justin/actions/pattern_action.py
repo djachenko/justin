@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 from justin_utils import util
 from justin_utils.cli import Parameter, Action, Context
 
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.models.photoset import Photoset
 
 Extra = Dict[str, Any]
@@ -41,7 +41,7 @@ class PatternAction(Action, ABC):
             self.perform_for_path(path, args, context, extra.copy())
 
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        photoset = Photoset(FolderTree(path))
+        photoset = Photoset.from_path(path)
 
         self.perform_for_photoset(photoset, args, context, extra.copy())
 

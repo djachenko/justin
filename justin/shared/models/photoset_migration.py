@@ -2,7 +2,7 @@ import json
 from abc import abstractmethod
 from pathlib import Path
 
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile
 from justin.shared.models.photoset import Photoset
 from justin.shared.metafile import Json
@@ -78,7 +78,7 @@ class RenameFoldersMigration(PhotosetMigration):
         ]
 
         for src, dst in renamings:
-            src_tree = photoset.tree[src]
+            src_tree = photoset.folder[src]
 
             if src_tree is None:
                 continue
@@ -96,7 +96,7 @@ def main():
     migration = SplitMetafilesMigration()
 
     migration.migrate(
-        Photoset(FolderTree(Path("C:/Users/justin/photos/stages/stage3.schedule/21.12.18.loading_party"))))
+        Photoset(Folder(Path("C:/Users/justin/photos/stages/stage3.schedule/21.12.18.loading_party"))))
 
 
 if __name__ == '__main__':

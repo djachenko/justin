@@ -1,14 +1,14 @@
 import string
 
 from justin.shared import filesystem
-from justin.shared.filesystem import FolderTree
+from justin.shared.filesystem import Folder
 from justin.shared.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 
 
 class EventUtils:
     @staticmethod
-    def get_community_id(posts_folder: FolderTree, root_photoset: Photoset) -> str | None:
+    def get_community_id(posts_folder: Folder, root_photoset: Photoset) -> str | None:
         root_path = root_photoset.path
 
         group_metafile = posts_folder.get_metafile(GroupMetafile)

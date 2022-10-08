@@ -3,7 +3,7 @@ from typing import List
 
 from justin.actions.named.stage.logic.base import Extractor, Selector
 from justin.shared import filesystem
-from justin.shared.filesystem import FolderTree, PathBased
+from justin.shared.filesystem import Folder, PathBased
 from justin.shared.helpers.parts import is_parted, folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin.shared.structure_old import OldStructure
@@ -63,7 +63,7 @@ class ValidateStructureVisitor(StructureVisitor[List[Path]], Selector):
 
         if isinstance(self.__structure, OldStructure):
             assert False
-            wrong_paths = StructureSelector(self.__structure).inner_select(photoset.tree, self.__structure)
+            wrong_paths = StructureSelector(self.__structure).inner_select(photoset.folder, self.__structure)
         else:
             wrong_paths = self.visit(self.__structure)
 
@@ -82,7 +82,7 @@ class StructureSelector(Selector):
 
         self.__structure = structure
 
-    def inner_select(self, tree: FolderTree, structure: OldStructure) -> List[Path]:
+    def inner_select(self, tree: Folder, structure: OldStructure) -> List[Path]:
         result = []
 
         if is_parted(tree):
@@ -90,11 +90,11 @@ class StructureSelector(Selector):
                 for part in folder_tree_parts(tree):
                     result += self.inner_select(part, structure)
             else:
-                result += [subtree.path for subtree in tree.subtrees]
+                result += [subtree.path for subtree in tree.subfolders]
 
             return result
 
-        for subtree in tree.subtrees:
+        for subtree in tree.subfolders:
             if subtree.name not in structure.folders:
                 result.append(subtree.path)
             else:
@@ -106,7 +106,7 @@ class StructureSelector(Selector):
         return result
 
     def select(self, photoset: Photoset) -> List[str]:
-        wrong_paths = self.inner_select(photoset.tree, self.__structure)
+        wrong_paths = self.inner_select(photoset.folder, self.__structure)
 
         relative_wrong_paths = [path.relative_to(photoset.path) for path in wrong_paths]
 

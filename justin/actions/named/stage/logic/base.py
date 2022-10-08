@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import Optional, List, Iterable
 
-from justin.shared.filesystem import PathBased, RelativeFileset, File, FolderTree
+from justin.shared.filesystem import PathBased, RelativeFileset, File, Folder
 from justin.shared.helpers import utils
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
@@ -63,7 +63,7 @@ class Extractor:
 
         virtual_set.move_down(self.__filter_folder)
 
-        photoset.tree.refresh()
+        photoset.folder.refresh()
 
         return []
 
@@ -73,12 +73,12 @@ class Extractor:
         if prechecks_result:
             return prechecks_result
 
-        filtered = photoset.tree[self.__filter_folder]
+        filtered = photoset.folder[self.__filter_folder]
 
         if not filtered:
             return []
 
-        filtered_photoset = Photoset(filtered)
+        filtered_photoset = Photoset.from_tree(filtered)
 
         prechecks_result = self.__run_prechecks(filtered_photoset)
 
@@ -91,7 +91,7 @@ class Extractor:
 
         filtered_set.move_up()
 
-        photoset.tree.refresh()
+        photoset.folder.refresh()
 
         return []
 
@@ -170,15 +170,15 @@ class MetaCheck(Check):
 
 class DestinationsAwareCheck(Check):
     @abstractmethod
-    def check_post_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+    def check_post_metafile(self, folder: Folder) -> Iterable[Problem]:
         pass
 
     @abstractmethod
-    def check_group_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+    def check_group_metafile(self, folder: Folder) -> Iterable[Problem]:
         pass
 
     @abstractmethod
-    def check_person_metafile(self, folder: FolderTree) -> Iterable[Problem]:
+    def check_person_metafile(self, folder: Folder) -> Iterable[Problem]:
         pass
 
     def get_problems(self, photoset: Photoset) -> Iterable[Problem]:
@@ -187,14 +187,14 @@ class DestinationsAwareCheck(Check):
         if photoset.justin is not None:
             problems += self.check_group_metafile(photoset.justin)
 
-            for name_folder in photoset.justin.subtrees:
+            for name_folder in photoset.justin.subfolders:
                 for post_folder in folder_tree_parts(name_folder):
                     problems += self.check_post_metafile(post_folder)
 
         if photoset.timelapse:
             problems += self.check_post_metafile(photoset.timelapse)
 
-        def check_event(event_folder: FolderTree) -> Iterable[Problem]:
+        def check_event(event_folder: Folder) -> Iterable[Problem]:
             local_problems = self.check_group_metafile(event_folder)
 
             for post_folder_ in folder_tree_parts(event_folder):
@@ -203,7 +203,7 @@ class DestinationsAwareCheck(Check):
             return local_problems
 
         if photoset.closed is not None:
-            for name_folder in photoset.closed.subtrees:
+            for name_folder in photoset.closed.subfolders:
                 problems += check_event(name_folder)
 
         if photoset.meeting is not None:
@@ -212,7 +212,7 @@ class DestinationsAwareCheck(Check):
         if photoset.my_people is not None:
             problems += self.check_post_metafile(photoset.my_people)
 
-            for person_folder in photoset.my_people.subtrees:
+            for person_folder in photoset.my_people.subfolders:
                 problems += self.check_person_metafile(person_folder)
 
         return problems
