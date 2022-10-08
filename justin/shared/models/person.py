@@ -5,9 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import List
 
-from justin.shared.filesystem import FolderTree
 from justin.shared.metafile import Json
-from pyvko.entities.user import User
 from pyvko.pyvko_main import Pyvko
 
 
@@ -42,9 +40,12 @@ class Person:
 
         return d
 
+    def __eq__(self, other):
+        return isinstance(other, Person) and other.folder == self.folder
+
     @staticmethod
     def is_valid(person: 'Person') -> bool:
-        return bool(person.folder and person.name and person.vk_id and person.source)
+        return bool(person.folder and person.name and person.vk_id)
 
 
 class PeopleRegister:
@@ -77,24 +78,6 @@ class PeopleRegister:
         with self.__path().open("w", encoding='utf8') as people_json_file:
             json.dump([person.as_json() for person in self.__people], people_json_file, indent=4, ensure_ascii=False)
 
-    def add_person(self, person: Person) -> None:
-        self.__validate_and_add(person)
-
-    def __validate_and_add(self, person: Person) -> None:
-        assert Person.is_valid(person)
-
-        for existing_person in self.__people:
-            assert person.vk_id != existing_person.vk_id, "This vk id already registered"
-            assert person.folder != existing_person.folder, "This folder is already registered"
-
-            assert not person.folder.startswith(existing_person.folder) and \
-                   not existing_person.folder.startswith(person.folder), \
-                f"Folder prefixes collision with {existing_person.folder}"
-
-        self.__people.append(person)
-
-        self.save()
-
     def __contains__(self, name) -> bool:
         for person in self.__people:
             if person.folder == name:
@@ -117,9 +100,22 @@ class PeopleRegister:
 
         return None
 
-    def fix_person(self, person: Person) -> None:
-        folder = person.folder
+    def update_person(self, person: Person) -> None:
+        assert Person.is_valid(person), "Person is invalid."
 
-        self.__people.remove(person)
+        try:
+            existing_index = self.__people.index(person)
 
-        self.__validate_and_add(person)
+            self.__people[existing_index] = person
+        except ValueError:
+            for existing_person in self.__people:
+                assert person.vk_id != existing_person.vk_id, "This vk id already registered"
+                assert person.folder != existing_person.folder, "This folder is already registered"
+
+                assert not person.folder.startswith(existing_person.folder) and \
+                       not existing_person.folder.startswith(person.folder), \
+                    f"Folder prefixes collision with {existing_person.folder}"
+
+            self.__people.append(person)
+
+        self.save()

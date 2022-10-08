@@ -60,7 +60,7 @@ class CommandFactory:
             SingleActionCommand("create_event", self.__action_factory.create_event()),
             SingleActionCommand("setup_event", self.__action_factory.setup_event()),
             SingleActionCommand("group", self.__action_factory.date_split()),
-            SingleActionCommand("people_reg", self.__action_factory.register_people()),
-            SingleActionCommand("people_fix", self.__action_factory.fix_people()),
+            SingleActionCommand("reg_people", self.__action_factory.register_people()),
+            SingleActionCommand("fix_people", self.__action_factory.fix_people()),
             SingleActionCommand("panext", self.__action_factory.pano_extract()),
         ]

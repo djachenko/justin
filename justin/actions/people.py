@@ -8,12 +8,58 @@ from justin.shared.context import Context
 from justin.shared.filesystem import FolderTree
 from justin.shared.models.person import PeopleRegister, Person
 from justin.shared.models.photoset import Photoset
+from justin_utils import util
 from justin_utils.cli import Action, Parameter
 from pyvko.entities.user import User
 from pyvko.pyvko_main import Pyvko
 
 
-class RegisterPeopleAction(DestinationsAwareAction):
+class FixPeopleMixin:
+    @staticmethod
+    def fix_person(person: Person, register: PeopleRegister, pyvko: Pyvko) -> None:
+
+        folder = person.folder
+
+        if not person.vk_id:
+            url = input(f"Who is {folder} in vk? ")
+
+            if url == "-":
+                return
+        else:
+            url = input(f"Who is {folder} in vk? ") or person.vk_id
+
+        user: User = pyvko.get(url)
+
+        assert isinstance(user, User)
+
+        vk_id = user.id
+        vk_name = f"{user.first_name} {user.last_name}"
+
+        if not person.name:
+            new_name = input(f"Is it {vk_name}? (empty - yes, any string - new name) ") or vk_name
+        else:
+            other = "other"
+
+            new_name = util.ask_for_choice(f"Who is {person.folder}?", [
+                person.name,
+                vk_name,
+                other
+            ])
+
+            if new_name == other:
+                while True:
+                    new_name = input("Who then?")
+
+                    if new_name:
+                        break
+
+        person.vk_id = vk_id
+        person.name = new_name
+
+        register.update_person(person)
+
+
+class RegisterPeopleAction(DestinationsAwareAction, FixPeopleMixin):
     def handle_closed(self, closed_folder: FolderTree, context: Context, extra: Extra) -> None:
         super().handle_closed(closed_folder, context, extra)
 
@@ -27,38 +73,24 @@ class RegisterPeopleAction(DestinationsAwareAction):
     def handle_common(self, folder: FolderTree, context: Context, extra: Extra) -> None:
         pass
 
-    @staticmethod
-    def __register_from_path(tree: FolderTree, pyvko: Pyvko, register: PeopleRegister):
-
-        source = tree.name
-
+    def __register_from_path(self, tree: FolderTree, pyvko: Pyvko, register: PeopleRegister):
         for my_person in tree.subtrees:
             if my_person.name in register:
                 continue
 
-            url = input(f"Who is {my_person.name}? ")
-
-            if url == "-":
-                continue
-
-            user: User = pyvko.get(url)
-
-            assert isinstance(user, User)
-
-            vk_id = user.id
-            name = f"{user.first_name} {user.last_name}"
-
-            person = Person(
-                vk_id=vk_id,
-                name=name,
-                folder=my_person.stem,
-                source=source,
+            self.fix_person(
+                Person(
+                    vk_id=None,
+                    name=None,
+                    folder=my_person.stem,
+                    source=tree.name,
+                ),
+                register,
+                pyvko
             )
 
-            register.add_person(person)
 
-
-class FixPeopleAction(Action):
+class FixPeopleAction(Action, FixPeopleMixin):
     MY_PEOPLE_FLAG = "my_people"
     CLOSED_FLAG = "closed"
 
@@ -126,18 +158,14 @@ class FixPeopleAction(Action):
 
         print(len(list(people_to_fix)))
 
-        people_to_fix = filter(lambda x: not Person.is_valid(x), people_to_fix)
+        people_to_fix = [person for person in people_to_fix if not Person.is_valid(person)]
 
         print(len(list(people_to_fix)))
-
 
         if not people_to_fix:
             print("Fixing not needed.")
 
+            return
+
         for person in people_to_fix:
-            folder = person.folder
-
-            person.vk_id = input(f"Enter {folder}'s vk_id (current {person.vk_id}):") or person.vk_id
-            person.name = input(f"Enter {folder}'s name (current {person.name}):") or person.name
-
-            register.fix_person(person)
+            self.fix_person(person, register, context.pyvko)
