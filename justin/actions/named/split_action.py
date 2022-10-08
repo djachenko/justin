@@ -1,12 +1,12 @@
 from argparse import Namespace
 from typing import List, Optional
 
-from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.actions.pattern_action import PatternAction
 from justin.shared.filesystem import FolderTree
 from justin.shared.filesystem import RelativeFileset, File
-from justin.shared.helpers import photoset_utils
-from justin.shared.helpers.photoset_utils import JpegType
+from justin.shared.helpers import utils
+from justin.shared.helpers.utils import JpegType
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.cli import Parameter

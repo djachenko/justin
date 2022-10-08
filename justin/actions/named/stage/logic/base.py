@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from typing import Optional, List, Iterable
 
 from justin.shared.filesystem import PathBased, RelativeFileset, File, FolderTree
-from justin.shared.helpers import photoset_utils
+from justin.shared.helpers import utils
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
@@ -190,6 +190,9 @@ class DestinationsAwareCheck(Check):
             for name_folder in photoset.justin.subtrees:
                 for post_folder in folder_tree_parts(name_folder):
                     problems += self.check_post_metafile(post_folder)
+
+        if photoset.timelapse:
+            problems += self.check_post_metafile(photoset.timelapse)
 
         def check_event(event_folder: FolderTree) -> Iterable[Problem]:
             local_problems = self.check_group_metafile(event_folder)

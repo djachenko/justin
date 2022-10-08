@@ -3,7 +3,7 @@ from argparse import Namespace
 from justin_utils.pylinq import Sequence
 
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
-from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.shared.filesystem import FolderTree
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile
@@ -75,9 +75,15 @@ class WebSyncAction(DestinationsAwareAction):
             print(f"Syncing {person_folder.name}...", end="", flush=True)
 
             person_metafile = person_folder.get_metafile(PersonMetafile)
+            total_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments)
 
             for comment_metafile in person_metafile.comments:
                 if comment_metafile.status == PostStatus.PUBLISHED:
+                    continue
+
+                if comment_metafile.id not in person_metafile.comments:
+                    person_metafile.comments.remove(comment_metafile)
+
                     continue
 
                 comment = comments[comment_metafile.id]
@@ -87,7 +93,8 @@ class WebSyncAction(DestinationsAwareAction):
 
                 person_folder.save_metafile(person_metafile)
 
-            total_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments)
+            person_folder.save_metafile(person_metafile)
+
             publish_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments if
                                 comment_metafile.status == PostStatus.PUBLISHED)
 

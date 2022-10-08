@@ -1,6 +1,7 @@
 import runpy
 from enum import Enum
 from pathlib import Path
+from typing import Dict, Any
 
 from justin.shared.structure import Structure
 
@@ -28,8 +29,8 @@ class Config:
         return self.__internal_dict[key]
 
     @staticmethod
-    def from_source(path: Path) -> 'Config':
-        run_result = runpy.run_path(str(path))
+    def from_source(path: Path, init_globals: Dict[str, Any] = None) -> 'Config':
+        run_result = runpy.run_path(str(path), init_globals=init_globals)
 
         config_dict = run_result["config"]
 

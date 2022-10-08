@@ -2,7 +2,7 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List
 
-from justin.actions.named.named_action import Extra
+from justin.actions.pattern_action import Extra
 from justin.actions.pattern_action import PatternAction
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset

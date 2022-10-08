@@ -4,7 +4,7 @@ from typing import List
 
 from justin.actions.named.stage.logic.factories.checks_factory import ChecksFactory
 from justin.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
-from justin.actions.named.stage.models.stage import Stage, Archive
+from justin.actions.named.stage.models.stage import Stage, Archive, DefaultStage
 
 
 class StagesFactory:
@@ -54,7 +54,7 @@ class StagesFactory:
 
     @lru_cache()
     def gif(self) -> Stage:
-        return Stage(
+        return DefaultStage(
             folder="stage0.gif",
             command="gif",
             outcoming_checks=[
@@ -64,14 +64,14 @@ class StagesFactory:
 
     @lru_cache()
     def filter(self) -> Stage:
-        return Stage(
+        return DefaultStage(
             folder="stage1.filter",
             command="filter"
         )
 
     @lru_cache()
     def develop(self) -> Stage:
-        return Stage(
+        return DefaultStage(
             folder="stage2.develop",
             command="develop",
             outcoming_checks=[
@@ -86,7 +86,7 @@ class StagesFactory:
 
     @lru_cache()
     def ourate(self) -> Stage:
-        return Stage(
+        return DefaultStage(
             folder="stage2.ourate",
             command="ourate",
             outcoming_checks=[
@@ -102,7 +102,7 @@ class StagesFactory:
 
     @lru_cache()
     def ready(self) -> Stage:
-        return Stage(
+        return DefaultStage(
             folder="stage3.ready",
             command="ready",
             incoming_checks=[
@@ -122,7 +122,7 @@ class StagesFactory:
 
     @lru_cache()
     def published(self) -> Stage:
-        return Stage(
+        return DefaultStage(
             folder="stage4.published",
             command="publish",
             incoming_checks=[
@@ -138,7 +138,7 @@ class StagesFactory:
 
     @lru_cache()
     def scheduled(self) -> Stage:
-        return Stage(
+        return DefaultStage(
             folder="stage3.schedule",
             command="schedule",
             incoming_checks=[

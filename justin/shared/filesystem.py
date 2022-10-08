@@ -6,14 +6,12 @@ from functools import partial
 from pathlib import Path
 from typing import List, Optional, Dict, Callable
 
-from justin.shared.models.exif import parse_exif
+# region helpers
+from justin.shared.metafile import MetafileMixin
 from justin_utils import util
 from justin_utils.data import DataSize
 from justin_utils.time_formatter import format_time
 from justin_utils.transfer import TransferSpeedMeter, TransferTimeEstimator
-
-# region helpers
-from justin.shared.metafile import MetafileMixin
 
 
 def __subfolders(path: Path) -> List[Path]:
@@ -347,6 +345,9 @@ class File(PathBased):
 
         return o.path == self.path
 
+    def __lt__(self, other: 'File') -> bool:
+        return self.name < other.name
+
 
 class FolderTree(PathBased, MetafileMixin):
     # noinspection PyTypeChecker
@@ -366,6 +367,10 @@ class FolderTree(PathBased, MetafileMixin):
     @property
     def name(self) -> str:
         return self.path.name
+
+    @property
+    def stem(self) -> str:
+        return self.path.stem
 
     @property
     def files(self) -> List[File]:
@@ -452,20 +457,7 @@ class FolderTree(PathBased, MetafileMixin):
 
                 exit(1)
 
-        class Comparator:
-            def __init__(self, o: File) -> None:
-                super().__init__()
-
-                self.exif = parse_exif(o.path)
-                self.name = o.name
-
-            def __lt__(self, other: 'Comparator') -> bool:
-                if other.exif and self.exif:
-                    return self.exif.date_taken < other.exif.date_taken
-
-                return self.name < other.name
-
-        self.__files.sort(key=Comparator)
+        self.__files.sort(key=lambda x: x.name)
 
     def move(self, path: Path):
         super().move(path)

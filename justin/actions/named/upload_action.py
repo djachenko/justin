@@ -9,11 +9,14 @@ from typing import List, Iterator
 from justin.actions.create_event_action import CreateEventAction, SetupEventAction
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
-from justin.actions.named.named_action import Context, Extra
+from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import FolderTree, File
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile
+from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
+    AlbumMetafile
+from justin.shared.models.exif import parse_exif
+from justin.shared.models.person import Person
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 from justin_utils.util import stride, flatten
@@ -281,6 +284,18 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         assert post is not None
 
         for person_folder in my_people_folder.subtrees:
+            person = context.my_people.get_by_folder(person_folder.name)
+
+            if not person:
+                print(f"{person_folder.name} needs to be registered.")
+
+                continue
+
+            if not Person.is_valid(person):
+                print(f"{person_folder.name} needs to be fixed.")
+
+                continue
+
             if not person_folder.has_metafile(PersonMetafile):
                 person_folder.save_metafile(PersonMetafile())
 
@@ -303,6 +318,8 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
                 links = []
 
+                photo = None
+
                 for image in images_chunk:
                     print(f"Uploading {image.name}...", end="", flush=True)
 
@@ -316,12 +333,19 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                     print(" done.", flush=True)
 
                 text = "\n\n".join([
-                    person_folder.name,
+                    ", ".join([
+                        person.name,
+                        f"https://vk.com/write{person.vk_id}"
+                    ]),
                     "\n".join(links),
                     f"{len(links)} total.",
                 ])
 
-                comment = post.add_comment(CommentModel(text, from_group=abs(my_people_group.id)))
+                comment = post.add_comment(CommentModel(
+                    text=text,
+                    from_group=abs(my_people_group.id),
+                    attachments=[photo]
+                ))
 
                 comment_metafile = CommentMetafile(
                     id=comment.item_id,
@@ -476,11 +500,22 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     @staticmethod
     def __get_album_attachments(community: Albums, folder: FolderTree, params: UploadParams) -> [Attachment]:
-        album = community.create_album(params.album_name)
+
+        if folder.has_metafile(AlbumMetafile):
+            metafile = folder.get_metafile(AlbumMetafile)
+            album = community.get_album_by_id(metafile.album_id)
+        else:
+            album = community.create_album(params.album_name)
+            metafile = AlbumMetafile(album_id=album.id, images=[])
+
+            folder.save_metafile(metafile)
 
         file_count = folder.file_count()
 
-        for i, file in enumerate(folder.files, start=1):
+        for i, file in enumerate(sorted(folder.files, key=parse_exif), start=1):
+            if file.name in metafile.images:
+                continue
+
             success = False
 
             print(f"Uploading {file.name} ({i}/{file_count})")
@@ -499,6 +534,12 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                     print(f"Retrying {counter}")
 
                     counter += 1
+
+            metafile.images.append(file.name)
+
+            folder.save_metafile(metafile)
+
+        folder.remove_metafile(AlbumMetafile)
 
         return [album]
 

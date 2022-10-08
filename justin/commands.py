@@ -1,17 +1,22 @@
+from argparse import ArgumentParser
 from functools import lru_cache
 from typing import List, Iterable
 
 from justin.actions.action_factory import ActionFactory
 from justin.actions.named.stage.models.stages_factory import StagesFactory
-from justin.commands.command import Command
-from justin.commands.single_subparser_commands.named_command import NamedCommand
-from justin.commands.stage_command import StageCommand
-from justin_utils.cli import Command as CLICommand, Action
+from justin_utils.cli import Command, Action
 
 
-class SingleActionCommand(CLICommand):
+class SingleActionCommand(Command):
     def __init__(self, name: str, action: Action, allowed_same_parameters: Iterable[str] = ()) -> None:
         super().__init__(name, [action], allowed_same_parameters)
+
+
+class StageCommand(SingleActionCommand):
+    def configure_subparser(self, subparser: ArgumentParser) -> None:
+        super().configure_subparser(subparser)
+
+        subparser.set_defaults(command_name=self.name)
 
 
 class CommandFactory:
@@ -23,10 +28,13 @@ class CommandFactory:
 
     @lru_cache()
     def commands(self) -> List[Command]:
-        return [
-            StageCommand(self.__action_factory.stage_action(), self.__stages_factory),
+        stage_commands = [
+            StageCommand(stage.command, self.__action_factory.stage_action())
+            for stage in self.__stages_factory.stages()
+        ]
 
-            CLICommand(
+        return stage_commands + [
+            Command(
                 "upload",
                 [
                     self.__action_factory.web_sync_action(),
@@ -52,7 +60,7 @@ class CommandFactory:
             SingleActionCommand("create_event", self.__action_factory.create_event()),
             SingleActionCommand("setup_event", self.__action_factory.setup_event()),
             SingleActionCommand("group", self.__action_factory.date_split()),
-
-            NamedCommand("local_sync", self.__action_factory.local_sync_action()),
-            # NamedCommand("archive", self.__action_factory.archive_action()),
+            SingleActionCommand("reg_people", self.__action_factory.register_people()),
+            SingleActionCommand("fix_people", self.__action_factory.fix_people()),
+            SingleActionCommand("panext", self.__action_factory.pano_extract()),
         ]
