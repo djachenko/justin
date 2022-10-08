@@ -117,7 +117,7 @@ class SetupEventAction(Action):
             assert False
 
         if args.create:
-            event = context.pyvko.events.create_event(event_title)
+            event = context.pyvko.create_event(event_title)
         elif args.url:
             event = context.pyvko.get(args.url)
         else:
