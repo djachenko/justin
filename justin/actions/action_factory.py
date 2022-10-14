@@ -15,7 +15,7 @@ from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.actions.named.stage.stage_action import StageAction
 from justin.actions.named.upload_action import UploadAction
 from justin.actions.named.web_sync_action import WebSyncAction
-from justin.actions.pano_extract_action import PanoExtractAction
+from justin.actions.drone import PanoExtractAction, JpgDngDuplicatesAction, HandleDroneAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.people import RegisterPeopleAction, FixPeopleAction
 from justin.actions.sequence_action import SequenceAction
@@ -75,7 +75,6 @@ class ActionFactory:
     @lru_cache()
     def upload_action(self) -> Action:
         return UploadAction(
-            create=self.create_event(),
             setup=self.setup_event()
         )
 
@@ -88,7 +87,7 @@ class ActionFactory:
         return SequenceAction()
 
     @lru_cache()
-    def create_event(self) -> CreateEventAction:
+    def create_event(self) -> Action:
         return CreateEventAction()
 
     @lru_cache()
@@ -104,8 +103,19 @@ class ActionFactory:
         return RegisterPeopleAction()
 
     @lru_cache()
-    def pano_extract(self) -> Action:
+    def __pano_extract(self) -> PanoExtractAction:
         return PanoExtractAction()
+
+    @lru_cache()
+    def deduplicate(self) -> JpgDngDuplicatesAction:
+        return JpgDngDuplicatesAction()
+
+    @lru_cache()
+    def drone(self) -> Action:
+        return HandleDroneAction(
+            pano_action=self.__pano_extract(),
+            duplicate_action=self.deduplicate(),
+        )
 
     @lru_cache()
     def fix_people(self) -> Action:
