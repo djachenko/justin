@@ -62,5 +62,5 @@ class CommandFactory:
             SingleActionCommand("group", self.__action_factory.date_split()),
             SingleActionCommand("reg_people", self.__action_factory.register_people()),
             SingleActionCommand("fix_people", self.__action_factory.fix_people()),
-            SingleActionCommand("panext", self.__action_factory.pano_extract()),
+            SingleActionCommand("drone", self.__action_factory.drone()),
         ]

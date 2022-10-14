@@ -64,8 +64,6 @@ class PeopleRegister:
         return (self.__root / self.__category).with_suffix(".json")
 
     def read(self) -> None:
-        print(f"reAD {self.__path()}")
-
         if not self.__path().exists():
             return
 
@@ -86,8 +84,6 @@ class PeopleRegister:
         return False
 
     def __iter__(self):
-        print(f"self pe {len(self.__people)}")
-
         return iter(self.__people)
 
     def get_all_folders(self) -> List[str]:
@@ -114,7 +110,7 @@ class PeopleRegister:
 
                 assert not person.folder.startswith(existing_person.folder) and \
                        not existing_person.folder.startswith(person.folder), \
-                    f"Folder prefixes collision with {existing_person.folder}"
+                       f"Folder prefixes collision with {existing_person.folder}"
 
             self.__people.append(person)
 

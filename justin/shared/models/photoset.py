@@ -1,8 +1,10 @@
+from datetime import date
 from pathlib import Path
 from typing import List
 
 from justin.shared.filesystem import Folder, File, FolderBased
 from justin.shared.helpers.parts import PartsMixin
+from justin.shared.metafile import PhotosetMetafile
 from justin.shared.models import sources
 from justin.shared.models.sources import Source
 from justin_utils import util
@@ -21,12 +23,25 @@ class Photoset(FolderBased, PartsMixin):
     def __str__(self) -> str:
         return "Photoset: " + self.folder.name
 
+    def __init__(self, folder: Folder) -> None:
+        super().__init__(folder)
+
+        self.__metafile = folder.get_metafile(PhotosetMetafile)
+
+    @property
+    def date(self) -> date:
+        return self.__metafile.date
+
+    @property
+    def total_size(self):
+        return sum(file.size for file in self.folder.flatten())
+
     @property
     def parts(self) -> List['Photoset']:
         if not self.is_parted:
             return [self]
 
-        parts = [Photoset.from_tree(part_folder) for part_folder in super().parts]
+        parts = [Photoset.from_folder(part_folder) for part_folder in super().parts]
 
         return parts
 
@@ -114,16 +129,17 @@ class Photoset(FolderBased, PartsMixin):
         return jpegs
 
     @classmethod
-    def from_tree(cls, tree: Folder) -> 'Photoset':
-        photoset = Photoset(tree)
+    def from_folder(cls, folder: Folder, no_migration: bool = False) -> 'Photoset':
+        photoset = Photoset(folder)
 
-        from justin.shared.models.photoset_migration import ALL_MIGRATIONS
+        if not no_migration:
+            from justin.shared.models.photoset_migration import ALL_MIGRATIONS
 
-        for migration in ALL_MIGRATIONS:
-            migration.migrate(photoset)
+            for migration in ALL_MIGRATIONS:
+                migration.migrate(photoset)
 
         return photoset
 
     @classmethod
     def from_path(cls, path: Path) -> 'Photoset':
-        return Photoset.from_tree(Folder(path))
+        return Photoset.from_folder(Folder(path))

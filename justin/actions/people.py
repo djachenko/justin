@@ -117,7 +117,7 @@ class FixPeopleAction(Action, FixPeopleMixin):
 
         group_adder.add_argument("--all", "-a", action="store_true")
         group_adder.add_argument("--name", "-n")
-        group_adder.add_argument("--by", type=Path, default=Path.cwd().as_posix())
+        group_adder.add_argument("--by", "-by", type=Path, default=Path.cwd().as_posix())
 
     def perform(self, args: Namespace, context: Context) -> None:
         selected_type = args.type
@@ -147,12 +147,13 @@ class FixPeopleAction(Action, FixPeopleMixin):
             names_in_folder = {name_tree.name for name_tree in names_root.subfolders}
 
             registered_people = [register.get_by_folder(name) for name in names_in_folder]
-            people_to_fix = filter(None, registered_people)
+            people_to_fix = [person for person in registered_people if person]
 
-            names_to_register = filter(lambda x: x not in register, names_in_folder)
+            names_to_register = [name for name in names_in_folder if name not in register]
 
             if names_to_register:
                 print(", ".join(names_to_register), "won't be fixed, need to be registered.")
+
         else:
             assert False
 

@@ -1,9 +1,10 @@
 import json
 from abc import abstractmethod
+from datetime import date
 from pathlib import Path
 
 from justin.shared.filesystem import Folder
-from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile
+from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
 from justin.shared.models.photoset import Photoset
 from justin.shared.metafile import Json
 
@@ -25,7 +26,7 @@ class SplitMetafilesMigration(PhotosetMigration):
         with old_metafile_path.open() as metafile_file:
             json_dict = json.load(metafile_file)
 
-        if "migrated" in json_dict and json_dict["migrated"]:
+        if "migrated" in json_dict and json_dict["migrated"] or "type" in json_dict:
             return
 
         posts_jsons: Json = json_dict["posts"]
@@ -86,9 +87,41 @@ class RenameFoldersMigration(PhotosetMigration):
             src_tree.rename(dst)
 
 
+class ParseMetafileMigration(PhotosetMigration):
+    def migrate(self, photoset: Photoset) -> None:
+        metafile = photoset.folder.get_metafile(PhotosetMetafile) or PhotosetMetafile(
+                total_size=None,
+                date=None
+            )
+
+        if metafile.date is None:
+            year, month, day, rest = photoset.name.split(".", maxsplit=3)
+
+            if not (year.isdecimal() and month.isdecimal() and day.isdecimal()):
+                assert False, "date not parceable"
+
+            year = int(year)
+            month = int(month)
+            day = int(day)
+
+            date_ = date(
+                year=year,
+                month=month,
+                day=day
+            )
+
+            metafile.date = date_
+
+        if metafile.total_size is None:
+            metafile.total_size = sum(file.size for file in photoset.folder.flatten())
+
+        photoset.folder.save_metafile(metafile)
+
+
 ALL_MIGRATIONS = [
     SplitMetafilesMigration(),
     RenameFoldersMigration(),
+    ParseMetafileMigration(),
 ]
 
 
