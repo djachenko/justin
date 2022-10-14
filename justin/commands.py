@@ -63,4 +63,5 @@ class CommandFactory:
             SingleActionCommand("reg_people", self.__action_factory.register_people()),
             SingleActionCommand("fix_people", self.__action_factory.fix_people()),
             SingleActionCommand("drone", self.__action_factory.drone()),
+            SingleActionCommand("redistribute", self.__action_factory.redistribute())
         ]

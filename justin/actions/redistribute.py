@@ -45,7 +45,9 @@ class RedistributeAction(Action):
 
                 if set_location == active_location:
                     continue
+                    
+            print(f"{set_.name} from {set_location} to {active_location}")
 
-            self.__move_action.perform_for_photoset(set_, args, context, {
-                MoveAction.SELECTED_LOCATION: active_location
-            })
+            # self.__move_action.perform_for_photoset(set_, args, context, {
+            #     MoveAction.SELECTED_LOCATION: active_location
+            # })
