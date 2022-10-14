@@ -3,6 +3,7 @@ import json
 from abc import abstractmethod, ABC
 from collections import defaultdict
 from dataclasses import dataclass, asdict, field
+from datetime import date, datetime
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -61,9 +62,13 @@ class PostStatus(Metafile, Enum):
         return str(self.value)
 
 
+DATE_FORMAT_D_M_Y = "%d.%m.%y"
+
+
 @dataclass
 class PhotosetMetafile(RootMetafile):
     total_size: int
+    date: date
 
     @classmethod
     def type(cls) -> str:
@@ -71,12 +76,18 @@ class PhotosetMetafile(RootMetafile):
 
     @classmethod
     def from_json(cls: Type[T], json_object: Json) -> T:
-        return PhotosetMetafile(
-            total_size=json_object["total_size"]
-        )
+        new_object: PhotosetMetafile = fromdict(json_object, cls)
+
+        new_object.date = datetime.strptime(json_object["date"], DATE_FORMAT_D_M_Y).date()
+
+        return new_object
 
     def as_json(self) -> Json:
-        return asdict(self)
+        asdict_self_ = super().as_json() | asdict(self)
+
+        asdict_self_["date"] = self.date.strftime(DATE_FORMAT_D_M_Y)
+
+        return asdict_self_
 
 
 @dataclass
@@ -268,6 +279,22 @@ MetafileMigrator.instance().register(
 
 # region metafile reading
 
+def fromdict(obj: Json, data_class: Type[V]) -> V:
+    fields = dataclasses.fields(data_class)
+
+    dict_ = {}
+
+    for field in fields:
+        try:
+            dict_[field.name] = field.type(obj[field.name])
+        except TypeError:
+            dict_[field.name] = None
+
+    new_instance = data_class(**dict_)
+
+    return new_instance
+
+
 class MetafileReadWriter(Singleton):
     def __init__(self) -> None:
         super().__init__()
@@ -281,9 +308,11 @@ class MetafileReadWriter(Singleton):
         for type_ in types:
             fields += dataclasses.fields(type_)
 
-        assert len(set(fields)) == len(fields)
+            assert type_.type() not in self.__mapping
 
-        self.__mapping |= {type_.type(): type_ for type_ in types}
+            self.__mapping[type_.type()] = type_
+
+        assert len(set(fields)) == len(fields)
 
     def read(self, path: Path, metafile_type: V = None) -> V | None:
         metafiles = self.read_all(path)

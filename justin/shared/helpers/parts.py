@@ -33,19 +33,19 @@ class PartsMixin:
     # noinspection PyTypeChecker
     @property
     @abstractmethod
-    def tree(self) -> Folder:
+    def folder(self) -> Folder:
         assert False
 
     @property
     def is_parted(self) -> bool:
-        return is_parted(self.tree)
+        return is_parted(self.folder)
 
     @property
     def parts(self) -> List[Folder]:
-        if self.tree is None:
+        if self.folder is None:
             return []
 
-        if is_parted(self.tree):
-            return self.tree.subfolders
+        if is_parted(self.folder):
+            return self.folder.subfolders
         else:
-            return [self.tree]
+            return [self.folder]
