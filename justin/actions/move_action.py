@@ -1,3 +1,4 @@
+import shutil
 from argparse import Namespace
 from pathlib import Path
 from typing import List
@@ -13,7 +14,7 @@ from justin_utils import util
 
 
 class MoveAction(PatternAction):
-    __SELECTED_LOCATION = "selected_location"
+    SELECTED_LOCATION = "selected_location"
 
     def __init__(self, prechecks: List[Check]) -> None:
         super().__init__()
@@ -39,7 +40,7 @@ class MoveAction(PatternAction):
         else:
             selected_location = util.ask_for_choice(f"Where would you like to move {path.name}?", new_locations)
 
-        extra[MoveAction.__SELECTED_LOCATION] = selected_location
+        extra[MoveAction.SELECTED_LOCATION] = selected_location
 
         super().perform_for_pattern(paths, args, context, extra)
 
@@ -47,7 +48,15 @@ class MoveAction(PatternAction):
         world = context.world
 
         from_location = world.location_of_path(photoset.path)
-        selected_location = extra[MoveAction.__SELECTED_LOCATION]
+        selected_location = extra[MoveAction.SELECTED_LOCATION]
+
+        _, _, empty_space = shutil.disk_usage(selected_location)
+        photoset_size = photoset.total_size
+
+        if empty_space < photoset_size:
+            print("Not enough space")
+
+            return
 
         if selected_location == from_location:
             print(f"{photoset.name} is already there.")

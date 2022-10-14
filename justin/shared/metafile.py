@@ -194,6 +194,24 @@ class AlbumMetafile(RootMetafile):
         )
 
 
+@dataclass
+class LocationMetafile(RootMetafile):
+    location_name: str
+    location_state: str
+    location_order: int
+
+    @classmethod
+    def type(cls) -> str:
+        return "location"
+
+    def as_json(self) -> Json:
+        return super().as_json() | asdict(self)
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return fromdict(json_object, cls)
+
+
 # endregion metafile classes
 
 
