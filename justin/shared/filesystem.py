@@ -6,8 +6,7 @@ from functools import partial
 from pathlib import Path
 from typing import List, Optional, Dict, Callable
 
-# region helpers
-from justin.shared.metafile import MetafileMixin
+from justin.shared.metafile import MetafileMixin  # todo: fucking remove
 from justin_utils import util
 from justin_utils.data import DataSize
 from justin_utils.time_formatter import format_time
@@ -416,6 +415,9 @@ class Folder(PathBased, MetafileMixin):
     def file_count(self) -> int:
         return sum(subtree.file_count() for subtree in self.subfolders) + len(self.files)
 
+    def size(self) -> int:
+        return sum(file.size for file in self.flatten())
+
     def empty(self) -> bool:
         return self.file_count() == 0
 
@@ -448,8 +450,9 @@ class Folder(PathBased, MetafileMixin):
             elif child.is_file():
                 if child.name.lower() == ".DS_store".lower():
                     child.unlink()
-                elif child.stem.lower() != "_meta":
-                    # else:
+                elif child.stem.lower() == "_meta":
+                    continue  # metafile not included in files
+                else:
                     self.files.append(File(child))
 
             else:
@@ -497,14 +500,14 @@ class Folder(PathBased, MetafileMixin):
 
 
 class FolderBased(PathBased):
-    def __init__(self, tree: Folder) -> None:
-        super().__init__(tree.path)
+    def __init__(self, folder: Folder) -> None:
+        super().__init__(folder.path)
 
-        self.__tree = tree
+        self.__folder = folder
 
     @property
     def folder(self) -> Folder:
-        return self.__tree
+        return self.__folder
 
     @property
     def name(self) -> str:
