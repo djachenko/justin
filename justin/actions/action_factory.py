@@ -18,6 +18,7 @@ from justin.actions.named.web_sync_action import WebSyncAction
 from justin.actions.drone import PanoExtractAction, JpgDngDuplicatesAction, HandleDroneAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.people import RegisterPeopleAction, FixPeopleAction
+from justin.actions.redistribute import RedistributeAction
 from justin.actions.sequence_action import SequenceAction
 from justin_utils.cli import Action
 
@@ -35,7 +36,7 @@ class ActionFactory:
         return StageAction(self.__stages_factory)
 
     @lru_cache()
-    def move_action(self) -> Action:
+    def move_action(self) -> MoveAction:
         return MoveAction(
             prechecks=[self.__checks_factory.metadata()]
         )
@@ -120,3 +121,9 @@ class ActionFactory:
     @lru_cache()
     def fix_people(self) -> Action:
         return FixPeopleAction()
+
+    @lru_cache()
+    def redistribute(self) -> Action:
+        return RedistributeAction(
+            move_action=self.move_action()
+        )
