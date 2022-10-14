@@ -75,21 +75,22 @@ class WebSyncAction(DestinationsAwareAction):
             print(f"Syncing {person_folder.name}...", end="", flush=True)
 
             person_metafile = person_folder.get_metafile(PersonMetafile)
-            total_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments)
+            total_count = len(person_folder.files)
 
             for comment_metafile in person_metafile.comments:
                 if comment_metafile.status == PostStatus.PUBLISHED:
                     continue
 
-                if comment_metafile.id not in person_metafile.comments:
+                if comment_metafile.id not in comments:
+                    print(f"Comment #{comment_metafile.id} for {person_folder.name} was deleted.")
+
                     person_metafile.comments.remove(comment_metafile)
 
-                    continue
+                else:
+                    comment = comments[comment_metafile.id]
 
-                comment = comments[comment_metafile.id]
-
-                if comment.is_liked():
-                    comment_metafile.status = PostStatus.PUBLISHED
+                    if comment.is_liked():
+                        comment_metafile.status = PostStatus.PUBLISHED
 
                 person_folder.save_metafile(person_metafile)
 
@@ -102,6 +103,9 @@ class WebSyncAction(DestinationsAwareAction):
                 print(" all sent.")
             else:
                 print(f" {publish_count}/{total_count} sent.")
+
+    def handle_timelapse(self, timelapse_folder: Folder, context: Context, extra: Extra) -> None:
+        pass
 
     def __warmup_cache(self, group_id: int, context: Context):
         if group_id in self.__cache:

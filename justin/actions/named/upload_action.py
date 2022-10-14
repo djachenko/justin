@@ -80,10 +80,9 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
         return date_generator
 
-    def __init__(self, create: CreateEventAction, setup: SetupEventAction) -> None:
+    def __init__(self, setup: SetupEventAction) -> None:
         super().__init__()
 
-        self.__create = create
         self.__setup = setup
 
     # endregion date generator
@@ -356,6 +355,9 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 person_metafile.comments.append(comment_metafile)
 
                 person_folder.save_metafile(person_metafile)
+
+    def handle_timelapse(self, timelapse_folder: Folder, context: Context, extra: Extra) -> None:
+        pass
 
     # endregion upload strategies
 

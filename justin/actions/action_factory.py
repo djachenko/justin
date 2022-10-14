@@ -107,14 +107,14 @@ class ActionFactory:
         return PanoExtractAction()
 
     @lru_cache()
-    def deduplicate(self) -> JpgDngDuplicatesAction:
+    def __deduplicate(self) -> JpgDngDuplicatesAction:
         return JpgDngDuplicatesAction()
 
     @lru_cache()
     def drone(self) -> Action:
         return HandleDroneAction(
             pano_action=self.__pano_extract(),
-            duplicate_action=self.deduplicate(),
+            duplicate_action=self.__deduplicate(),
         )
 
     @lru_cache()

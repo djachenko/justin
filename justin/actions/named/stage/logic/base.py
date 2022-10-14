@@ -46,7 +46,7 @@ class Extractor:
     def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         selection = self.__selector.select(photoset)
 
-        files_to_move = photoset_utils.files_by_stems(selection, photoset)
+        files_to_move = utils.files_by_stems(selection, photoset)
 
         return files_to_move
 
@@ -78,7 +78,7 @@ class Extractor:
         if not filtered:
             return []
 
-        filtered_photoset = Photoset.from_tree(filtered)
+        filtered_photoset = Photoset.from_folder(filtered, no_migration=True)
 
         prechecks_result = self.__run_prechecks(filtered_photoset)
 
