@@ -1,15 +1,16 @@
 import json
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from datetime import date
-from pathlib import Path
+from functools import lru_cache
+from typing import Iterable, Tuple
 
-from justin.shared.filesystem import Folder
+from justin.shared.metafile import Json
 from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
 from justin.shared.models.photoset import Photoset
-from justin.shared.metafile import Json
+from justin_utils.singleton import Singleton
 
 
-class PhotosetMigration:
+class PhotosetMigration(Singleton):
     @abstractmethod
     def migrate(self, photoset: Photoset) -> None:
         pass
@@ -71,28 +72,59 @@ class SplitMetafilesMigration(PhotosetMigration):
         # old_metafile_path.unlink()
 
 
-class RenameFoldersMigration(PhotosetMigration):
+class RenameFoldersMigration(PhotosetMigration, ABC):
+    @property
+    @abstractmethod
+    def renamings(self) -> Iterable[Tuple[str, str]]:
+        pass
+
     def migrate(self, photoset: Photoset) -> None:
-        renamings = [
+        for src, dst in self.renamings:
+            src_path = photoset.path / src
+
+            if not src_path.exists():
+                continue
+
+            dst_path = photoset.path / dst
+
+            if dst_path.exists():
+                print(f"{dst_path} already exists, not migrating from {src_path}.")
+
+                continue
+
+            src_path.rename(dst_path)
+
+
+class ChangeStructureMigration(RenameFoldersMigration):
+    @property
+    @lru_cache()
+    def renamings(self) -> Iterable[Tuple[str, str]]:
+        return [
             ("our_people", "my_people",),
             ("selection", "not_signed",),
         ]
 
-        for src, dst in renamings:
-            src_tree = photoset.folder[src]
 
-            if src_tree is None:
-                continue
+class RenamePeopleMigration(RenameFoldersMigration):
+    @property
+    def renamings(self) -> Iterable[Tuple[str, str]]:
+        root = "my_people/"
 
-            src_tree.rename(dst)
+        people_mapping = [
+            ("voloshina", "voloshina_nastya",),
+            ("dementyeva", "dementyeva_tanya",),
+        ]
+
+        return [(root + src, root + dst) for src, dst in people_mapping]
 
 
 class ParseMetafileMigration(PhotosetMigration):
     def migrate(self, photoset: Photoset) -> None:
+        # noinspection PyTypeChecker
         metafile = photoset.folder.get_metafile(PhotosetMetafile) or PhotosetMetafile(
-                total_size=None,
-                date=None
-            )
+            total_size=None,
+            date=None
+        )
 
         if metafile.date is None:
             year, month, day, rest = photoset.name.split(".", maxsplit=3)
@@ -119,18 +151,8 @@ class ParseMetafileMigration(PhotosetMigration):
 
 
 ALL_MIGRATIONS = [
-    SplitMetafilesMigration(),
-    RenameFoldersMigration(),
-    ParseMetafileMigration(),
+    SplitMetafilesMigration.instance(),
+    ChangeStructureMigration.instance(),
+    ParseMetafileMigration.instance(),
+    RenamePeopleMigration.instance(),
 ]
-
-
-def main():
-    migration = SplitMetafilesMigration()
-
-    migration.migrate(
-        Photoset(Folder(Path("C:/Users/justin/photos/stages/stage3.schedule/21.12.18.loading_party"))))
-
-
-if __name__ == '__main__':
-    main()

@@ -2,9 +2,9 @@ from datetime import date
 from pathlib import Path
 from typing import List
 
-from justin.shared.filesystem import Folder, File, FolderBased
+from justin.shared.filesystem import File, FolderBased
 from justin.shared.helpers.parts import PartsMixin
-from justin.shared.metafile import PhotosetMetafile
+from justin.shared.metafile import PhotosetMetafile, MetaFolder
 from justin.shared.models import sources
 from justin.shared.models.sources import Source
 from justin_utils import util
@@ -23,10 +23,15 @@ class Photoset(FolderBased, PartsMixin):
     def __str__(self) -> str:
         return "Photoset: " + self.folder.name
 
-    def __init__(self, folder: Folder) -> None:
+    def __init__(self, folder: MetaFolder) -> None:
         super().__init__(folder)
 
         self.__metafile = folder.get_metafile(PhotosetMetafile)
+
+    @property
+    def folder(self) -> MetaFolder:
+        # noinspection PyTypeChecker
+        return super().folder
 
     @property
     def date(self) -> date:
@@ -41,7 +46,8 @@ class Photoset(FolderBased, PartsMixin):
         if not self.is_parted:
             return [self]
 
-        parts = [Photoset.from_folder(part_folder) for part_folder in super().parts]
+        # noinspection PyTypeChecker
+        parts = [Photoset.from_folder(part_folder, no_migration=True) for part_folder in super().parts]
 
         return parts
 
@@ -60,7 +66,7 @@ class Photoset(FolderBased, PartsMixin):
             return None
 
     @property
-    def photoclub(self) -> Folder | None:
+    def photoclub(self) -> MetaFolder | None:
         return self.folder[Photoset.__PHOTOCLUB]
 
     @property
@@ -73,31 +79,31 @@ class Photoset(FolderBased, PartsMixin):
         return result
 
     @property
-    def justin(self) -> Folder | None:
+    def justin(self) -> MetaFolder | None:
         return self.folder[Photoset.__JUSTIN]
 
     @property
-    def gif(self) -> Folder | None:
+    def gif(self) -> MetaFolder | None:
         return self.folder[Photoset.__GIF]
 
     @property
-    def timelapse(self) -> Folder | None:
+    def timelapse(self) -> MetaFolder | None:
         return self.folder["timelapse"]
 
     @property
-    def closed(self) -> Folder | None:
+    def closed(self) -> MetaFolder | None:
         return self.folder[Photoset.__CLOSED]
 
     @property
-    def meeting(self) -> Folder | None:
+    def meeting(self) -> MetaFolder | None:
         return self.folder[Photoset.__MEETING]
 
     @property
-    def kot_i_kit(self) -> Folder | None:
+    def kot_i_kit(self) -> MetaFolder | None:
         return self.folder[Photoset.__KOT_I_KIT]
 
     @property
-    def my_people(self) -> Folder | None:
+    def my_people(self) -> MetaFolder | None:
         return self.folder[Photoset.__MY_PEOPLE]
 
     @property
@@ -129,7 +135,7 @@ class Photoset(FolderBased, PartsMixin):
         return jpegs
 
     @classmethod
-    def from_folder(cls, folder: Folder, no_migration: bool = False) -> 'Photoset':
+    def from_folder(cls, folder: MetaFolder, no_migration: bool = False) -> 'Photoset':
         photoset = Photoset(folder)
 
         if not no_migration:
@@ -142,4 +148,4 @@ class Photoset(FolderBased, PartsMixin):
 
     @classmethod
     def from_path(cls, path: Path) -> 'Photoset':
-        return Photoset.from_folder(Folder(path))
+        return Photoset.from_folder(MetaFolder.from_path(path))

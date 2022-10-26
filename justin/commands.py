@@ -39,7 +39,6 @@ class CommandFactory:
                 [
                     self.__action_factory.web_sync_action(),
                     self.__action_factory.upload_action(),
-                    self.__action_factory.rearrange_action(),
                 ],
                 allowed_same_parameters=[
                     "pattern",

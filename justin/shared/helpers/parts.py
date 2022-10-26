@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, TypeVar
 
 from justin.shared.filesystem import Folder
 
@@ -19,7 +19,10 @@ def is_parted(tree: Folder) -> bool:
     return all([is_part(tree) for tree in tree.subfolders]) and len(tree.files) == 0
 
 
-def folder_tree_parts(tree: Folder) -> List[Folder]:
+T = TypeVar("T", bound=Folder)
+
+
+def folder_tree_parts(tree: T) -> List[T]:
     if tree is None:
         return []
 

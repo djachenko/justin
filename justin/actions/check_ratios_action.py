@@ -37,7 +37,12 @@ class CheckRatiosAction(PatternAction):
             for k, v in ratios.items():
                 print(k, len(v), v)
         else:
-            sorted_by_count: List[Tuple[float, List[Path]]] = sorted(ratios.items(), key=lambda x: len(x[1]), reverse=True)
+            sorted_by_count: List[Tuple[float, List[Path]]] = sorted(
+                ratios.items(),
+                key=lambda x: len(x[1]),
+                reverse=True
+            )
+
             minority_ratios = sorted_by_count[1:]
 
             if not minority_ratios:

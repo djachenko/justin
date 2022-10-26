@@ -5,7 +5,7 @@ from justin.actions.pattern_action import Context, Extra
 from justin.actions.pattern_action import PatternAction
 from justin.shared.filesystem import Folder
 from justin.shared.filesystem import RelativeFileset, File
-from justin.shared.helpers import utils
+from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.utils import JpegType
 from justin.shared.models.photoset import Photoset
 from justin_utils import util

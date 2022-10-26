@@ -6,8 +6,6 @@ from functools import partial
 from pathlib import Path
 from typing import List, Optional, Dict, Callable
 
-from justin.shared.metafile import MetafileMixin  # todo: fucking remove
-from justin_utils import util
 from justin_utils.data import DataSize
 from justin_utils.time_formatter import format_time
 from justin_utils.transfer import TransferSpeedMeter, TransferTimeEstimator
@@ -348,20 +346,20 @@ class File(PathBased):
         return self.name < other.name
 
 
-class Folder(PathBased, MetafileMixin):
+class Folder(PathBased):
     # noinspection PyTypeChecker
     def __init__(self, path: Path) -> None:
         super().__init__(path)
 
-        self.__backing_subtrees: Dict[str, Folder] = None
+        self.__subfolder_mapping: Dict[str, Folder] = None
         self.__files: List[File] = None
 
     @property
-    def __subtrees(self) -> Dict[str, 'Folder']:
-        if self.__backing_subtrees is None:
+    def __subfolders(self) -> Dict[str, 'Folder']:
+        if self.__subfolder_mapping is None:
             self.refresh()
 
-        return self.__backing_subtrees
+        return self.__subfolder_mapping
 
     @property
     def name(self) -> str:
@@ -380,10 +378,10 @@ class Folder(PathBased, MetafileMixin):
 
     @property
     def subfolders(self) -> List['Folder']:
-        return sorted(list(self.__subtrees.values()), key=lambda x: x.name)
+        return sorted(list(self.__subfolders.values()), key=lambda x: x.name)
 
     def __contains__(self, key: str) -> bool:
-        return key in self.__subtrees
+        return key in self.__subfolders
 
     def __getitem__(self, key: str | Path) -> Optional['Folder']:
         if isinstance(key, str):
@@ -394,7 +392,12 @@ class Folder(PathBased, MetafileMixin):
         return None
 
     def __get_by_str(self, key: str) -> Optional['Folder']:
-        return self.__subtrees.get(key)
+        first, *rest = key.split("/", maxsplit=1)
+
+        if rest:
+            return self[first][rest[0]]
+        else:
+            return self.__subfolders.get(key)
 
     def __get_by_path(self, path: Path) -> Optional['Folder']:
         root, *rest = path.parts
@@ -430,22 +433,22 @@ class Folder(PathBased, MetafileMixin):
         self.path.rmdir()
 
     def refresh(self):
-        self.__backing_subtrees = {}
+        self.__subfolder_mapping = {}
         self.__files = []
 
         for child in self.path.iterdir():
             if child.is_dir():
-                child_tree = Folder(child)
+                child_tree = self.from_path(child)
 
                 if not child_tree.empty():
-                    self.__subtrees[child.name] = child_tree
+                    self.__subfolders[child.name] = child_tree
                 else:
                     try:
                         child_tree.remove()
                     except:
                         print(f"Failed to remove empty tree: \"{child_tree}\"")
 
-                        self.__subtrees[child.name] = child_tree
+                        self.__subfolders[child.name] = child_tree
 
             elif child.is_file():
                 if child.name.lower() == ".DS_store".lower():
@@ -494,9 +497,9 @@ class Folder(PathBased, MetafileMixin):
     def __repr__(self) -> str:
         return str(self)
 
-    def collect_metafile_paths(self) -> List[Path]:
-        return super().collect_metafile_paths() + \
-               util.flatten(subtree.collect_metafile_paths() for subtree in self.subfolders)
+    @classmethod
+    def from_path(cls, path: Path) -> 'Folder':
+        return cls(path)
 
 
 class FolderBased(PathBased):

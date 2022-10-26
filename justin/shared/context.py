@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from justin.shared.helpers.gif_maker import GifMaker
-from justin.shared.models.person import PeopleRegister
+from justin.shared.models.person import PeopleRegistry
 from justin.shared.models.world import World
 from pyvko.aspects.groups import Group
 from pyvko.aspects.posts import Posts
@@ -21,8 +21,8 @@ class Context:
 
     gif_maker = GifMaker()
 
-    my_people: PeopleRegister
-    closed: PeopleRegister
+    my_people: PeopleRegistry
+    closed: PeopleRegistry
 
     @property
     def default_group(self) -> Group:

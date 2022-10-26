@@ -2,6 +2,7 @@ from abc import abstractmethod
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Iterable
 
 from justin.shared.filesystem import File
 
@@ -102,3 +103,20 @@ def parse_exif(path: Path | File) -> Exif | None:
         return NativeExif.from_path(path)
 
     return None
+
+
+def exif_sorted(seq: Iterable[File]) -> Iterable[File]:
+    class Comparator:
+        def __init__(self, o: File) -> None:
+            super().__init__()
+
+            self.exif = parse_exif(o.path)
+            self.name = o.name
+
+        def __lt__(self, other: 'Comparator') -> bool:
+            if other.exif and self.exif:
+                return self.exif.date_taken < other.exif.date_taken
+
+            return self.name < other.name
+
+    return sorted(seq, key=Comparator)
