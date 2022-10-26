@@ -3,7 +3,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, asdict
 from datetime import date
 from pathlib import Path
-from typing import List
+from typing import List, Iterable
 
 from justin.shared.metafile import Json
 from pyvko.pyvko_main import Pyvko
@@ -48,7 +48,7 @@ class Person:
         return bool(person.folder and person.name and person.vk_id)
 
 
-class PeopleRegister:
+class PeopleRegistry:
     def __init__(self, root: Path, category: str, pyvko: Pyvko | None = None):
         super().__init__()
 
@@ -108,9 +108,17 @@ class PeopleRegister:
                 assert person.vk_id != existing_person.vk_id, "This vk id already registered"
                 assert person.folder != existing_person.folder, "This folder is already registered"
 
-                assert not person.folder.startswith(existing_person.folder) and \
-                       not existing_person.folder.startswith(person.folder), \
-                       f"Folder prefixes collision with {existing_person.folder}"
+                def build_prefixes(string: str, sep: str) -> Iterable[str]:
+                    prefixes_ = ["", ]
+
+                    for e in string.split(sep):
+                        prefixes_ = [sep.join([prefix, e]) for prefix in prefixes_]
+
+                    return prefixes_
+
+                prefixes = build_prefixes(existing_person.folder, "_")
+
+                assert person.folder not in prefixes, f"Folder prefixes collision with {existing_person.folder}"
 
             self.__people.append(person)
 

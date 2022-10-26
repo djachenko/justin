@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from typing import Optional, List, Iterable
 
 from justin.shared.filesystem import PathBased, RelativeFileset, File, Folder
-from justin.shared.helpers import utils
+from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
@@ -46,7 +46,7 @@ class Extractor:
     def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         selection = self.__selector.select(photoset)
 
-        files_to_move = utils.files_by_stems(selection, photoset)
+        files_to_move = photoset_utils.files_by_stems(selection, photoset)
 
         return files_to_move
 

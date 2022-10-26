@@ -4,7 +4,7 @@ from typing import List
 
 from justin.actions.named.stage.logic.factories.checks_factory import ChecksFactory
 from justin.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
-from justin.actions.named.stage.models.stage import Stage, Archive, DefaultStage
+from justin.actions.named.stage.models.stage import Stage, ArchiveStage, DefaultStage
 
 
 class StagesFactory:
@@ -39,7 +39,7 @@ class StagesFactory:
     
     @lru_cache()
     def archive(self) -> Stage:
-        return Archive(
+        return ArchiveStage(
             folder=".archive",
             command="archive",
             incoming_checks=[

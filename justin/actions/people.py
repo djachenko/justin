@@ -6,7 +6,7 @@ from justin.actions.named.destinations_aware_action import DestinationsAwareActi
 from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
-from justin.shared.models.person import PeopleRegister, Person
+from justin.shared.models.person import PeopleRegistry, Person
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.cli import Action, Parameter
@@ -16,7 +16,7 @@ from pyvko.pyvko_main import Pyvko
 
 class FixPeopleMixin:
     @staticmethod
-    def fix_person(person: Person, register: PeopleRegister, pyvko: Pyvko) -> None:
+    def fix_person(person: Person, register: PeopleRegistry, pyvko: Pyvko) -> None:
 
         folder = person.folder
 
@@ -73,11 +73,12 @@ class RegisterPeopleAction(DestinationsAwareAction, FixPeopleMixin):
     def handle_common(self, folder: Folder, context: Context, extra: Extra) -> None:
         pass
 
-    def __register_from_path(self, tree: Folder, pyvko: Pyvko, register: PeopleRegister):
+    def __register_from_path(self, tree: Folder, pyvko: Pyvko, register: PeopleRegistry):
         for my_person in tree.subfolders:
             if my_person.name in register:
                 continue
 
+            # noinspection PyTypeChecker
             self.fix_person(
                 Person(
                     vk_id=None,
@@ -135,21 +136,26 @@ class FixPeopleAction(Action, FixPeopleMixin):
         elif args.name:
             people_to_fix = [register.get_by_folder(args.name)]
         elif args.by:
-            photoset = Photoset.from_path(args.by)
+            people_to_fix = []
+            names_to_register = []
 
-            if selected_type == FixPeopleAction.MY_PEOPLE_FLAG:
-                names_root = photoset.my_people
-            elif selected_type == FixPeopleAction.CLOSED_FLAG:
-                names_root = photoset.closed
-            else:
-                assert False
+            for photoset in Photoset.from_path(args.by).parts:
+                if selected_type == FixPeopleAction.MY_PEOPLE_FLAG:
+                    names_root = photoset.my_people
+                elif selected_type == FixPeopleAction.CLOSED_FLAG:
+                    names_root = photoset.closed
+                else:
+                    assert False
 
-            names_in_folder = {name_tree.name for name_tree in names_root.subfolders}
+                if not names_root:
+                    continue
 
-            registered_people = [register.get_by_folder(name) for name in names_in_folder]
-            people_to_fix = [person for person in registered_people if person]
+                names_in_folder = {name_tree.name for name_tree in names_root.subfolders}
 
-            names_to_register = [name for name in names_in_folder if name not in register]
+                registered_people = [register.get_by_folder(name) for name in names_in_folder]
+                people_to_fix += [person for person in registered_people if person]
+
+                names_to_register += [name for name in names_in_folder if name not in register]
 
             if names_to_register:
                 print(", ".join(names_to_register), "won't be fixed, need to be registered.")
@@ -157,11 +163,7 @@ class FixPeopleAction(Action, FixPeopleMixin):
         else:
             assert False
 
-        print(len(list(people_to_fix)))
-
         people_to_fix = [person for person in people_to_fix if not Person.is_valid(person)]
-
-        print(len(list(people_to_fix)))
 
         if not people_to_fix:
             print("Fixing not needed.")

@@ -80,7 +80,7 @@ class DefaultStage(Stage):
         return root / "stages" / self.folder
 
 
-class Archive(Stage):
+class ArchiveStage(Stage):
     def get_new_parent(self, photoset: Photoset, root: Path) -> Path:
         destinations = [
             "justin",
