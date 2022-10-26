@@ -7,7 +7,7 @@ from justin.shared.config import Config
 from justin.shared.context import Context
 from justin.shared.factories_container import FactoriesContainer
 from justin.shared.metafile_migrations import *
-from justin.shared.models.person import PeopleRegister
+from justin.shared.models.person import PeopleRegistry
 from justin.shared.models.world import World
 from justin_utils.cd import cd
 from justin_utils.cli import App
@@ -26,8 +26,8 @@ def __run(config_path: Path, args: List[str] = None):
     pyvko_config = PyvkoConfig.read(pyvko_config_file)
     pyvko = Pyvko(pyvko_config)
 
-    my_people = PeopleRegister(configs_folder, "my_people", pyvko)
-    closed = PeopleRegister(configs_folder, "closed", pyvko)
+    my_people = PeopleRegistry(configs_folder, "my_people", pyvko)
+    closed = PeopleRegistry(configs_folder, "closed", pyvko)
 
     config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
         "my_people": my_people,
@@ -36,11 +36,13 @@ def __run(config_path: Path, args: List[str] = None):
 
     factories_container = FactoriesContainer(config)
 
+    world = Proxy(lambda: World())
+
     def get_lazy_group(url_key):
         return Proxy(lambda: pyvko.get_by_url(config[url_key]))
 
-    context: Context = Context(
-        world=Proxy(lambda: World(config[Config.Keys.DISK_STRUCTURE])),
+    context = Context(
+        world=world,
         justin_group=get_lazy_group(Config.Keys.JUSTIN_URL),
         closed_group=get_lazy_group(Config.Keys.CLOSED_URL),
         meeting_group=get_lazy_group(Config.Keys.MEETING_URL),

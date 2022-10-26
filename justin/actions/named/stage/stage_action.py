@@ -1,8 +1,9 @@
 from argparse import Namespace
 
-from justin.actions.pattern_action import Context, Extra
+from justin.actions.pattern_action import Extra
 from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.actions.pattern_action import PatternAction
+from justin.shared.context import Context
 from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.shared.models.photoset import Photoset
 
@@ -32,9 +33,6 @@ class StageAction(PatternAction):
         transfer_checks = current_stage.outcoming_checks + new_stage.incoming_checks
 
         root = context.world.location_of_path(photoset.path)
-
-        # todo: change to location
-        new_stage_folder = root / "stages" / new_stage.folder
 
         photoset_parts = photoset.parts
 

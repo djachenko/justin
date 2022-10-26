@@ -7,9 +7,8 @@ from justin.actions.named.destinations_aware_action import DestinationsAwareActi
 from justin.actions.named.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.shared import filesystem
-from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts, is_part
-from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile
+from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile, MetaFolder
 from justin.shared.models.photoset import Photoset
 from pyvko.aspects.events import Events
 from pyvko.aspects.posts import Posts
@@ -50,7 +49,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
 
         super().perform_for_part(part, args, context, extra)
 
-    def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_justin(self, justin_folder: MetaFolder, context: Context, extra: Extra) -> None:
         self.__fix_group(justin_folder, context.justin_group)
 
         self.__fix_categories(
@@ -59,7 +58,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
             extra
         )
 
-    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
         # noinspection PyTypeChecker
         self.__fix_categories(
             closed_folder.subfolders,
@@ -67,7 +66,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
             extra
         )
 
-    def handle_meeting(self, meeting_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_meeting(self, meeting_folder: MetaFolder, context: Context, extra: Extra) -> None:
         # noinspection PyTypeChecker
         self.__fix_categories(
             [meeting_folder],
@@ -75,7 +74,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
             extra
         )
 
-    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_kot_i_kit(self, kot_i_kit_folder: MetaFolder, context: Context, extra: Extra) -> None:
         skip_subtrees = [
             "logo",
             "market",
@@ -90,11 +89,11 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
             extra
         )
 
-    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
         # todo: notify if fixing required
         pass
 
-    def handle_timelapse(self, timelapse_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_timelapse(self, timelapse_folder: MetaFolder, context: Context, extra: Extra) -> None:
         self.__fix_posts(
             posts_folder=timelapse_folder,
             root=extra[FixMetafileAction.__ROOT_KEY],
@@ -102,7 +101,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
         )
 
     # noinspection PyMethodMayBeStatic
-    def __fix_group(self, folder: Folder, group: Posts) -> None:
+    def __fix_group(self, folder: MetaFolder, group: Posts) -> None:
         if folder.has_metafile(GroupMetafile):
             return
 
@@ -114,8 +113,8 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
 
     def __fix_categories(
             self,
-            categories: List[Folder],
-            group_provider: Callable[[Folder, Photoset], Posts],
+            categories: List[MetaFolder],
+            group_provider: Callable[[MetaFolder, Photoset], Posts],
             extra: Extra
     ):
         root = extra[FixMetafileAction.__ROOT_KEY]
@@ -132,7 +131,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
                 community=community
             )
 
-    def __get_event(self, community: Events, category: Folder, root: Photoset) -> Posts | None:
+    def __get_event(self, community: Events, category: MetaFolder, root: Photoset) -> Posts | None:
         event_id = FixMetafileAction.get_community_id(category, root)
 
         if event_id is None:
@@ -147,7 +146,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
 
         return event
 
-    def __fix_posts(self, posts_folder: Folder, root: Photoset, community: Posts) -> None:
+    def __fix_posts(self, posts_folder: MetaFolder, root: Photoset, community: Posts) -> None:
         posts_folders = folder_tree_parts(posts_folder)
 
         self.__warmup_cache(community)

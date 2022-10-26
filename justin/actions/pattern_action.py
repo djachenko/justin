@@ -3,11 +3,9 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List, Dict, Any
 
+from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.cli import Parameter, Action, Context
-
-from justin.shared.filesystem import Folder
-from justin.shared.models.photoset import Photoset
 
 Extra = Dict[str, Any]
 
