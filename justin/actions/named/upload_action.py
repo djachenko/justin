@@ -6,15 +6,15 @@ from datetime import time, date, datetime, timedelta
 from pathlib import Path
 from typing import List, Iterator
 
-from justin.actions.create_event_action import CreateEventAction, SetupEventAction
+from justin.actions.event import SetupEventAction
 from justin.actions.named.destinations_aware_action import DestinationsAwareAction
 from justin.actions.named.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
-from justin.shared.filesystem import Folder, File
+from justin.shared.filesystem import File
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
-    AlbumMetafile
+    AlbumMetafile, MetaFolder
 from justin.shared.models.exif import parse_exif
 from justin.shared.models.person import Person
 from justin.shared.models.photoset import Photoset
@@ -122,7 +122,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
     # region utils
 
     @staticmethod
-    def __check_all_posted(*posts_folders: Folder) -> bool:
+    def __check_all_posted(*posts_folders: MetaFolder) -> bool:
         for post_folder in posts_folders:
             if not post_folder.has_metafile(PostMetafile):
                 return False
@@ -148,7 +148,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     # region upload strategies
 
-    def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_justin(self, justin_folder: MetaFolder, context: Context, extra: Extra) -> None:
         justin_group = context.justin_group
         set_name = extra[UploadAction.__SET_NAME]
         part_name = extra[UploadAction.__PART_NAME]
@@ -181,7 +181,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 )
             )
 
-    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
         set_name: str = extra[UploadAction.__SET_NAME]
         only_one_name: bool = extra[UploadAction.__SINGLE_NAME]
 
@@ -212,7 +212,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 )
             )
 
-    def handle_meeting(self, meeting_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_meeting(self, meeting_folder: MetaFolder, context: Context, extra: Extra) -> None:
         if UploadAction.__check_all_posted(*folder_tree_parts(meeting_folder)):
             return
 
@@ -233,7 +233,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             )
         )
 
-    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_kot_i_kit(self, kot_i_kit_folder: MetaFolder, context: Context, extra: Extra) -> None:
         kot_i_kit_group = context.kot_i_kit_group
 
         skip_subtrees = [
@@ -266,7 +266,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 )
             )
 
-    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
         my_people_group = context.my_people_group
 
         if not my_people_folder.has_metafile(PostMetafile):
@@ -356,7 +356,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
                 person_folder.save_metafile(person_metafile)
 
-    def handle_timelapse(self, timelapse_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_timelapse(self, timelapse_folder: MetaFolder, context: Context, extra: Extra) -> None:
         pass
 
     # endregion upload strategies
@@ -372,7 +372,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         category: str | None = None
 
     @staticmethod
-    def __upload_event(extra: Extra, folder: Folder, params: EventParams) -> None:
+    def __upload_event(extra: Extra, folder: MetaFolder, params: EventParams) -> None:
         event = UploadAction.__get_event(
             extra=extra,
             params=params,
@@ -402,7 +402,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         )
 
     @staticmethod
-    def __get_event(folder: Folder, extra: Extra, params: EventParams) -> Event | None:
+    def __get_event(folder: MetaFolder, extra: Extra, params: EventParams) -> Event | None:
         set_context: Extra = extra[UploadAction.__SET_CONTEXT]
         root: Photoset = extra[UploadAction.__ROOT]
 
@@ -441,7 +441,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         text: str | None = None
 
     @staticmethod
-    def __upload_bottom(community: Community, posts_folder: Folder, extra: Extra, params: UploadParams) \
+    def __upload_bottom(community: Community, posts_folder: MetaFolder, extra: Extra, params: UploadParams) \
             -> None:
         root_path: Path = extra[UploadAction.__ROOT_PATH]
 
@@ -478,7 +478,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             post_folder.save_metafile(post_metafile)
 
     @staticmethod
-    def __upload_folder(community: Community, folder: Folder, params: UploadParams) -> int:
+    def __upload_folder(community: Community, folder: MetaFolder, params: UploadParams) -> int:
         if folder.file_count() <= 10:
             attachments = UploadAction.__get_post_attachments(community, folder)
         else:
@@ -495,13 +495,13 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         return post.id
 
     @staticmethod
-    def __get_post_attachments(community: Posts, folder: Folder) -> [Attachment]:
+    def __get_post_attachments(community: Posts, folder: MetaFolder) -> [Attachment]:
         vk_photos = [community.upload_photo_to_wall(file.path) for file in folder.files]
 
         return vk_photos
 
     @staticmethod
-    def __get_album_attachments(community: Albums, folder: Folder, params: UploadParams) -> [Attachment]:
+    def __get_album_attachments(community: Albums, folder: MetaFolder, params: UploadParams) -> [Attachment]:
 
         if folder.has_metafile(AlbumMetafile):
             metafile = folder.get_metafile(AlbumMetafile)

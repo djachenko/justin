@@ -9,12 +9,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Type, TypeVar, List, Set
 
+from justin.shared.filesystem import Folder
+from justin.shared.helpers.utils import Json, fromdict
+from justin_utils import util
 from justin_utils.singleton import Singleton
 
 T = TypeVar('T', bound='Metafile')
 V = TypeVar('V', bound='RootMetafile')
-
-Json = Dict[str, 'Json'] | List['Json'] | str
 
 
 # region metafile classes
@@ -207,7 +208,7 @@ class MetafileMigration(Singleton):
         pass
 
     @abstractmethod
-    def migrate(self, json: Json) -> Json:
+    def migrate(self, json_object: Json) -> Json:
         pass
 
     def __eq__(self, other):
@@ -278,21 +279,6 @@ MetafileMigrator.instance().register(
 # endregion metafile migrations
 
 # region metafile reading
-
-def fromdict(obj: Json, data_class: Type[V]) -> V:
-    fields = dataclasses.fields(data_class)
-
-    dict_ = {}
-
-    for field in fields:
-        try:
-            dict_[field.name] = field.type(obj[field.name])
-        except TypeError:
-            dict_[field.name] = None
-
-    new_instance = data_class(**dict_)
-
-    return new_instance
 
 
 class MetafileReadWriter(Singleton):
@@ -447,5 +433,16 @@ class MetafileMixin(ABC):
 
     def collect_metafile_paths(self) -> List[Path]:
         return [self.metafile_path]
+
+
+class MetaFolder(Folder, MetafileMixin):
+    @property
+    def subfolders(self) -> List['MetaFolder']:
+        # noinspection PyTypeChecker
+        return super().subfolders
+
+    def collect_metafile_paths(self) -> List[Path]:
+        return super().collect_metafile_paths() + \
+               util.flatten(subtree.collect_metafile_paths() for subtree in self.subfolders)
 
 # endregion metafile mixins

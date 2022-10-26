@@ -5,7 +5,7 @@ from typing import List
 from justin.actions.check_ratios_action import PatternAction
 from justin.actions.pattern_action import Extra
 from justin.shared.filesystem import Folder
-from justin.shared.helpers.utils import exif_sorted
+from justin.shared.models.exif import exif_sorted
 from justin_utils.cli import Context, Parameter
 
 
@@ -21,7 +21,7 @@ class SequenceAction(PatternAction):
         prefix = args.prefix
         start = args.start
 
-        tree = Folder(path)
+        tree = Folder.from_path(path)
 
         files = exif_sorted(tree.files)
         files = [file.path for file in files]

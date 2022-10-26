@@ -1,7 +1,7 @@
 from functools import lru_cache
 
 from justin.actions.check_ratios_action import CheckRatiosAction
-from justin.actions.create_event_action import CreateEventAction, SetupEventAction
+from justin.actions.event import CreateEventAction, SetupEventAction
 from justin.actions.date_split import DateSplitAction
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
