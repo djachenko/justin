@@ -2,10 +2,10 @@ from argparse import Namespace
 from datetime import timedelta
 from typing import List
 
+from justin.actions.group_action import GroupAction
 from justin_utils.cli import Parameter
 from pyvko.entities.user import Group
 
-from justin.actions.rearrange_action import GroupAction
 from justin.shared.context import Context
 
 

@@ -1,13 +1,13 @@
-from justin.actions.action_factory import ActionFactory
-from justin.actions.named.stage.logic.factories.checks_factory import ChecksFactory
-from justin.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
-from justin.actions.named.stage.logic.factories.selector_factory import SelectorFactory
-from justin.actions.named.stage.models.stages_factory import StagesFactory
-from justin.commands import CommandFactory
 from justin.shared.config import Config
+from justin.di.actions import ActionFactory
+from justin.di.checks import ChecksFactory
+from justin.di.commands import CommandFactory
+from justin.di.extractors import ExtractorFactory
+from justin.di.selectors import SelectorFactory
+from justin.di.stages import StagesFactory
 
 
-class FactoriesContainer:
+class DI:
     def __init__(self, config: Config) -> None:
         super().__init__()
 

@@ -260,7 +260,7 @@ class PathBased(Movable):
     def __init__(self, path: Path) -> None:
         super().__init__()
 
-        self.__path = path
+        self.__path = path.absolute()
 
     @property
     def path(self) -> Path:
@@ -375,6 +375,10 @@ class Folder(PathBased):
             self.refresh()
 
         return self.__files
+
+    @property
+    def total_size(self) -> int:
+        return sum(file.size for file in self.flatten())
 
     @property
     def subfolders(self) -> List['Folder']:
@@ -496,6 +500,16 @@ class Folder(PathBased):
 
     def __repr__(self) -> str:
         return str(self)
+
+    @property
+    def __key(self):
+        return self.path
+
+    def __hash__(self):
+        return hash(self.__key)
+
+    def __eq__(self, other: 'Folder') -> bool:
+        return isinstance(other, type(self)) and other.__key == self.__key
 
     @classmethod
     def from_path(cls, path: Path) -> 'Folder':

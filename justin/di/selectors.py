@@ -1,15 +1,16 @@
 from functools import lru_cache
 
-from justin.actions.named.stage.logic.base import Selector
-from justin.actions.named.stage.logic.edited import EditedSelector
-from justin.actions.named.stage.logic.everything_is_published_selector import EverythingIsPublishedSelector
-from justin.actions.named.stage.logic.gif_sources import GifSourcesSelector
-from justin.actions.named.stage.logic.metadata import MetadataSelector
-from justin.actions.named.stage.logic.missing_gifs import MissingGifsSelector
-from justin.actions.named.stage.logic.odd_selection import OddSelectionSelector
-from justin.actions.named.stage.logic.progress import ProgressResultsSelector
-from justin.actions.named.stage.logic.structure import ValidateStructureVisitor
-from justin.actions.named.stage.logic.unselected import UnselectedSelector
+from justin.actions.stage.logic.base import Selector
+from justin.actions.stage.logic.edited import EditedSelector
+from justin.actions.stage.logic.everything_is_published_selector import EverythingIsPublishedSelector
+from justin.actions.stage.logic.gif_sources import GifSourcesSelector
+from justin.actions.stage.logic.metadata import MetadataSelector
+from justin.actions.stage.logic.missing_gifs import MissingGifsSelector
+from justin.actions.stage.logic.odd_selection import OddSelectionSelector
+from justin.actions.stage.logic.progress import AllSourcesHaveResultsSelector
+from justin.actions.stage.logic.structure import ValidateStructureVisitor
+
+from justin.actions.stage.logic.unselected import UnselectedSelector
 from justin.shared.structure import Structure
 
 
@@ -54,4 +55,4 @@ class SelectorFactory:
 
     @lru_cache()
     def progress_has_results(self) -> Selector:
-        return ProgressResultsSelector()
+        return AllSourcesHaveResultsSelector()

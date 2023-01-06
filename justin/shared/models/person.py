@@ -6,14 +6,15 @@ from pathlib import Path
 from typing import List, Iterable
 
 from justin.shared.metafile import Json
+from justin_utils.util import first
 from pyvko.pyvko_main import Pyvko
 
 
 @dataclass
 class Person:
     folder: str
-    name: str
-    vk_id: int
+    name: str | None
+    vk_id: int | None
     source: str
     register_date: date = date.today()
 
@@ -44,8 +45,11 @@ class Person:
         return isinstance(other, Person) and other.folder == self.folder
 
     @staticmethod
-    def is_valid(person: 'Person') -> bool:
-        return bool(person.folder and person.name and person.vk_id)
+    def is_valid(person: 'Person', strict: bool = False) -> bool:
+        if strict:
+            return bool(person.folder and person.name and person.vk_id)
+        else:
+            return bool(person.folder)
 
 
 class PeopleRegistry:
@@ -104,22 +108,32 @@ class PeopleRegistry:
 
             self.__people[existing_index] = person
         except ValueError:
+            collision = self.find_collision(person.folder)
+
+            assert not collision, f"Folder prefixes collision with {collision.folder}"
+
             for existing_person in self.__people:
-                assert person.vk_id != existing_person.vk_id, "This vk id already registered"
+                assert person.vk_id is None or person.vk_id != existing_person.vk_id , f"Vk id {person.vk_id} is already registered"
                 assert person.folder != existing_person.folder, "This folder is already registered"
-
-                def build_prefixes(string: str, sep: str) -> Iterable[str]:
-                    prefixes_ = ["", ]
-
-                    for e in string.split(sep):
-                        prefixes_ = [sep.join([prefix, e]) for prefix in prefixes_]
-
-                    return prefixes_
-
-                prefixes = build_prefixes(existing_person.folder, "_")
-
-                assert person.folder not in prefixes, f"Folder prefixes collision with {existing_person.folder}"
 
             self.__people.append(person)
 
         self.save()
+
+    @staticmethod
+    def __build_prefixes(string: str, sep: str) -> Iterable[str]:
+
+        prefixes = []
+
+        split = string.split(sep)
+
+        for i in range(1, len(split) + 1):
+            prefixes.append(sep.join(split[:i]))
+
+        return prefixes
+
+    def find_collision(self, folder_name: str) -> Person | None:
+        return first(self.__people, lambda p: folder_name in self.__build_prefixes(p.folder, "_"))
+
+    def check_availability(self, folder_name: str) -> bool:
+        return self.find_collision(folder_name) is None
