@@ -2,7 +2,7 @@ from typing import List
 
 from justin_utils import joins
 
-from justin.actions.named.stage.logic.base import Extractor, AbstractCheck, Check, Selector
+from justin.actions.stage.logic.base import Extractor, AbstractCheck, Check, Selector
 from justin.shared.filesystem import PathBased
 from justin.shared.models.photoset import Photoset
 
@@ -25,7 +25,7 @@ class ProgressExtractor(Extractor):
         pass
 
 
-class ProgressResultsSelector(Selector):
+class AllSourcesHaveResultsSelector(Selector):
     def select(self, photoset: Photoset) -> List[str]:
         if photoset.name != "progress":
             return []

@@ -1,8 +1,8 @@
 from argparse import Namespace
 
 from justin.actions.pattern_action import Extra
-from justin.actions.named.stage.models.stages_factory import StagesFactory
 from justin.actions.pattern_action import PatternAction
+from justin.di.stages import StagesFactory
 from justin.shared.context import Context
 from justin.shared.helpers.checks_runner import ChecksRunner
 from justin.shared.models.photoset import Photoset
@@ -64,10 +64,9 @@ class StageAction(PatternAction):
                 print(problem)
         else:
             if new_stage != current_stage:
-                # todo: new_stage.accept(photoset)
-                # photoset.move(new_stage_folder)
 
-                new_stage.transfer(photoset, root)
+                # todo: move to folder
+                new_stage.transfer(photoset, root.path)
 
             for photoset_part in photoset_parts:
                 new_stage.prepare(photoset_part)

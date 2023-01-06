@@ -1,8 +1,9 @@
 from argparse import Namespace
 
-from justin.actions.named.destinations_aware_action import DestinationsAwareAction
+from justin.actions.destinations_aware_action import DestinationsAwareAction
 from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
+from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, MetaFolder
 from justin.shared.models.photoset import Photoset
@@ -56,16 +57,48 @@ class WebSyncAction(DestinationsAwareAction):
         self.__handle_tagged(kot_i_kit_folder, context)
 
     def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
+        self.__warmup_cache(context.my_people_group.id, context)
+
         if not my_people_folder.has_metafile(PostMetafile):
             return
 
         post_metafile = my_people_folder.get_metafile(PostMetafile)
 
+        _, _, published_ids, _ = self.__cache[context.my_people_group.id]
+
+        if post_metafile.post_id not in published_ids:
+            for subfolder in my_people_folder.subfolders:
+                subfolder.remove_metafile()
+
+            my_people_folder.remove_metafile()
+
+            print("Post was deleted")
+
+            return
+
         post = context.my_people_group.get_post(post_metafile.post_id)
+
+        if post.is_liked():
+            for person_folder in my_people_folder.subfolders:
+                if not person_folder.has_metafile(PersonMetafile):
+                    continue
+
+                person_metafile = person_folder.get_metafile(PersonMetafile)
+
+                for comment_metafile in person_metafile.comments:
+                    comment_metafile.status = PostStatus.PUBLISHED
+
+                person_folder.save_metafile(person_metafile)
+
+            print("All people sent.")
+
+            return
 
         comments = {comment.item_id: comment for comment in post.get_comments()}
 
         print("Syncing my people...")
+
+        all_sent = True
 
         for person_folder in my_people_folder.subfolders:
             if not person_folder.has_metafile(PersonMetafile):
@@ -98,12 +131,20 @@ class WebSyncAction(DestinationsAwareAction):
             publish_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments if
                                 comment_metafile.status == PostStatus.PUBLISHED)
 
-            if publish_count == total_count:
+            if publish_count >= total_count:
                 print(" all sent.")
             else:
                 print(f" {publish_count}/{total_count} sent.")
 
+                all_sent = False
+
+        if all_sent:
+            post.like()
+
     def handle_timelapse(self, timelapse_folder: MetaFolder, context: Context, extra: Extra) -> None:
+        pass
+
+    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
         pass
 
     def __warmup_cache(self, group_id: int, context: Context):
@@ -116,12 +157,12 @@ class WebSyncAction(DestinationsAwareAction):
         published_posts = group.get_posts()
 
         scheduled_ids = [post.id for post in scheduled_posts]
-        published_timed_ids = [post.timer_id for post in published_posts]
+        published_timer_ids = [post.timer_id for post in published_posts]
         published_ids = [post.id for post in published_posts]
 
         timed_to_published_mapping = {post.timer_id: post.id for post in published_posts if post.timer_id}
 
-        self.__cache[group_id] = (scheduled_ids, published_timed_ids, published_ids, timed_to_published_mapping)
+        self.__cache[group_id] = (scheduled_ids, published_timer_ids, published_ids, timed_to_published_mapping)
 
     def __handle_tagged(self, folder: MetaFolder, context: Context) -> None:
         if not folder.has_metafile():

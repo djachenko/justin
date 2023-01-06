@@ -1,29 +1,30 @@
 from functools import lru_cache
 
 from justin.actions.check_ratios_action import CheckRatiosAction
-from justin.actions.event import CreateEventAction, SetupEventAction
 from justin.actions.date_split import DateSplitAction
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
+from justin.actions.drone import HandleDroneAction, JpgDngDuplicatesAction, PanoExtractAction
+from justin.actions.event import SetupEventAction, CreateEventAction
+from justin.actions.location import LocationAction
 from justin.actions.move_action import MoveAction
-from justin.actions.named.fix_metafile_action import FixMetafileAction
-from justin.actions.named.make_gifs_action import MakeGifAction
-from justin.actions.named.resize_gif_sources_action import ResizeGifSourcesAction
-from justin.actions.named.split_action import SplitAction
-from justin.actions.named.stage.logic.factories.checks_factory import ChecksFactory
-from justin.actions.named.stage.models.stages_factory import StagesFactory
-from justin.actions.named.stage.stage_action import StageAction
-from justin.actions.named.upload_action import UploadAction
-from justin.actions.named.web_sync_action import WebSyncAction
-from justin.actions.drone import PanoExtractAction, JpgDngDuplicatesAction, HandleDroneAction
+from justin.actions.fix_metafile_action import FixMetafileAction
+from justin.actions.make_gifs_action import MakeGifAction
+from justin.actions.resize_gif_sources_action import ResizeGifSourcesAction
+from justin.actions.split_action import SplitAction
+from justin.actions.stage.stage_action import StageAction
+from justin.actions.upload_action import UploadAction
+from justin.actions.web_sync_action import WebSyncAction
+from justin.actions.people import FixPeopleAction, RegisterPeopleAction
 from justin.actions.rearrange_action import RearrangeAction
-from justin.actions.people import RegisterPeopleAction, FixPeopleAction
 from justin.actions.sequence_action import SequenceAction
+from justin.cms.cms import CMSAction
+from justin.di.checks import ChecksFactory
+from justin.di.stages import StagesFactory
 from justin_utils.cli import Action
 
 
 class ActionFactory:
-
     def __init__(self, stages_factory: StagesFactory, checks_factory: ChecksFactory) -> None:
         super().__init__()
 
@@ -120,3 +121,11 @@ class ActionFactory:
     @lru_cache()
     def fix_people(self) -> Action:
         return FixPeopleAction()
+
+    @lru_cache()
+    def cms(self) -> Action:
+        return CMSAction()
+
+    @lru_cache()
+    def location(self) -> Action:
+        return LocationAction()

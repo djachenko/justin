@@ -2,7 +2,7 @@ import dataclasses
 from enum import Flag, auto
 from typing import Iterable, Tuple, Any, List, Type, TypeVar, Dict
 
-from justin.actions.named.stage.exceptions.no_files_for_name_error import NoFilesForNameError
+from justin.actions.stage.exceptions.no_files_for_name_error import NoFilesForNameError
 
 
 def __validate_join(join: Iterable[Tuple[str, Any]], name: str):
@@ -40,10 +40,14 @@ def fromdict(obj: Json, data_class: Type[V]) -> V:
     dict_ = {}
 
     for field in fields:
+        field_name = field.name
         try:
-            dict_[field.name] = field.type(obj[field.name])
-        except TypeError:
-            dict_[field.name] = None
+            if field_name in obj:
+                dict_[field_name] = field.type(obj[field_name])
+            else:
+                dict_[field_name] = field.default
+        except (TypeError, ValueError):
+            dict_[field_name] = None
 
     new_instance = data_class(**dict_)
 

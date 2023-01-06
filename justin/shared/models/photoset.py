@@ -1,8 +1,9 @@
 from datetime import date
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+from uuid import UUID
 
-from justin.shared.filesystem import File, FolderBased
+from justin.shared.filesystem import File, FolderBased, Folder
 from justin.shared.helpers.parts import PartsMixin
 from justin.shared.metafile import PhotosetMetafile, MetaFolder
 from justin.shared.models import sources
@@ -34,12 +35,8 @@ class Photoset(FolderBased, PartsMixin):
         return super().folder
 
     @property
-    def date(self) -> date:
-        return self.__metafile.date
-
-    @property
-    def total_size(self):
-        return sum(file.size for file in self.folder.flatten())
+    def id(self) -> UUID:
+        return self.__metafile.photoset_id
 
     @property
     def parts(self) -> List['Photoset']:
@@ -47,7 +44,7 @@ class Photoset(FolderBased, PartsMixin):
             return [self]
 
         # noinspection PyTypeChecker
-        parts = [Photoset.from_folder(part_folder, no_migration=True) for part_folder in super().parts]
+        parts = [Photoset.from_folder(part_folder, without_migration=True) for part_folder in super().parts]
 
         return parts
 
@@ -107,6 +104,10 @@ class Photoset(FolderBased, PartsMixin):
         return self.folder[Photoset.__MY_PEOPLE]
 
     @property
+    def drive(self) -> MetaFolder | None:
+        return self.folder["drive"]
+
+    @property
     def results(self) -> List[File]:
         possible_subtrees = [
             self.my_people,
@@ -115,13 +116,14 @@ class Photoset(FolderBased, PartsMixin):
             self.photoclub,
             self.meeting,
             self.kot_i_kit,
+            self.drive,
         ]
 
         possible_subtrees = [i for i in possible_subtrees if i is not None]
 
         results_lists = [sub.flatten() for sub in possible_subtrees]
 
-        result = util.flatten(results_lists)
+        result = util.flat_map(results_lists)
 
         return result
 
@@ -134,11 +136,26 @@ class Photoset(FolderBased, PartsMixin):
 
         return jpegs
 
+    @staticmethod
+    def is_photoset(folder: Folder) -> bool:
+        name_split = folder.name.split(".")
+
+        if len(name_split) != 4:
+            return False
+
+        if not all(i.isdecimal() for i in name_split[:3]):
+            return False
+
+        return True
+
     @classmethod
-    def from_folder(cls, folder: MetaFolder, no_migration: bool = False) -> 'Photoset':
+    def from_folder(cls, folder: MetaFolder, without_migration: bool = False) -> Optional['Photoset']:
+        if not without_migration and not Photoset.is_photoset(folder):
+            return None
+
         photoset = Photoset(folder)
 
-        if not no_migration:
+        if not without_migration:
             from justin.shared.models.photoset_migration import ALL_MIGRATIONS
 
             for migration in ALL_MIGRATIONS:
@@ -147,5 +164,5 @@ class Photoset(FolderBased, PartsMixin):
         return photoset
 
     @classmethod
-    def from_path(cls, path: Path) -> 'Photoset':
+    def from_path(cls, path: Path) -> Optional['Photoset']:
         return Photoset.from_folder(MetaFolder.from_path(path))

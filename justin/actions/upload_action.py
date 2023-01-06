@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import List, Iterator
 
 from justin.actions.event import SetupEventAction
-from justin.actions.named.destinations_aware_action import DestinationsAwareAction
-from justin.actions.named.mixins import EventUtils
+from justin.actions.destinations_aware_action import DestinationsAwareAction
+from justin.actions.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
 from justin.shared.filesystem import File
@@ -19,7 +19,7 @@ from justin.shared.models.exif import parse_exif
 from justin.shared.models.person import Person
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
-from justin_utils.util import stride, flatten
+from justin_utils.util import stride, flat_map
 from pyvko.aspects.albums import Albums
 from pyvko.aspects.comments import CommentModel
 from pyvko.aspects.events import Event
@@ -99,7 +99,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             .map(lambda pt: pt.closed) \
             .not_null() \
             .flat_map(lambda pt: pt.subfolders) \
-            .is_distinct(lambda nm: nm.name)
+            .is_distinct(lambda sf: sf.name)
 
         extra.update({
             UploadAction.__SET_NAME: photoset.name,
@@ -285,6 +285,14 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         for person_folder in my_people_folder.subfolders:
             person = context.my_people.get_by_folder(person_folder.name)
 
+            if not person and person_folder.name.startswith("unknown"):
+                person = Person(
+                    folder=person_folder.name,
+                    name=person_folder.name,
+                    vk_id=1,
+                    source=""
+                )
+
             if not person:
                 print(f"{person_folder.name} needs to be registered.")
 
@@ -300,7 +308,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
             person_metafile = person_folder.get_metafile(PersonMetafile)
 
-            uploaded_images = flatten(c.files for c in person_metafile.comments)
+            uploaded_images = flat_map(c.files for c in person_metafile.comments)
             images_to_upload: List[File] = []
 
             for image in person_folder.files:
@@ -312,7 +320,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             if not images_to_upload:
                 continue
 
-            for chunk_index, images_chunk in enumerate(stride(images_to_upload, 10), 1):
+            for chunk_index, images_chunk in enumerate(stride(images_to_upload, 5), 1):
                 print(f"Uploading {person_folder.name}, chunk {chunk_index}")
 
                 links = []
@@ -331,11 +339,15 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
                     print(" done.", flush=True)
 
+                name_components = [
+                    person.name,
+                ]
+
+                if person.vk_id != 1:
+                    name_components.append(f"https://vk.com/write{person.vk_id}")
+
                 text = "\n\n".join([
-                    ", ".join([
-                        person.name,
-                        f"https://vk.com/write{person.vk_id}"
-                    ]),
+                    ", ".join(name_components),
                     "\n".join(links),
                     f"{len(links)} total.",
                 ])
@@ -496,7 +508,16 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     @staticmethod
     def __get_post_attachments(community: Posts, folder: MetaFolder) -> [Attachment]:
-        vk_photos = [community.upload_photo_to_wall(file.path) for file in folder.files]
+        vk_photos = []
+
+        for file in folder.files:
+            print(f"{file.name}... ", end="", flush=True)
+
+            photo = community.upload_photo_to_wall(file.path)
+
+            vk_photos.append(photo)
+
+            print("done")
 
         return vk_photos
 
