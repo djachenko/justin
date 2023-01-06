@@ -4,6 +4,7 @@ from typing import List
 
 from lazy_object_proxy import Proxy
 
+from justin.cms.google_sheets_database import GoogleSheetsDatabase
 from justin.di.app import DI
 from justin.shared.config import Config
 from justin.shared.context import Context
@@ -47,6 +48,7 @@ def __run(config_path: Path, args: List[str] = None):
         pyvko=pyvko,
         my_people=my_people,
         closed=closed,
+        cms_db=Proxy(lambda: GoogleSheetsDatabase(config[Config.Keys.SPREADSHEET_ID], configs_folder))
     )
 
     context.my_people.read()

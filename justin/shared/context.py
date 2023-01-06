@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from justin.cms.db import Database
 from justin.shared.helpers.gif_maker import GifMaker
 from justin.shared.models.person import PeopleRegistry
 from justin.shared.models.world import World
@@ -23,6 +24,8 @@ class Context:
 
     my_people: PeopleRegistry
     closed: PeopleRegistry
+
+    cms_db: Database
 
     @property
     def default_group(self) -> Group:
