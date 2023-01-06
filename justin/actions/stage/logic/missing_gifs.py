@@ -1,9 +1,9 @@
 from typing import List, Iterable
 
-from justin.actions.named.stage.logic.base import Extractor, Problem
+from justin.actions.stage.logic.base import Extractor, Problem
 from justin.shared.helpers.gif_maker import GifMaker
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.actions.named.stage.logic.base import Selector
+from justin.actions.stage.logic.base import Selector
 from justin.shared.models.photoset import Photoset
 
 

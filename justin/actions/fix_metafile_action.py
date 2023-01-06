@@ -3,8 +3,8 @@ from functools import partial
 from pathlib import Path
 from typing import List, Callable
 
-from justin.actions.named.destinations_aware_action import DestinationsAwareAction
-from justin.actions.named.mixins import EventUtils
+from justin.actions.destinations_aware_action import DestinationsAwareAction
+from justin.actions.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.shared import filesystem
 from justin.shared.helpers.parts import folder_tree_parts, is_part

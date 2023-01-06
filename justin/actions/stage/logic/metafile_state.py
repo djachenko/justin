@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from justin.actions.named.stage.logic.base import Problem, DestinationsAwareCheck
+from justin.actions.stage.logic.base import Problem, DestinationsAwareCheck
 from justin.shared.filesystem import Folder
 from justin.shared.metafile import PostMetafile, GroupMetafile, PostStatus, PersonMetafile, MetaFolder
 

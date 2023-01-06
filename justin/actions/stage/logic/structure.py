@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 
-from justin.actions.named.stage.logic.base import Extractor, Selector
+from justin.actions.stage.logic.base import Extractor, Selector
 from justin.shared import filesystem
 from justin.shared.filesystem import PathBased
 from justin.shared.models.photoset import Photoset

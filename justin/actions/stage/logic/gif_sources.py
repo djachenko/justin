@@ -2,8 +2,8 @@ from typing import List, Iterable
 
 from justin_utils import joins, util
 
-from justin.actions.named.stage.logic.base import Check, Problem
-from justin.actions.named.stage.logic.base import Selector
+from justin.actions.stage.logic.base import Check, Problem
+from justin.actions.stage.logic.base import Selector
 from justin.shared.models.photoset import Photoset
 
 

@@ -6,7 +6,7 @@ from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
-from justin_utils.util import flatten, first
+from justin_utils.util import flat_map, first
 
 Problem = str
 
@@ -41,7 +41,7 @@ class Extractor:
         return self.__selector
 
     def __run_prechecks(self, photoset: Photoset) -> Iterable[Problem]:
-        return flatten(precheck.get_problems(photoset) for precheck in self.__prechecks)
+        return flat_map(precheck.get_problems(photoset) for precheck in self.__prechecks)
 
     def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         selection = self.__selector.select(photoset)
@@ -78,7 +78,7 @@ class Extractor:
         if not filtered:
             return []
 
-        filtered_photoset = Photoset.from_folder(filtered, no_migration=True)
+        filtered_photoset = Photoset.from_folder(filtered, without_migration=True)
 
         prechecks_result = self.__run_prechecks(filtered_photoset)
 

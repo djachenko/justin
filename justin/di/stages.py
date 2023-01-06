@@ -2,9 +2,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List
 
-from justin.actions.named.stage.logic.factories.checks_factory import ChecksFactory
-from justin.actions.named.stage.logic.factories.extractor_factory import ExtractorFactory
-from justin.actions.named.stage.models.stage import Stage, ArchiveStage, DefaultStage
+from justin.actions.stage.stage import Stage, DefaultStage, ArchiveStage
+from justin.di.checks import ChecksFactory
+from justin.di.extractors import ExtractorFactory
 
 
 class StagesFactory:
@@ -36,7 +36,7 @@ class StagesFactory:
             self.scheduled(),
             self.archive(),
         ]
-    
+
     @lru_cache()
     def archive(self) -> Stage:
         return ArchiveStage(
