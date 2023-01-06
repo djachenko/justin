@@ -18,6 +18,8 @@ class Config:
         PHOTOSET_STRUCTURE = "photoset_structure"
         DISK_STRUCTURE = "global_structure"
 
+        SPREADSHEET_ID = "spreadsheet_id"
+
     def __init__(self, json_object: dict) -> None:
         super().__init__()
 

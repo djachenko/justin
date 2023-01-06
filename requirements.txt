@@ -1,7 +1,10 @@
-Pillow
-pyvko
+Pillow~=9.1.0
+pyvko~=0.1.11
 lazy-object-proxy
 justin_utils
 six
 py_linq
 exif
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
