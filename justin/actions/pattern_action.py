@@ -41,6 +41,11 @@ class PatternAction(Action, ABC):
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
         photoset = Photoset.from_path(path)
 
+        if photoset is None:
+            print(f"Path {path} is no photoset.")
+
+            return
+
         self.perform_for_photoset(photoset, args, context, extra.copy())
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:

@@ -3,11 +3,11 @@ import json
 from abc import abstractmethod, ABC
 from collections import defaultdict
 from dataclasses import dataclass, asdict, field
-from datetime import date, datetime
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Type, TypeVar, List, Set
+from uuid import UUID, uuid4
 
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.utils import Json, fromdict
@@ -42,11 +42,14 @@ class RootMetafile(Metafile):
     def type(cls) -> str:
         pass
 
-    @abstractmethod
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        return fromdict(json_object, cls)
+
     def as_json(self) -> Json:
         return super().as_json() | {
             RootMetafile.TYPE_KEY: self.type()
-        }
+        } | asdict(self)
 
 
 class PostStatus(Metafile, Enum):
@@ -68,27 +71,16 @@ DATE_FORMAT_D_M_Y = "%d.%m.%y"
 
 @dataclass
 class PhotosetMetafile(RootMetafile):
-    total_size: int
-    date: date
+    photoset_id: UUID = field(default_factory=lambda: uuid4())
 
     @classmethod
     def type(cls) -> str:
         return "photoset"
 
-    @classmethod
-    def from_json(cls: Type[T], json_object: Json) -> T:
-        new_object: PhotosetMetafile = fromdict(json_object, cls)
-
-        new_object.date = datetime.strptime(json_object["date"], DATE_FORMAT_D_M_Y).date()
-
-        return new_object
-
     def as_json(self) -> Json:
-        asdict_self_ = super().as_json() | asdict(self)
-
-        asdict_self_["date"] = self.date.strftime(DATE_FORMAT_D_M_Y)
-
-        return asdict_self_
+        return super().as_json() | {
+            "photoset_id": self.photoset_id.hex
+        }
 
 
 @dataclass
@@ -193,6 +185,15 @@ class AlbumMetafile(RootMetafile):
             album_id=json_object["album_id"],
             images=json_object["images"]
         )
+
+
+@dataclass
+class LocationMetafile(RootMetafile):
+    location_name: str
+
+    @classmethod
+    def type(cls) -> str:
+        return "location"
 
 
 # endregion metafile classes
@@ -372,6 +373,7 @@ MetafileReadWriter.instance().register(
     PersonMetafile,
     PhotosetMetafile,
     AlbumMetafile,
+    LocationMetafile,
 )
 
 
@@ -443,6 +445,6 @@ class MetaFolder(Folder, MetafileMixin):
 
     def collect_metafile_paths(self) -> List[Path]:
         return super().collect_metafile_paths() + \
-               util.flatten(subtree.collect_metafile_paths() for subtree in self.subfolders)
+            util.flat_map(subtree.collect_metafile_paths() for subtree in self.subfolders)
 
 # endregion metafile mixins

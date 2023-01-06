@@ -1,12 +1,12 @@
 from enum import Enum
 from pathlib import Path
+from typing import List
 
 from lazy_object_proxy import Proxy
 
+from justin.di.app import DI
 from justin.shared.config import Config
 from justin.shared.context import Context
-from justin.shared.factories_container import FactoriesContainer
-from justin.shared.metafile_migrations import *
 from justin.shared.models.person import PeopleRegistry
 from justin.shared.models.world import World
 from justin_utils.cd import cd
@@ -34,15 +34,11 @@ def __run(config_path: Path, args: List[str] = None):
         "closed": closed
     })
 
-    factories_container = FactoriesContainer(config)
-
-    world = Proxy(lambda: World())
-
     def get_lazy_group(url_key):
         return Proxy(lambda: pyvko.get_by_url(config[url_key]))
 
     context = Context(
-        world=world,
+        world=Proxy(lambda: World()),
         justin_group=get_lazy_group(Config.Keys.JUSTIN_URL),
         closed_group=get_lazy_group(Config.Keys.CLOSED_URL),
         meeting_group=get_lazy_group(Config.Keys.MEETING_URL),
@@ -56,12 +52,7 @@ def __run(config_path: Path, args: List[str] = None):
     context.my_people.read()
     context.closed.read()
 
-    #    JsonMigrator.instance().register(
-    #       PostFormatMigration(),
-    #      PostStatusMigration(),
-    # )
-
-    commands = factories_container.commands_factory.commands()
+    commands = DI(config).commands_factory.commands()
 
     try:
         App(commands, context).run(args)
@@ -100,7 +91,7 @@ class Commands(str, Enum):
     SPLIT = "split"
     UPLOAD = "upload"
     WEB_SYNC = "web_sync"
-    REGISTER_PEOPLE = "register_people"
+    REGISTER_PEOPLE = "reg_people"
 
 
 class Locations(str, Enum):
@@ -126,9 +117,9 @@ class Stages(str, Enum):
 
 def main():
     current_location = Locations.MAC_OS_HOME
-    current_stage = Stages.FILTER
-    current_command = Commands.UPLOAD
-    current_pattern = "*litsky*"
+    current_stage = Stages.PUBLISHED
+    current_command = Commands.ARCHIVE
+    current_pattern = "*"
 
     commands = {
         0: f"{current_command} {current_pattern}",
@@ -144,12 +135,22 @@ def main():
         10: "setup_event https://vk.com/event206314876 24.06.22 22.06.24.bakina_prom --parent https://vk.com/mothilda",
         11: "upload -h",
         12: "people_fix -a",
+        13: "setup_event --url https://vk.com/event206315284 --folder .",
+        14: "cms -ig jvstin",
+        15: "cms -ip 22.05.14.self_maevka",
+        16: "cms -il .",
+        17: "group",
     }
 
-    with cd(Path(f"{current_location}photos/stages/{current_stage}")):
+    locations = {
+        0: f"{current_location}photos/stages/{current_stage}",
+        1: f"{current_location}photos"
+    }
+
+    with cd(Path(locations[1])):
         __run(
             Path(__file__).parent.parent,
-            commands[12].split()
+            commands[14].split()
         )
 
 

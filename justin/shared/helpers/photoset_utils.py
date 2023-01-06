@@ -33,7 +33,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
 
     jpegs_join = joins.left(
         stems,
-        util.flatten(jpegs_lists),
+        util.flat_map(jpegs_lists),
         lambda s, f: s == f.stem()
     )
 
@@ -48,7 +48,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
     __validate_join(sources_join, "sources")
 
     jpegs_to_move = [jpeg for _, jpeg in jpegs_join]
-    sources_contents_to_move = util.flatten(source.files() for _, source in sources_join)
+    sources_contents_to_move = util.flat_map(source.files() for _, source in sources_join)
 
     jpegs_set = set(jpegs_to_move)
 
@@ -63,7 +63,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
 
         return result
 
-    metafile_paths = util.flatten(collect_metafiles(tree) for tree in jpeg_trees)
+    metafile_paths = util.flat_map(collect_metafiles(tree) for tree in jpeg_trees)
     metafiles = [File(path) for path in metafile_paths if path.exists()]
 
     files_to_move = jpegs_to_move + sources_contents_to_move + metafiles

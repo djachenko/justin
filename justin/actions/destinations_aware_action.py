@@ -11,6 +11,7 @@ class DestinationsAwareAction(PatternAction):
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         destinations = [
             (part.closed, self.handle_closed),
+            (part.drive, self.handle_drive),
             (part.justin, self.handle_justin),
             (part.kot_i_kit, self.handle_kot_i_kit),
             (part.meeting, self.handle_meeting),
@@ -26,6 +27,9 @@ class DestinationsAwareAction(PatternAction):
 
     def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(closed_folder, context, extra)
+
+    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
+        self.handle_common(drive_folder, context, extra)
 
     def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
         self.handle_common(justin_folder, context, extra)
