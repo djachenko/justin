@@ -113,6 +113,7 @@ class RenamePeopleMigration(RenameFoldersMigration):
         people_mapping = [
             ("voloshina", "voloshina_nastya",),
             ("dementyeva", "dementyeva_tanya",),
+            ("kravchenko", "kravchenko_nastya",),
         ]
 
         return [(root + src, root + dst) for src, dst in people_mapping]
