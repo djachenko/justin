@@ -9,4 +9,4 @@ class EverythingIsPublishedSelector(Selector):
         if photoset.justin is None:
             return []
 
-        return [file.stem() for file in photoset.justin.files]
+        return [file.stem for file in photoset.justin.files]

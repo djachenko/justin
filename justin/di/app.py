@@ -5,6 +5,7 @@ from justin.di.commands import CommandFactory
 from justin.di.extractors import ExtractorFactory
 from justin.di.selectors import SelectorFactory
 from justin.di.stages import StagesFactory
+from justin.shared.helpers.checks_runner import ChecksRunner
 
 
 class DI:
@@ -27,7 +28,8 @@ class DI:
 
         actions_factory = ActionFactory(
             stages_factory,
-            checks_factory
+            checks_factory,
+            ChecksRunner.instance()
         )
 
         self.__commands_factory = CommandFactory(stages_factory, actions_factory)

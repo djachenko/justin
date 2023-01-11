@@ -12,7 +12,6 @@ class ProgressExtractor(Extractor):
     def __init__(self, prechecks: List[AbstractCheck]) -> None:
         # noinspection PyTypeChecker
         super().__init__(
-            name="progress",
             selector=None,
             filter_folder="progress",
             prechecks=prechecks
@@ -33,7 +32,7 @@ class AllSourcesHaveResultsSelector(Selector):
         results = photoset.results
         sources = photoset.sources
 
-        join = joins.left(sources, results, lambda s, r: s.stem() == r.stem())
+        join = joins.left(sources, results, lambda s, r: s.stem == r.stem)
 
         sources_without_results = [s.name for s, r in join if r is None]
 

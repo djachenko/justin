@@ -14,9 +14,9 @@ class UnselectedSelector(Selector):
         join = joins.left(
             results,
             selection,
-            lambda x, y: x.stem() == y.stem()
+            lambda x, y: x.stem == y.stem
         )
 
-        names_of_unselected_jpegs = [i[0].stem() for i in join if i[1] is None]
+        names_of_unselected_jpegs = [i[0].stem for i in join if i[1] is None]
 
         return names_of_unselected_jpegs

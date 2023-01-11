@@ -34,7 +34,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
     jpegs_join = joins.left(
         stems,
         util.flat_map(jpegs_lists),
-        lambda s, f: s == f.stem()
+        lambda s, f: s == f.stem
     )
 
     __validate_join(jpegs_join, "jpegs")
@@ -42,7 +42,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
     sources_join = list(joins.left(
         stems,
         photoset.sources,
-        lambda s, f: s == f.stem()
+        lambda s, f: s == f.stem
     ))
 
     __validate_join(sources_join, "sources")

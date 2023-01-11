@@ -137,7 +137,7 @@ class Photoset(FolderBased, PartsMixin):
         return jpegs
 
     @staticmethod
-    def is_photoset(folder: Folder) -> bool:
+    def is_photoset(folder: Path) -> bool:
         name_split = folder.name.split(".")
 
         if len(name_split) != 4:
@@ -150,7 +150,7 @@ class Photoset(FolderBased, PartsMixin):
 
     @classmethod
     def from_folder(cls, folder: MetaFolder, without_migration: bool = False) -> Optional['Photoset']:
-        if not without_migration and not Photoset.is_photoset(folder):
+        if not without_migration and not Photoset.is_photoset(folder.path):
             return None
 
         photoset = Photoset(folder)

@@ -3,6 +3,7 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List, Dict, Any
 
+from justin.shared.metafile import MetaFolder
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.cli import Parameter, Action, Context
@@ -39,7 +40,10 @@ class PatternAction(Action, ABC):
             self.perform_for_path(path, args, context, extra.copy())
 
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        photoset = Photoset.from_path(path)
+        self.perform_for_folder(MetaFolder.from_path(path), args, context, extra.copy())
+
+    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
+        photoset = Photoset.from_folder(folder)
 
         if photoset is None:
             print(f"Path {path} is no photoset.")

@@ -113,10 +113,6 @@ class StagesFactory:
             ],
             outcoming_checks=[
                 self.__checks_factory.structure(),
-            ],
-            preparation_hooks=[
-                # todo: instagram
-                # sandbox
             ]
         )
 

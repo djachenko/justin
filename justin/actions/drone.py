@@ -1,9 +1,10 @@
 from argparse import Namespace
 from collections import defaultdict
-from pathlib import Path
+from functools import lru_cache
 
 from justin.actions.pattern_action import Extra
 from justin.actions.pattern_action import PatternAction
+from justin.shared.filesystem import Folder
 from justin_utils.cli import Context
 
 
@@ -17,38 +18,41 @@ class PanoExtractAction(PatternAction):
         5: [6, ]
     }
 
-    def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        if len([item for item in path.iterdir() if item.is_file()]) != 35:
-            return
-
+    @property
+    @lru_cache
+    def reverse_mapping(self) -> dict:
         reverse_mapping = {}
 
         for row, row_members in PanoExtractAction.mapping.items():
             for member in row_members:
                 reverse_mapping[member] = row
 
-        for index, file in enumerate(filter(lambda x: x.is_file(), sorted(path.iterdir())), start=1):
-            file_row = reverse_mapping[index]
+        return reverse_mapping
 
-            subfolder = path / f"row_{file_row}"
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+        if len(folder.files) != 35:
+            return
 
-            subfolder.mkdir(exist_ok=True)
+        for index, file in enumerate(folder.files, start=1):
+            file_row = PanoExtractAction.reverse_mapping[index]
 
-            file.rename(subfolder / file.name)
+            subfolder = folder / f"row_{file_row}"
+
+            subfolder.mkdir()
+
+            file.move(subfolder.path)
 
 
 class JpgDngDuplicatesAction(PatternAction):
-    def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
         buckets = defaultdict(lambda: [])
 
-        for item in path.iterdir():
-            assert not item.is_dir()
-
+        for item in folder.files:
             buckets[item.stem].append(item.suffix.lower())
 
         for stem, bucket in buckets.items():
             if ".dng" in bucket and ".jpg" in bucket:
-                jpg_path = (path / stem).with_suffix(".jpg")
+                jpg_path = (folder.path / stem).with_suffix(".jpg")
 
                 jpg_path.unlink()
 
@@ -60,11 +64,8 @@ class HandleDroneAction(PatternAction):
         self.__pano_action = pano_action
         self.__duplicate_action = duplicate_action
 
-    def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        self.__duplicate_action.perform_for_path(path / "100MEDIA", args, context, extra)
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+        self.__duplicate_action.perform_for_folder(folder / "100MEDIA", args, context, extra)
 
-        for pano_folder in (path / "PANORAMA").iterdir():
-            if not pano_folder.is_dir():
-                continue
-
-            self.__pano_action.perform_for_path(pano_folder, args, context, extra)
+        for pano_folder in (folder / "PANORAMA").subfolders:
+            self.__pano_action.perform_for_folder(pano_folder, args, context, extra)

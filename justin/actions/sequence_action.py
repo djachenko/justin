@@ -1,5 +1,4 @@
 from argparse import Namespace
-from pathlib import Path
 from typing import List
 
 from justin.actions.check_ratios_action import PatternAction
@@ -17,13 +16,11 @@ class SequenceAction(PatternAction):
             Parameter(name="start", default=0, type=int),
         ]
 
-    def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
         prefix = args.prefix
         start = args.start
 
-        tree = Folder.from_path(path)
-
-        files = exif_sorted(tree.files)
+        files = exif_sorted(folder.files)
         files = [file.path for file in files]
 
         # files.sort(key=lambda x: x.name)

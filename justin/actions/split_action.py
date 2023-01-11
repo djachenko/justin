@@ -52,8 +52,8 @@ class SplitAction(PatternAction):
         chosen_base = split_files
         not_chosen_files = [result for result in part.results if result not in chosen_base]
 
-        chosen_stems = util.distinct([file.stem() for file in chosen_base])
-        not_chosen_stems = util.distinct(file.stem() for file in not_chosen_files)
+        chosen_stems = util.distinct([file.stem for file in chosen_base])
+        not_chosen_stems = util.distinct(file.stem for file in not_chosen_files)
 
         stems_to_copy = []
         stems_to_move = []
