@@ -9,7 +9,7 @@ from justin.di.app import DI
 from justin.shared.config import Config
 from justin.shared.context import Context
 from justin.shared.models.person import PeopleRegistry
-from justin.shared.models.world import World
+from justin.shared.world import World
 from justin_utils.cd import cd
 from justin_utils.cli import App
 from pyvko.config.config import Config as PyvkoConfig
