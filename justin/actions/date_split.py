@@ -1,6 +1,5 @@
 from argparse import Namespace
 from datetime import timedelta
-from pathlib import Path
 from typing import List
 
 from justin.actions.pattern_action import PatternAction, Extra
@@ -17,8 +16,8 @@ class DateSplitAction(PatternAction):
             Parameter(flags=["-e", "--epsilon"], default=3, type=lambda x: timedelta(hours=int(x)))
         ]
 
-    def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        sources = parse_sources(Folder(path).files)
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+        sources = parse_sources(folder.files)
 
         if not sources:
             return

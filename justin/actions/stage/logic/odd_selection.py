@@ -18,7 +18,7 @@ class OddSelectionSelector(Selector):
         join = joins.left(
             selection,
             results,
-            lambda x, y: x.stem() == y.stem()
+            lambda x, y: x.stem == y.stem
         )
 
-        return [i[0].stem() for i in join if i[1] is None]
+        return [i[0].stem for i in join if i[1] is None]

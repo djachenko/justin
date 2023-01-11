@@ -25,6 +25,7 @@ class Source(Movable):
     def exif(self) -> Exif:
         pass
 
+    @property
     def stem(self) -> str:
         return self.name
 
@@ -71,7 +72,7 @@ class InternalMetadataSource(Source):
 
     @property
     def name(self):
-        return self.__jpeg.stem()
+        return self.__jpeg.stem
 
     def files(self) -> List[File]:
         return [self.__jpeg]
@@ -89,7 +90,7 @@ class ExternalMetadataSource(Source):
         assert raw.extension != ".jpg"
 
         if metadata is not None:
-            assert raw.stem() == metadata.stem()
+            assert raw.stem == metadata.stem
 
         self.raw = raw
         self.metadata = metadata
@@ -103,7 +104,7 @@ class ExternalMetadataSource(Source):
 
     @property
     def name(self):
-        return self.raw.stem()
+        return self.raw.stem
 
     @property
     @lru_cache()
@@ -130,7 +131,7 @@ def parse_sources(seq: Iterable[File]) -> List[Source]:
     join = joins.left(
         split[0],
         split[1],
-        lambda raw, xmp: raw.stem() == xmp.stem()
+        lambda raw, xmp: raw.stem == xmp.stem
     )
 
     raws = [ExternalMetadataSource(raw, meta) for raw, meta in join]

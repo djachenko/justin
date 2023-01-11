@@ -309,6 +309,7 @@ class File(PathBased):
     def mtime(self):
         return self.path.stat().st_mtime
 
+    @property
     def stem(self) -> str:
         name = self.path.stem
 
@@ -322,6 +323,10 @@ class File(PathBased):
                 name = name_and_modifier[0]
 
         return name
+    
+    @property
+    def suffix(self) -> str:
+        return self.path.suffix
 
     @property
     def extension(self) -> str:
@@ -510,6 +515,12 @@ class Folder(PathBased):
 
     def __eq__(self, other: 'Folder') -> bool:
         return isinstance(other, type(self)) and other.__key == self.__key
+    
+    def __truediv__(self, other) -> 'Folder':
+        return type(self).from_path(self.path / other)
+    
+    def mkdir(self) -> None:
+        self.path.mkdir(parents=True, exist_ok=True)
 
     @classmethod
     def from_path(cls, path: Path) -> 'Folder':

@@ -35,10 +35,6 @@ class ChecksFactory:
         )
 
     @lru_cache()
-    def metadata(self) -> Check:
-        return MetadataCheck(self.__selector_factory.metadata())
-
-    @lru_cache()
     def missing_gifs(self) -> Check:
         return Check(
             name="missing gifs check",
@@ -48,20 +44,24 @@ class ChecksFactory:
         )
 
     @lru_cache()
-    def gif_sources(self) -> Check:
-        return GifSourcesCheck(
-            name="gif sources check",
-            selector=self.__selector_factory.gif_sources(),
-            message="Not all your sources have gif pair. This ok?"
-        )
-
-    @lru_cache()
     def structure(self) -> Check:
         return Check(
             name="structure check",
             selector=self.__selector_factory.structure(),
             hook=self.__extractor_factory.structure(),
             message="You have some unexpected structures. Extract?"
+        )
+
+    @lru_cache()
+    def metadata(self) -> Check:
+        return MetadataCheck(self.__selector_factory.metadata())
+
+    @lru_cache()
+    def gif_sources(self) -> Check:
+        return GifSourcesCheck(
+            name="gif sources check",
+            selector=self.__selector_factory.gif_sources(),
+            message="Not all your sources have gif pair. This ok?"
         )
 
     @lru_cache()

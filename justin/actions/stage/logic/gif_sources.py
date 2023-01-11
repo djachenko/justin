@@ -18,10 +18,10 @@ class GifSourcesSelector(Selector):
         join = joins.right(
             gif_sources,
             sources,
-            lambda gif, source: gif.stem() == source.stem()
+            lambda gif, source: gif.stem == source.stem
         )
 
-        nongifed_sources_names = [source.stem() for gif, source in join if gif is None]
+        nongifed_sources_names = [source.stem for gif, source in join if gif is None]
 
         return nongifed_sources_names
 

@@ -21,15 +21,18 @@ from justin.actions.sequence_action import SequenceAction
 from justin.cms.cms import CMSAction
 from justin.di.checks import ChecksFactory
 from justin.di.stages import StagesFactory
+from justin.shared.helpers.checks_runner import ChecksRunner
 from justin_utils.cli import Action
 
 
 class ActionFactory:
-    def __init__(self, stages_factory: StagesFactory, checks_factory: ChecksFactory) -> None:
+    def __init__(self, stages_factory: StagesFactory, checks_factory: ChecksFactory, checks_runner: ChecksRunner) \
+            -> None:
         super().__init__()
 
         self.__stages_factory = stages_factory
         self.__checks_factory = checks_factory
+        self.__runner = checks_runner
 
     @lru_cache()
     def stage_action(self) -> Action:
@@ -38,7 +41,8 @@ class ActionFactory:
     @lru_cache()
     def move_action(self) -> Action:
         return MoveAction(
-            prechecks=[self.__checks_factory.metadata()]
+            prechecks=[self.__checks_factory.metadata()],
+            runner=self.__runner
         )
 
     @lru_cache()

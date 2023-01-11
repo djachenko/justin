@@ -1,11 +1,11 @@
 from argparse import Namespace
 from collections import defaultdict
-from pathlib import Path
 from typing import List, Tuple
 
 from PIL import Image
 
 from justin.actions.pattern_action import PatternAction, Extra
+from justin.shared.filesystem import Folder, File
 from justin_utils.cli import Context, Parameter
 
 
@@ -20,24 +20,24 @@ class CheckRatiosAction(PatternAction):
             Parameter(flags=["-p", "--precision"], type=int, default=CheckRatiosAction.__DEFAULT_PRECISION),
         ]
 
-    def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
         ratios = defaultdict(lambda: [])
 
         precision = args.precision
 
-        for img_path in sorted(filter(lambda x: x.is_file(), path.iterdir())):
-            with Image.open(img_path) as image:
+        for img in sorted(folder.files):
+            with Image.open(img.path) as image:
                 ratio = image.width / image.height
 
                 ratio = round(ratio, precision)
 
-                ratios[ratio].append(img_path)
+                ratios[ratio].append(img)
 
         if args.verbose:
             for k, v in ratios.items():
                 print(k, len(v), v)
         else:
-            sorted_by_count: List[Tuple[float, List[Path]]] = sorted(
+            sorted_by_count: List[Tuple[float, List[File]]] = sorted(
                 ratios.items(),
                 key=lambda x: len(x[1]),
                 reverse=True
@@ -56,11 +56,11 @@ class CheckRatiosAction(PatternAction):
 
             if args.extract:
                 for ratio, image_list in minority_ratios:
-                    ratio_subfolder = path / f"{ratio}"
+                    ratio_subfolder = folder / f"{ratio}"
 
-                    ratio_subfolder.mkdir(exist_ok=True)
+                    ratio_subfolder.mkdir()
 
                     print(image_list)
 
                     for image in image_list:
-                        image.rename(ratio_subfolder / image.name)
+                        image.rename(ratio_subfolder.path / image.name)

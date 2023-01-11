@@ -24,14 +24,12 @@ class Selector:
 
 
 class Extractor:
-    def __init__(self, name: str, selector: Selector, filter_folder: str,
-                 prechecks: List[AbstractCheck] = None) -> None:
+    def __init__(self, selector: Selector, filter_folder: str, prechecks: List[AbstractCheck] = None) -> None:
         super().__init__()
 
         if not prechecks:
             prechecks = []
 
-        self.__name = name
         self.__selector = selector
         self.__filter_folder = filter_folder
         self.__prechecks = prechecks
@@ -68,15 +66,15 @@ class Extractor:
         return []
 
     def backwards(self, photoset: Photoset) -> Iterable[Problem]:
-        prechecks_result = self.__run_prechecks(photoset)
-
-        if prechecks_result:
-            return prechecks_result
-
         filtered = photoset.folder[self.__filter_folder]
 
         if not filtered:
             return []
+
+        prechecks_result = self.__run_prechecks(photoset)
+
+        if prechecks_result:
+            return prechecks_result
 
         filtered_photoset = Photoset.from_folder(filtered, without_migration=True)
 
