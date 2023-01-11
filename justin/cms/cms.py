@@ -11,7 +11,7 @@ from justin.cms.db import DBEntry, Database
 from justin.shared.context import Context
 from justin.shared.metafile import PostMetafile, RootMetafile, GroupMetafile, MetaFolder, PhotosetMetafile
 from justin.shared.models.photoset import Photoset
-from justin.shared.models.world import World
+from justin.shared.world import World
 from justin_utils.cli import Action
 from pyvko.aspects.posts import Post, Posts
 from pyvko.attachment.photo import Photo
@@ -34,7 +34,7 @@ class PhotosetEntry(DBEntry):
     photoset_name: str
     photoset_date: str
     photoset_size: int
-    photoset_location: str  # maybe location
+    photoset_location: str  # location is unable to restore
     photoset_path: str
     post_ids: List[Tuple[int, int]]  # (group, post)
     description: str = None
@@ -44,9 +44,8 @@ class PhotosetEntry(DBEntry):
         photoset_name = photoset.name
         photoset_size = photoset.folder.total_size
 
-        location_path = world.location_of_path(photoset.path).path
-        photoset_location = location_path.as_posix()
-        photoset_path = photoset.path.relative_to(location_path).as_posix()
+        photoset_location = world.location_of_path(photoset.path)
+        photoset_path = photoset.path.relative_to(photoset_location.path).as_posix()
 
         def collect(folder: MetaFolder, meta_type: Type[RootMetafile]) -> List[MetaFolder]:
             if folder.has_metafile(meta_type):
@@ -97,7 +96,7 @@ class PhotosetEntry(DBEntry):
             photoset_name=photoset_name,
             photoset_date=photoset_date.strftime("%d.%m.%Y"),
             photoset_size=photoset_size,
-            photoset_location=photoset_location,
+            photoset_location=photoset_location.name,
             photoset_path=photoset_path,
             post_ids=post_ids
         )
@@ -270,11 +269,17 @@ class CMSAction(Action):
 
     @staticmethod
     def index_photoset(photoset_folder: MetaFolder, world: World, db: Database):
+        new_entry = CMSAction.__get_photoset_entry(photoset_folder, world)
+
+        db.update(new_entry)
+
+    @staticmethod
+    def __get_photoset_entry(photoset_folder, world):
         photoset = Photoset.from_folder(photoset_folder)
 
         new_entry = PhotosetEntry.from_photoset(photoset, world)
 
-        db.update(new_entry)
+        return new_entry
 
     @staticmethod
     def index_location(location: MetaFolder, world: World, db: Database) -> None:
@@ -290,5 +295,6 @@ class CMSAction(Action):
 
         wide(location, wide_func)
 
-        for photoset in sets:
-            CMSAction.index_photoset(photoset, world, db)
+        entries = [CMSAction.__get_photoset_entry(photoset, world) for photoset in sets]
+
+        db.update(*entries)
