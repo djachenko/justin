@@ -190,6 +190,7 @@ class AlbumMetafile(RootMetafile):
 @dataclass
 class LocationMetafile(RootMetafile):
     location_name: str
+    location_description: str
 
     @classmethod
     def type(cls) -> str:

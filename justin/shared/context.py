@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from justin.cms.db import Database
 from justin.shared.helpers.gif_maker import GifMaker
 from justin.shared.models.person import PeopleRegistry
-from justin.shared.models.world import World
+from justin.shared.world import World
 from pyvko.aspects.groups import Group
 from pyvko.aspects.posts import Posts
 from pyvko.pyvko_main import Pyvko
