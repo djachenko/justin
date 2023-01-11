@@ -1,9 +1,10 @@
 from abc import abstractmethod
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Iterable
 
-from justin.actions.named.stage.logic.base import Check, Problem
-from justin.actions.named.stage.logic.base import Extractor
+from justin.actions.stage.logic.base import Check, Problem
+from justin.actions.stage.logic.base import Extractor
 from justin.shared.models.photoset import Photoset
 
 
@@ -83,25 +84,43 @@ class DefaultStage(Stage):
 class ArchiveStage(Stage):
     def get_new_parent(self, photoset: Photoset, root: Path) -> Path:
         destinations = [
-            "justin",
-            "photoclub",
             "closed",
-            "meeting",
+            "drive",
+            "justin",
             "kot_i_kit",
+            "meeting",
             "my_people",
+            "photoclub",
         ]
 
-        existing_destinations = [d for d in destinations if d in photoset.folder]
+        files_mapping = defaultdict(lambda: [])
 
-        largest_destination = max(existing_destinations, key=lambda x: len(photoset.folder[x].flatten()))
+        for part in photoset.parts:
+            for destination in destinations:
+                if destination not in part.folder:
+                    continue
 
-        largest_subtree = photoset.folder[largest_destination]
+                files_mapping[destination] += part.folder[destination].flatten()
 
-        if largest_destination in ["justin", "closed"]:
-            largest_subtree = max(largest_subtree.subfolders, key=lambda t: len(t.flatten()))
+        # existing_destinations = [d for d in destinations if d in photoset.folder]
+        #
+        # largest_destination = max(existing_destinations, key=lambda x: len(photoset.folder[x].flatten()))
 
-        relative_path = largest_subtree.path.relative_to(photoset.path)
+        largest_destination = max(files_mapping.keys(), key=lambda x: len(files_mapping[x]))
+        new_path = root / largest_destination
 
-        new_path = root / relative_path
+        if largest_destination in ["justin", "closed", "drive", ]:
+            files_mapping = defaultdict(lambda: [])
+
+            for part in photoset.parts:
+                if largest_destination not in part.folder:
+                    continue
+
+                for category in part.folder[largest_destination].subfolders:
+                    files_mapping[category.name] += category.flatten()
+
+            largest_category = max(files_mapping.keys(), key=lambda x: len(files_mapping[x]))
+
+            new_path /= largest_category
 
         return new_path
