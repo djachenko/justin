@@ -8,7 +8,6 @@ from justin.actions.stage.logic.base import Check
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.checks_runner import ChecksRunner
-from justin.shared.models.photoset import Photoset
 from justin_utils import util
 
 
@@ -54,19 +53,6 @@ class MoveAction(PatternAction):
             print(f"{path} is already there.")
 
             return
-
-        photoset = Photoset.from_path(path)
-
-        if photoset is not None:
-            issues = self.__runner.run(photoset, self.__prechecks)
-
-            if issues:
-                print(f"Unable to move {photoset.name}:")
-
-                for issue in issues:
-                    print(issue)
-
-                return
 
         new_path = selected_location / path.parent.relative_to(path_location.path)
 

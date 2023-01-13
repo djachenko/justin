@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Type, Tuple, TypeVar, Any, Callable, Iterable, ClassVar, Dict
+from typing import List, Type, Tuple, TypeVar, Any, Iterable, ClassVar, Dict
 from uuid import UUID
 
 from justin.cms.db import DBEntry, Database
@@ -88,7 +88,7 @@ class PhotosetEntry(DBEntry):
             photoset_name=photoset_name,
             photoset_date=photoset_date.strftime("%d.%m.%Y"),
             photoset_size=photoset_size,
-            photoset_location=photoset_location.name,
+            photoset_location=f"{photoset_location.name} ({photoset_location.description})",
             photoset_path=photoset_path,
             post_ids=post_ids
         )
@@ -223,19 +223,29 @@ class CMSAction(Action):
         meg_adder = subparser.add_mutually_exclusive_group(required=True)
 
         meg_adder.add_argument("--index_group", "-ig")
-        meg_adder.add_argument("--index_photoset", "-ip", type=lambda x: MetaFolder.from_path(Path(x)))
-        meg_adder.add_argument("--index_location", "-il", type=lambda x: MetaFolder.from_path(Path(x)))
+        meg_adder.add_argument("--index_photoset", "-ip",
+                               type=lambda x: MetaFolder.from_path(Path(x)),
+                               nargs="?",
+                               const=Path.cwd().as_posix()
+                               )
+        meg_adder.add_argument("--index_location", "-il",
+                               type=lambda x: MetaFolder.from_path(Path(x)),
+                               nargs="?",
+                               const=Path.cwd().as_posix()
+                               )
 
     def perform(self, args: Namespace, context: Context) -> None:
         db = context.cms_db
+
+        print(args)
 
         if args.index_group is not None:
             group = context.pyvko.get(args.index_group)
 
             self.index_group(group, db)
-        elif args.index_photoset is not None:
+        elif args.index_photoset:
             self.index_photoset(args.index_photoset, context.world, db)
-        elif args.index_location is not None:
+        elif args.index_location:
             self.index_location(args.index_location, context.world, db)
 
     @staticmethod
@@ -275,6 +285,8 @@ class CMSAction(Action):
 
     @staticmethod
     def index_location(location: MetaFolder, world: World, db: Database) -> None:
+        print(location)
+
         sets = []
 
         def wide_func(candidate: MetaFolder) -> Iterable[MetaFolder]:

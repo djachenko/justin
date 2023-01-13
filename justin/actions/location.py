@@ -41,7 +41,7 @@ class LocationAction(PatternAction):
 
                 return
 
-        queue = [folder, 0]
+        queue = [(folder, 0)]
 
         while queue:
             candidate, depth = queue.pop(0)
