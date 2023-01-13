@@ -515,12 +515,19 @@ class Folder(PathBased):
 
     def __eq__(self, other: 'Folder') -> bool:
         return isinstance(other, type(self)) and other.__key == self.__key
-    
+
+    def __type_copy(self, path: Path) -> 'Folder':
+        return type(self).from_path(path)
+
     def __truediv__(self, other) -> 'Folder':
-        return type(self).from_path(self.path / other)
+        return self.__type_copy(self.path / other)
     
     def mkdir(self) -> None:
         self.path.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def parent(self) -> 'Folder':
+        return self.__type_copy(self.path.parent)
 
     @classmethod
     def from_path(cls, path: Path) -> 'Folder':

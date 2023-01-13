@@ -121,34 +121,8 @@ class RenamePeopleMigration(RenameFoldersMigration):
 
 class ParseMetafileMigration(PhotosetMigration):
     def migrate(self, photoset: Photoset) -> None:
-        # noinspection PyTypeChecker
-        metafile = photoset.folder.get_metafile(PhotosetMetafile) or PhotosetMetafile(
-            total_size=None,
-            date=None
-        )
-
-        if metafile.date is None:
-            year, month, day, rest = photoset.name.split(".", maxsplit=3)
-
-            if not (year.isdecimal() and month.isdecimal() and day.isdecimal()):
-                assert False, "date not parceable"
-
-            year = int(year)
-            month = int(month)
-            day = int(day)
-
-            date_ = date(
-                year=year,
-                month=month,
-                day=day
-            )
-
-            metafile.date = date_
-
-        if metafile.total_size is None:
-            metafile.total_size = sum(file.size for file in photoset.folder.flatten())
-
-        photoset.folder.save_metafile(metafile)
+        if not photoset.folder.has_metafile(PhotosetMetafile):
+            photoset.folder.save_metafile(PhotosetMetafile())
 
 
 ALL_MIGRATIONS = [

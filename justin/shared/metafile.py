@@ -108,21 +108,19 @@ class PostMetafile(RootMetafile):
 
 
 @dataclass
+class NoPostMetafile(RootMetafile):
+    @classmethod
+    def type(cls) -> str:
+        return "no_post"
+
+
+@dataclass
 class GroupMetafile(RootMetafile):
     group_id: int
 
     @classmethod
     def type(cls) -> str:
         return "group"
-
-    @classmethod
-    def from_json(cls: Type[T], json_object: Json) -> T:
-        return GroupMetafile(
-            group_id=json_object["group_id"]
-        )
-
-    def as_json(self) -> Json:
-        return super().as_json() | asdict(self)
 
 
 @dataclass
@@ -375,6 +373,7 @@ MetafileReadWriter.instance().register(
     PhotosetMetafile,
     AlbumMetafile,
     LocationMetafile,
+    NoPostMetafile,
 )
 
 

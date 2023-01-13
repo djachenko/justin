@@ -15,7 +15,7 @@ class EventUtils:
         if group_metafile is not None:
             return str(group_metafile.group_id)
 
-        print(f"Which event contents of {posts_folder.path.relative_to(root_path)} belong to?")
+        print(f"Which community contents of {posts_folder.path.relative_to(root_path)} belong to?")
 
         while True:
             answer = input(

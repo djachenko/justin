@@ -13,19 +13,11 @@ from justin.shared.metafile import PostMetafile, RootMetafile, GroupMetafile, Me
 from justin.shared.models.photoset import Photoset
 from justin.shared.world import World
 from justin_utils.cli import Action
+from justin_utils.util import wide
 from pyvko.aspects.posts import Post, Posts
 from pyvko.attachment.photo import Photo
 
 T = TypeVar("T", bound="DBEntry")
-
-V = TypeVar("V")
-
-
-def wide(start: V, provider: Callable[[V], Iterable[V]]) -> None:
-    roots = [start]
-
-    while roots:
-        roots += provider(roots.pop(0))
 
 
 @dataclass
