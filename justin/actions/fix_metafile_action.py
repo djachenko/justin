@@ -7,9 +7,12 @@ from justin.actions.destinations_aware_action import DestinationsAwareAction
 from justin.actions.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.shared import filesystem
+from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts, is_part
-from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile, MetaFolder
+from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile, MetaFolder, NoPostMetafile
 from justin.shared.models.photoset import Photoset
+from justin_utils import util
+from justin_utils.util import wide
 from pyvko.aspects.events import Events
 from pyvko.aspects.posts import Posts
 
@@ -49,20 +52,23 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
 
         super().perform_for_part(part, args, context, extra)
 
+    def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
+        # noinspection PyTypeChecker
+        self.__fix_categories(
+            closed_folder.subfolders,
+            partial(self.__get_event, context.closed_group),
+            extra
+        )
+
+    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
+        pass
+
     def handle_justin(self, justin_folder: MetaFolder, context: Context, extra: Extra) -> None:
         self.__fix_group(justin_folder, context.justin_group)
 
         self.__fix_categories(
             justin_folder.subfolders,
             lambda a, b: context.justin_group,
-            extra
-        )
-
-    def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
-        # noinspection PyTypeChecker
-        self.__fix_categories(
-            closed_folder.subfolders,
-            partial(self.__get_event, context.closed_group),
             extra
         )
 
@@ -94,10 +100,57 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
         pass
 
     def handle_timelapse(self, timelapse_folder: MetaFolder, context: Context, extra: Extra) -> None:
+        if timelapse_folder.has_metafile(NoPostMetafile):
+            return
+
+        if timelapse_folder.has_metafile(GroupMetafile):
+            group_metafile = timelapse_folder.get_metafile(GroupMetafile)
+
+            group_id = group_metafile.group_id
+
+            group = context.pyvko.get(str(group_id))
+        else:
+            root = timelapse_folder.parent
+            group_ids = []
+
+            def collect_group_ids(folder: MetaFolder) -> List[MetaFolder]:
+                if folder.has_metafile(GroupMetafile):
+                    group_ids.append(folder.get_metafile(GroupMetafile).group_id)
+
+                    return []
+                else:
+                    return folder.subfolders
+
+            wide(root, collect_group_ids)
+
+            communities = [context.pyvko.get(group_id) for group_id in group_ids]
+
+            names_mapping = {community.name: community for community in communities}
+            other = "Other community"
+            no_post = "Wasn't published"
+
+            name = util.ask_for_choice("Where was timelapse published?", list(names_mapping.keys()) + [
+                other,
+                no_post,
+            ])
+
+            if name == other:
+                group_id = input("Enter community id: ")
+
+                group = context.pyvko.get(group_id)
+            elif name == no_post:
+                timelapse_folder.save_metafile(NoPostMetafile())
+                return
+
+            else:
+                group = names_mapping[name]
+
+        self.__fix_group(timelapse_folder, group)
+
         self.__fix_posts(
             posts_folder=timelapse_folder,
             root=extra[FixMetafileAction.__ROOT_KEY],
-            community=context.justin_group
+            community=group
         )
 
     # noinspection PyMethodMayBeStatic
