@@ -108,7 +108,7 @@ def __handle_tree(src_path: Path, dst_path: Path, file_handler: Callable[[Path, 
     for index, file in enumerate(files):
         assert file.is_file()
 
-        relative_path = file.relative_to(src_path)
+        relative_path = file.relative_to(src_path.parent)
         file_size = file.stat().st_size
 
         speed_meter.feed(file_size)
@@ -474,7 +474,10 @@ class Folder(PathBased):
 
         self.__files.sort(key=lambda x: x.name)
 
-    def move(self, path: Path):
+    def move(self, path: Path) -> None:
+        if isinstance(path, Folder):
+            path = path.path
+
         super().move(path)
 
         self.refresh()

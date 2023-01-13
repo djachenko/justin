@@ -1,9 +1,8 @@
-from datetime import date
 from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
 
-from justin.shared.filesystem import File, FolderBased, Folder
+from justin.shared.filesystem import File, FolderBased
 from justin.shared.helpers.parts import PartsMixin
 from justin.shared.metafile import PhotosetMetafile, MetaFolder
 from justin.shared.models import sources
@@ -24,10 +23,9 @@ class Photoset(FolderBased, PartsMixin):
     def __str__(self) -> str:
         return "Photoset: " + self.folder.name
 
-    def __init__(self, folder: MetaFolder) -> None:
-        super().__init__(folder)
-
-        self.__metafile = folder.get_metafile(PhotosetMetafile)
+    @property
+    def __metafile(self):
+        return self.folder.get_metafile(PhotosetMetafile)
 
     @property
     def folder(self) -> MetaFolder:

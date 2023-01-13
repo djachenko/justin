@@ -113,7 +113,8 @@ class PeopleRegistry:
             assert not collision, f"Folder prefixes collision with {collision.folder}"
 
             for existing_person in self.__people:
-                assert person.vk_id is None or person.vk_id != existing_person.vk_id , f"Vk id {person.vk_id} is already registered"
+                assert person.vk_id is None or person.vk_id != existing_person.vk_id,\
+                    f"Vk id {person.vk_id} is already registered"
                 assert person.folder != existing_person.folder, "This folder is already registered"
 
             self.__people.append(person)

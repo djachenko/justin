@@ -1,8 +1,8 @@
 import json
 from abc import abstractmethod, ABC
-from datetime import date
 from functools import lru_cache
 from typing import Iterable, Tuple
+from uuid import UUID
 
 from justin.shared.metafile import Json
 from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
@@ -121,8 +121,13 @@ class RenamePeopleMigration(RenameFoldersMigration):
 
 class ParseMetafileMigration(PhotosetMigration):
     def migrate(self, photoset: Photoset) -> None:
-        if not photoset.folder.has_metafile(PhotosetMetafile):
-            photoset.folder.save_metafile(PhotosetMetafile())
+        if photoset.folder.has_metafile(PhotosetMetafile):
+            metafile = photoset.folder.get_metafile(PhotosetMetafile)
+
+            if isinstance(metafile.photoset_id, UUID):
+                return
+
+        photoset.folder.save_metafile(PhotosetMetafile())
 
 
 ALL_MIGRATIONS = [

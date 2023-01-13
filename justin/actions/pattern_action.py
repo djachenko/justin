@@ -47,7 +47,7 @@ class PatternAction(Action, ABC):
         photoset = Photoset.from_folder(folder)
 
         if photoset is None:
-            print(f"Path {path} is no photoset.")
+            print(f"Folder {folder} is no photoset.")
 
             return
 
