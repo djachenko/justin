@@ -35,7 +35,9 @@ class CheckRatiosAction(PatternAction):
 
         if args.verbose:
             for k, v in ratios.items():
-                print(k, len(v), v)
+                print(f"{k}, {len(v)}: ", end="")
+
+                print(", ".join([image.name for image in v]))
         else:
             sorted_by_count: List[Tuple[float, List[File]]] = sorted(
                 ratios.items(),
