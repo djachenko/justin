@@ -22,13 +22,6 @@ class SplitAction(PatternAction):
             Parameter("split_pattern", nargs="+"),
         ]
 
-    @staticmethod
-    def flat_or_empty(tree: Optional[Folder]) -> List[File]:
-        if tree is None:
-            return []
-
-        return tree.flatten()
-
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         print("hello this is split")
 
