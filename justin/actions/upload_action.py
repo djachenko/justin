@@ -11,7 +11,7 @@ from justin.actions.destinations_aware_action import DestinationsAwareAction
 from justin.actions.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
-from justin.shared.filesystem import File
+from justin.shared.filesystem import File, Folder
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
     AlbumMetafile, MetaFolder
@@ -111,7 +111,12 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
 
-        print(f"Scheduling {extra[UploadAction.__SET_NAME]}... ")
+        set_name = extra[UploadAction.__SET_NAME]
+
+        if part.name != set_name:
+            set_name = set_name + "/" + part.name
+
+        print(f"Scheduling {set_name}... ")
 
         extra[UploadAction.__ROOT] = part
         extra[UploadAction.__ROOT_PATH] = part.path
@@ -147,6 +152,9 @@ class UploadAction(DestinationsAwareAction, EventUtils):
     # endregion utils
 
     # region upload strategies
+
+    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
+        pass
 
     def handle_justin(self, justin_folder: MetaFolder, context: Context, extra: Extra) -> None:
         justin_group = context.justin_group
@@ -339,18 +347,21 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
                     print(" done.", flush=True)
 
-                name_components = [
-                    person.name,
-                ]
+                name_components = []
 
-                if person.vk_id != 1:
+                if person.name:
+                    name_components.append(person.name)
+                else:
+                    name_components.append(person.folder)
+
+                if person.vk_id and person.vk_id != 1:
                     name_components.append(f"https://vk.com/write{person.vk_id}")
 
                 text = "\n\n".join([
                     ", ".join(name_components),
                     "\n".join(links),
                     f"{len(links)} total.",
-                ])
+                ]).strip()
 
                 comment = post.add_comment(CommentModel(
                     text=text,
@@ -476,7 +487,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             if len(post_parts) > 1:
                 part_index = int(post_folder.name.split(".")[0])
 
-                params.album_name = f"{base_album_name}_{part_index}"
+                params.album_name = f"{base_album_name}.{part_index}"
             else:
                 params.album_name = base_album_name
 
