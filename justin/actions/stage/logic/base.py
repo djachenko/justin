@@ -1,9 +1,10 @@
 from abc import abstractmethod, ABC
-from typing import Optional, List, Iterable
+from typing import List, Iterable
 
 from justin.shared.filesystem import PathBased, RelativeFileset, File, Folder
 from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.parts import folder_tree_parts
+from justin.shared.metafile import NoPostMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.util import flat_map, first
@@ -95,7 +96,7 @@ class Extractor:
 
 
 class Check(AbstractCheck):
-    def __init__(self, name: str, selector: Optional[Selector] = None, hook: Optional[Extractor] = None,
+    def __init__(self, name: str, selector: Selector | None = None, hook: Extractor | None = None,
                  message: str = "") -> None:
         super().__init__()
 
@@ -189,7 +190,7 @@ class DestinationsAwareCheck(Check):
                 for post_folder in folder_tree_parts(name_folder):
                     problems += self.check_post_metafile(post_folder)
 
-        if photoset.timelapse:
+        if photoset.timelapse and not photoset.timelapse.has_metafile(NoPostMetafile):
             problems += self.check_post_metafile(photoset.timelapse)
 
         def check_event(event_folder: Folder) -> Iterable[Problem]:
