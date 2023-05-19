@@ -12,7 +12,7 @@ from justin.shared.helpers.parts import folder_tree_parts, is_part
 from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile, MetaFolder, NoPostMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
-from justin_utils.util import wide
+from justin_utils.util import bfs
 from pyvko.aspects.events import Events
 from pyvko.aspects.posts import Posts
 
@@ -121,7 +121,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
                 else:
                     return folder.subfolders
 
-            wide(root, collect_group_ids)
+            bfs(root, collect_group_ids)
 
             communities = [context.pyvko.get(group_id) for group_id in group_ids]
 
