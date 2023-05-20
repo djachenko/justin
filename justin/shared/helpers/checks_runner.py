@@ -1,12 +1,10 @@
 from typing import Iterable
 
-from justin_utils.singleton import Singleton
-
 from justin.actions.stage.logic.base import Check, Problem
 from justin.shared.models.photoset import Photoset
 
 
-class ChecksRunner(Singleton):
+class ChecksRunner:
     # noinspection PyMethodMayBeStatic
     def run(self, photoset: Photoset, checks: Iterable[Check]) -> Iterable[Problem]:
         for check in checks:
