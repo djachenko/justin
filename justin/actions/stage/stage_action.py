@@ -10,11 +10,11 @@ from justin.shared.models.photoset import Photoset
 
 class StageAction(PatternAction):
 
-    def __init__(self, factory: StagesFactory) -> None:
+    def __init__(self, factory: StagesFactory, checks_runner: ChecksRunner) -> None:
         super().__init__()
 
         self.__stages_factory = factory
-        self.__checks_runner = ChecksRunner.instance()
+        self.__checks_runner = checks_runner
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         # check if able to exit
