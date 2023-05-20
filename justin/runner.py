@@ -94,6 +94,7 @@ class Commands(str, Enum):
     UPLOAD = "upload"
     WEB_SYNC = "web_sync"
     REGISTER_PEOPLE = "reg_people"
+    FIX_PEOPLE = "fix_people"
 
 
 class Locations(str, Enum):
@@ -124,10 +125,10 @@ def main():
     current_pattern = "*"
 
     commands = {
-        0: f"{current_command} {current_pattern}",
+        0: f"{current_command.value} {current_pattern}",
         1: "rearrange -s 1",
         2: "rearrange",
-        3: "delay",
+        3: "delay 2",
         4: "",
         5: "check_ratios",
         6: "delete_posts",
@@ -145,14 +146,14 @@ def main():
     }
 
     locations = {
-        0: f"{current_location}photos/stages/{current_stage}",
-        1: f"{current_location}photos"
+        0: f"{current_location.value}photos/stages/{current_stage.value}",
+        1: f"{current_location.value}photos"
     }
 
-    with cd(Path(locations[1])):
+    with cd(Path(locations[0])):
         __run(
             Path(__file__).parent.parent,
-            commands[14].split()
+            commands[0].split()
         )
 
 
