@@ -36,7 +36,10 @@ class ActionFactory:
 
     @lru_cache()
     def stage_action(self) -> Action:
-        return StageAction(self.__stages_factory)
+        return StageAction(
+            factory=self.__stages_factory,
+            checks_runner=self.__runner
+        )
 
     @lru_cache()
     def move_action(self) -> Action:
