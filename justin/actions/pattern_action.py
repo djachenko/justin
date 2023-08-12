@@ -13,6 +13,9 @@ Extra = Dict[str, Any]
 
 
 class PatternAction(Action, ABC):
+    SET_NAME = "set_name"
+    PART_FULL_NAME = "part_full_name"
+
     @property
     def parameters(self) -> List[Parameter]:
         return super().parameters + [
@@ -51,10 +54,25 @@ class PatternAction(Action, ABC):
 
             return
 
+        for migration in context.photoset_migrations_factory.part_less_migrations():
+            migration.migrate(photoset)
+
         self.perform_for_photoset(photoset, args, context, extra.copy())
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
+        extra[PatternAction.SET_NAME] = photoset.name
+
         for part in photoset.parts:
+            if part.name != photoset.name:
+                part_full_name = f"{photoset.name}/{part.name}"
+            else:
+                part_full_name = part.name
+
+            extra[PatternAction.PART_FULL_NAME] = part_full_name
+
+            for migration in context.photoset_migrations_factory.part_wise_migrations():
+                migration.migrate(part)
+
             self.perform_for_part(part, args, context, extra.copy())
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:

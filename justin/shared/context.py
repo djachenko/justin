@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-from justin.cms.db import Database
-from justin.shared.helpers.gif_maker import GifMaker
-from justin.shared.models.person import PeopleRegistry
+from justin.cms.cms import CMS
+from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from pyvko.aspects.groups import Group
 from pyvko.aspects.posts import Posts
@@ -20,12 +19,9 @@ class Context:
 
     pyvko: Pyvko
 
-    gif_maker = GifMaker()
+    cms: CMS
 
-    my_people: PeopleRegistry
-    closed: PeopleRegistry
-
-    cms_db: Database
+    photoset_migrations_factory: PhotosetMigrationFactory
 
     @property
     def default_group(self) -> Group:

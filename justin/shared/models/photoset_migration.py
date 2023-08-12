@@ -1,9 +1,12 @@
 import json
 from abc import abstractmethod, ABC
 from functools import lru_cache
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, List
 from uuid import UUID
 
+from justin.cms.base_cms import Registry
+from justin.cms.cms import CMS
+from justin.cms.people_cms import PersonMigrationEntry
 from justin.shared.metafile import Json
 from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
 from justin.shared.models.photoset import Photoset
@@ -36,11 +39,17 @@ class SplitMetafilesMigration(PhotosetMigration):
 
         for group_id, group_posts in posts_jsons.items():
             for group_post in group_posts:
-                path = photoset.path / group_post["path"]
+                path = photoset.path / group_post["path"].replace("\\", "/")
                 post_id = int(group_post["id"])
+
+                if group_post["post_status"] == "posted":
+                    group_post["post_status"] = "published"
+
                 post_status = PostStatus(group_post["post_status"])
 
                 post_metafile = PostMetafile(post_id, post_status)
+
+                print(path)
 
                 posts.append((path, post_metafile))
 
@@ -69,7 +78,7 @@ class SplitMetafilesMigration(PhotosetMigration):
         with old_metafile_path.open(mode="w") as metafile_file:
             json.dump(json_dict, metafile_file, indent=4)
 
-        # old_metafile_path.unlink()
+        old_metafile_path.unlink()
 
 
 class RenameFoldersMigration(PhotosetMigration, ABC):
@@ -94,6 +103,8 @@ class RenameFoldersMigration(PhotosetMigration, ABC):
 
             src_path.rename(dst_path)
 
+        photoset.folder.refresh()
+
 
 class ChangeStructureMigration(RenameFoldersMigration):
     @property
@@ -106,17 +117,27 @@ class ChangeStructureMigration(RenameFoldersMigration):
 
 
 class RenamePeopleMigration(RenameFoldersMigration):
+
+    def __init__(self, migrations: Registry[PersonMigrationEntry, str]) -> None:
+        super().__init__()
+
+        self.__migrations = migrations
+
     @property
     def renamings(self) -> Iterable[Tuple[str, str]]:
-        root = "my_people/"
-
-        people_mapping = [
-            ("voloshina", "voloshina_nastya",),
-            ("dementyeva", "dementyeva_tanya",),
-            ("kravchenko", "kravchenko_nastya",),
+        roots = [
+            "my_people",
+            "closed",
+            "drive",
         ]
 
-        return [(root + src, root + dst) for src, dst in people_mapping]
+        mapping = []
+
+        for migration in self.__migrations:
+            for root in roots:
+                mapping.append((f"{root}/{migration.src}", f"{root}/{migration.dst}"))
+
+        return mapping
 
 
 class ParseMetafileMigration(PhotosetMigration):
@@ -130,9 +151,38 @@ class ParseMetafileMigration(PhotosetMigration):
         photoset.folder.save_metafile(PhotosetMetafile())
 
 
-ALL_MIGRATIONS = [
-    SplitMetafilesMigration.instance(),
-    ChangeStructureMigration.instance(),
-    ParseMetafileMigration.instance(),
-    RenamePeopleMigration.instance(),
-]
+class PhotosetMigrationFactory:
+    def __init__(self, cms: CMS) -> None:
+        super().__init__()
+
+        self.__cms = cms
+
+    @lru_cache()
+    def part_wise_migrations(self) -> List[PhotosetMigration]:
+        return [
+            self.__split_metafiles_migration(),
+            self.__change_structure_migration(),
+            self.__rename_people_migration(),
+        ]
+
+    @lru_cache()
+    def part_less_migrations(self) -> List[PhotosetMigration]:
+        return [
+            self.__parse_metafile_migration()
+        ]
+
+    @lru_cache()
+    def __split_metafiles_migration(self) -> PhotosetMigration:
+        return SplitMetafilesMigration()
+
+    @lru_cache()
+    def __change_structure_migration(self) -> PhotosetMigration:
+        return ChangeStructureMigration()
+
+    @lru_cache()
+    def __rename_people_migration(self) -> PhotosetMigration:
+        return RenamePeopleMigration(self.__cms.people_migrations)
+
+    @lru_cache()
+    def __parse_metafile_migration(self) -> PhotosetMigration:
+        return ParseMetafileMigration()

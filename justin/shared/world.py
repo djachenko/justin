@@ -1,12 +1,16 @@
 import os
 import platform
+import shutil
 import string
 from abc import abstractmethod
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Iterable, Type
 
+from justin.shared.helpers.utils import JsonSerializable, Json
 from justin.shared.metafile import MetaFolder, LocationMetafile
+from justin.shared.models.photoset import Photoset
+from justin_utils.util import bfs, T
 
 
 class Roots:
@@ -38,7 +42,7 @@ class MacOSRoots(Roots):
         ]
 
 
-class Location:
+class Location(JsonSerializable):
     def __init__(self, folder: MetaFolder) -> None:
         super().__init__()
 
@@ -61,11 +65,49 @@ class Location:
     def path(self) -> Path:
         return self.__folder.path
 
-    def __str__(self) -> str:
-        return "Location str"
+    def get_free_space(self) -> int:
+        total, used, free = shutil.disk_usage(self.path)
 
-    def __repr__(self) -> str:
-        return "Location repr"
+        print("total: ", total / 2 ** 30)
+        print("used: ", used / 2 ** 30)
+        print("free: ", free / 2 ** 30)
+
+        return free
+
+    @lru_cache()
+    def get_sets(self) -> Iterable[Photoset]:
+        photosets = []
+
+        def wider(folder: MetaFolder) -> List[MetaFolder]:
+            if folder.name == "stages":
+                return []
+
+            if Photoset.is_photoset(folder):
+                photosets.append(Photoset.from_folder(folder))
+
+                return []
+            else:
+                return folder.subfolders
+
+        bfs(self.__folder, wider)
+
+        return photosets
+
+    def __truediv__(self, other):
+        return self.__folder / other
+
+    @staticmethod
+    def is_location(candidate: Path):
+        return MetaFolder.from_path(candidate).has_metafile(LocationMetafile)
+
+    @classmethod
+    def from_json(cls: Type[T], json_object: Json) -> T:
+        assert isinstance(json_object, str)
+
+        return Location(MetaFolder.from_path(Path(json_object)))
+
+    def as_json(self) -> Json:
+        return str(self.name)
 
 
 class World:
@@ -73,7 +115,7 @@ class World:
 
     @staticmethod
     def __get_roots() -> Roots:
-        system_name = platform.system
+        system_name = platform.system()
 
         if system_name == "Darwin":
             return MacOSRoots()
@@ -87,6 +129,7 @@ class World:
 
         self.__roots = self.__get_roots()
 
+    # caching not needed, may be used for refresh
     def __discover_locations(self) -> List[Location]:
         roots = self.__roots.get_roots().copy()
 
@@ -97,20 +140,20 @@ class World:
         while roots:
             if counter > 1000:
                 print("Counter exceeded")
-                break
+                exit(1)
             else:
                 counter += 1
 
             try:
                 candidate = roots.pop(0)
 
+                print(candidate)
+
                 if candidate in self.__roots.exclude():
                     continue
 
-                meta_candidate = MetaFolder.from_path(candidate)
-
-                if meta_candidate.has_metafile(LocationMetafile):
-                    locations.append(Location(meta_candidate))
+                if Location.is_location(candidate):
+                    locations.append(Location(MetaFolder.from_path(candidate)))
                 else:
                     roots += [sub for sub in candidate.iterdir() if sub.is_dir() and not sub.name.startswith(".")]
             except PermissionError:

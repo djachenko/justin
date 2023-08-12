@@ -104,7 +104,7 @@ class SetupEventAction(Action):
             elif any(needs_event(part.meeting) for part in photoset.parts):
                 event_parent = context.meeting_group
             else:
-                print(f"Unable to get event. {photoset.path}")
+                print(f"Unable to determine parent. {photoset.path}")
 
                 return
 

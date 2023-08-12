@@ -135,7 +135,13 @@ class Photoset(FolderBased, PartsMixin):
         return jpegs
 
     @staticmethod
-    def is_photoset(folder: Path) -> bool:
+    def is_photoset(folder: Path | MetaFolder) -> bool:
+        if isinstance(folder, Path):
+            return Photoset.is_photoset(MetaFolder.from_path(folder))
+
+        if folder.has_metafile(PhotosetMetafile):
+            return True
+
         name_split = folder.name.split(".")
 
         if len(name_split) != 4:
@@ -152,12 +158,6 @@ class Photoset(FolderBased, PartsMixin):
             return None
 
         photoset = Photoset(folder)
-
-        if not without_migration:
-            from justin.shared.models.photoset_migration import ALL_MIGRATIONS
-
-            for migration in ALL_MIGRATIONS:
-                migration.migrate(photoset)
 
         return photoset
 

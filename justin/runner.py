@@ -4,11 +4,11 @@ from typing import List
 
 from lazy_object_proxy import Proxy
 
-from justin.cms.google_sheets_database import GoogleSheetsDatabase
+from justin.cms.cms import CMS
 from justin.di.app import DI
 from justin.shared.config import Config
 from justin.shared.context import Context
-from justin.shared.models.person import PeopleRegistry
+from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from justin_utils.cd import cd
 from justin_utils.cli import App
@@ -18,25 +18,26 @@ from pyvko.pyvko_main import Pyvko
 __CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
 __PYVKO_CONFIG_FILE = "pyvko_config.json"
+__CMS_FOLDER = "cms"
 
 
 def __run(config_path: Path, args: List[str] = None):
     configs_folder = config_path / __CONFIGS_FOLDER
     pyvko_config_file = configs_folder / __PYVKO_CONFIG_FILE
+    cms_root = configs_folder / __CMS_FOLDER
 
     pyvko_config = PyvkoConfig.read(pyvko_config_file)
     pyvko = Pyvko(pyvko_config)
-
-    my_people = PeopleRegistry(configs_folder, "my_people", pyvko)
-    closed = PeopleRegistry(configs_folder, "closed", pyvko)
+    cms = CMS(cms_root)
 
     config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
-        "my_people": my_people,
-        "closed": closed
+        "people": cms.people,
     })
 
     def get_lazy_group(url_key):
         return Proxy(lambda: pyvko.get_by_url(config[url_key]))
+
+    commands = DI(config).commands_factory.commands()
 
     context = Context(
         world=Proxy(lambda: World()),
@@ -46,15 +47,9 @@ def __run(config_path: Path, args: List[str] = None):
         kot_i_kit_group=get_lazy_group(Config.Keys.KOT_I_KIT_URL),
         my_people_group=get_lazy_group(Config.Keys.MY_PEOPLE_URL),
         pyvko=pyvko,
-        my_people=my_people,
-        closed=closed,
-        cms_db=Proxy(lambda: GoogleSheetsDatabase(config[Config.Keys.SPREADSHEET_ID], configs_folder))
+        cms=cms,
+        photoset_migrations_factory=PhotosetMigrationFactory(cms)
     )
-
-    context.my_people.read()
-    context.closed.read()
-
-    commands = DI(config).commands_factory.commands()
 
     try:
         App(commands, context).run(args)
@@ -105,6 +100,7 @@ class Locations(str, Enum):
     F = "F:/"
     PESTILENCE = "/Volumes/pestilence/"
     MICHAEL = "/Volumes/michael/"
+    TB4 = "/Volumes/4tb/"
     MAC_OS_HOME = "/Users/justin/"
 
 
@@ -114,40 +110,25 @@ class Stages(str, Enum):
     DEVELOP = "stage2.develop"
     OURATE = "stage2.ourate"
     READY = "stage3.ready"
-    SCHEDULED = "stage3.schedule"
+    SCHEDULE = "stage3.schedule"
     PUBLISHED = "stage4.published"
 
 
 def main():
     current_location = Locations.MAC_OS_HOME
-    current_stage = Stages.PUBLISHED
-    current_command = Commands.ARCHIVE
-    current_pattern = "*"
+    current_stage = Stages.SCHEDULE
+    current_command = Commands.REGISTER_PEOPLE
+    current_pattern = "*.aerocolor"
 
     commands = {
         0: f"{current_command.value} {current_pattern}",
-        1: "rearrange -s 1",
-        2: "rearrange",
-        3: "delay 2",
-        4: "",
-        5: "check_ratios",
-        6: "delete_posts",
-        7: "rearrange --group kotikit --shuffle --step 2 --start_time 18:00 --end_time 19:00",
-        8: "rearrange --shuffle",
-        9: "setup_event --parent_id 143472211 206107409 21.05.22 22.05.21.night_with_bet",
-        10: "setup_event https://vk.com/event206314876 24.06.22 22.06.24.bakina_prom --parent https://vk.com/mothilda",
-        11: "upload -h",
-        12: "people_fix -a",
-        13: "setup_event --url https://vk.com/event206315284 --folder .",
-        14: "cms -ig jvstin",
-        15: "cms -ip 22.05.14.self_maevka",
-        16: "cms -il .",
-        17: "group",
+        1: "mig_person shtro roman"
     }
 
     locations = {
         0: f"{current_location.value}photos/stages/{current_stage.value}",
-        1: f"{current_location.value}photos"
+        1: f"{current_location.value}photos",
+        2: "/Users/justin/photos/stages/stage2.develop/21.04.30.white_cottage",
     }
 
     with cd(Path(locations[0])):

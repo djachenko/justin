@@ -109,7 +109,7 @@ class ArchiveStage(Stage):
         largest_destination = max(files_mapping.keys(), key=lambda x: len(files_mapping[x]))
         new_path = root / largest_destination
 
-        if largest_destination in ["justin", "closed", "drive", ]:
+        if largest_destination in ["closed", "drive", ]:
             files_mapping = defaultdict(lambda: [])
 
             for part in photoset.parts:
@@ -118,6 +118,24 @@ class ArchiveStage(Stage):
 
                 for category in part.folder[largest_destination].subfolders:
                     files_mapping[category.name] += category.flatten()
+
+            largest_category = max(files_mapping.keys(), key=lambda x: len(files_mapping[x]))
+
+            new_path /= largest_category
+        elif largest_destination in ["justin", ]:
+            files_mapping = defaultdict(lambda: [])
+
+            for part in photoset.parts:
+                if largest_destination not in part.folder:
+                    continue
+
+                for category in part.folder[largest_destination].subfolders:
+                    category_name = category.name
+
+                    if category_name not in ["report", "nanoreport"]:
+                        category_name = "art"
+
+                    files_mapping[category_name] += category.flatten()
 
             largest_category = max(files_mapping.keys(), key=lambda x: len(files_mapping[x]))
 

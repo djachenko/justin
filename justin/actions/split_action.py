@@ -14,7 +14,6 @@ from justin_utils.cli import Parameter
 
 class SplitAction(PatternAction):
     __PHOTOSET_ROOT_KEY = "photoset_root"
-    __PHOTOSET_NAME_KEY = "photoset_name"
 
     @property
     def parameters(self) -> List[Parameter]:
@@ -26,14 +25,13 @@ class SplitAction(PatternAction):
         print("hello this is split")
 
         extra[SplitAction.__PHOTOSET_ROOT_KEY] = photoset.path
-        extra[SplitAction.__PHOTOSET_NAME_KEY] = photoset.name
 
         super().perform_for_photoset(photoset, args, context, extra)
 
         photoset.folder.refresh()
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        assert SplitAction.__PHOTOSET_NAME_KEY in extra
+        assert SplitAction.SET_NAME in extra
         assert SplitAction.__PHOTOSET_ROOT_KEY in extra
 
         print(f"Splitting {part.name}")
@@ -67,7 +65,7 @@ class SplitAction(PatternAction):
         files_to_copy = photoset_utils.files_by_stems(stems_to_copy, part, JpegType.SELECTION)
 
         photoset_root = extra[SplitAction.__PHOTOSET_ROOT_KEY]
-        photoset_name = extra[SplitAction.__PHOTOSET_NAME_KEY]
+        photoset_name = extra[SplitAction.SET_NAME]
 
         fileset_to_move = RelativeFileset(photoset_root, files_to_move)
         fileset_to_copy = RelativeFileset(photoset_root, files_to_copy)

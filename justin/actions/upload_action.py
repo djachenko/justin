@@ -6,26 +6,26 @@ from datetime import time, date, datetime, timedelta
 from pathlib import Path
 from typing import List, Iterator
 
-from justin.actions.event import SetupEventAction
 from justin.actions.destinations_aware_action import DestinationsAwareAction
+from justin.actions.event import SetupEventAction
 from justin.actions.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
+from justin.cms.people_cms import PersonEntry
 from justin.shared.filesystem import File, Folder
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
     AlbumMetafile, MetaFolder
 from justin.shared.models.exif import parse_exif
-from justin.shared.models.person import Person
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 from justin_utils.util import stride, flat_map
 from pyvko.aspects.albums import Albums
 from pyvko.aspects.comments import CommentModel
 from pyvko.aspects.events import Event
-from pyvko.aspects.groups import Group
 from pyvko.aspects.posts import Post, PostModel, Posts
 from pyvko.attachment.attachment import Attachment
+from pyvko.pyvko_main import Pyvko
 
 Community = Posts | Albums
 
@@ -34,7 +34,6 @@ class UploadAction(DestinationsAwareAction, EventUtils):
     __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
     __JUSTIN_DATE_GENERATOR = "date_generator"
 
-    __SET_NAME = "set_name"
     __SET_CONTEXT = "set_context"
 
     __ROOT = "root_itself"
@@ -102,7 +101,6 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             .is_distinct(lambda sf: sf.name)
 
         extra.update({
-            UploadAction.__SET_NAME: photoset.name,
             UploadAction.__SET_CONTEXT: defaultdict(lambda: {}),
             UploadAction.__SINGLE_NAME: only_one_closed_name,
         })
@@ -111,7 +109,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
 
-        set_name = extra[UploadAction.__SET_NAME]
+        set_name = extra[UploadAction.SET_NAME]
 
         if part.name != set_name:
             set_name = set_name + "/" + part.name
@@ -158,7 +156,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     def handle_justin(self, justin_folder: MetaFolder, context: Context, extra: Extra) -> None:
         justin_group = context.justin_group
-        set_name = extra[UploadAction.__SET_NAME]
+        set_name = extra[UploadAction.SET_NAME]
         part_name = extra[UploadAction.__PART_NAME]
 
         date_generator = extra[UploadAction.__JUSTIN_DATE_GENERATOR]
@@ -190,7 +188,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             )
 
     def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
-        set_name: str = extra[UploadAction.__SET_NAME]
+        set_name: str = extra[UploadAction.SET_NAME]
         only_one_name: bool = extra[UploadAction.__SINGLE_NAME]
 
         event_date = UploadAction.__get_date(set_name)
@@ -216,7 +214,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                     category=closed_name,
                     event_name=event_name,
                     event_date=event_date,
-                    owner=context.closed_group,
+                    pyvko=context.pyvko,
                 )
             )
 
@@ -226,7 +224,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
         print("Handling meeting...")
 
-        set_name: str = extra[UploadAction.__SET_NAME]
+        set_name: str = extra[UploadAction.SET_NAME]
 
         event_date = UploadAction.__get_date(set_name)
 
@@ -237,7 +235,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
                 destination=meeting_folder.name,
                 event_name=set_name,
                 event_date=event_date,
-                owner=context.meeting_group,
+                pyvko=context.pyvko,
             )
         )
 
@@ -278,7 +276,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         my_people_group = context.my_people_group
 
         if not my_people_folder.has_metafile(PostMetafile):
-            post = my_people_group.add_post(PostModel(text=extra[UploadAction.__SET_NAME]))
+            post = my_people_group.add_post(PostModel(text=extra[UploadAction.SET_NAME]))
 
             my_people_folder.save_metafile(GroupMetafile(group_id=my_people_group.id))
             my_people_folder.save_metafile(PostMetafile(post_id=post.id, status=PostStatus.PUBLISHED))
@@ -291,10 +289,10 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         assert post is not None
 
         for person_folder in my_people_folder.subfolders:
-            person = context.my_people.get_by_folder(person_folder.name)
+            person = context.cms.people.get(person_folder.name)
 
             if not person and person_folder.name.startswith("unknown"):
-                person = Person(
+                person = PersonEntry(
                     folder=person_folder.name,
                     name=person_folder.name,
                     vk_id=1,
@@ -306,7 +304,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
                 continue
 
-            if not Person.is_valid(person):
+            if not PersonEntry.is_valid(person):
                 print(f"{person_folder.name} needs to be fixed.")
 
                 continue
@@ -391,7 +389,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         destination: str
         event_name: str
         event_date: date
-        owner: Group
+        pyvko: Pyvko
         category: str | None = None
 
     @staticmethod
@@ -411,7 +409,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             group_id=event.id
         ))
 
-        set_name: str = extra[UploadAction.__SET_NAME]
+        set_name: str = extra[UploadAction.SET_NAME]
         date_generator = UploadAction.__generator_for_group(event)
 
         UploadAction.__upload_bottom(
@@ -429,7 +427,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         set_context: Extra = extra[UploadAction.__SET_CONTEXT]
         root: Photoset = extra[UploadAction.__ROOT]
 
-        owner = params.owner
+        pyvko = params.pyvko
         destination = params.destination
 
         if params.category is not None:
@@ -442,7 +440,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             event_url = UploadAction.get_community_id(folder, root)
 
             if event_url is not None:
-                event = owner.get_event(event_url)
+                event = pyvko.get(event_url)
             else:
                 event = None
 

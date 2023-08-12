@@ -16,6 +16,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
     mapping = {
         JpegType.JUSTIN: photoset.justin,
         JpegType.MY_PEOPLE: photoset.my_people,
+        JpegType.DRIVE: photoset.drive,
         JpegType.CLOSED: photoset.closed,
         JpegType.PHOTOCLUB: photoset.photoclub,
         JpegType.MEETING: photoset.meeting,
