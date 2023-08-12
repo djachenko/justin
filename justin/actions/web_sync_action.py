@@ -16,10 +16,8 @@ class WebSyncAction(DestinationsAwareAction):
 
         self.__cache = {}
 
-        self.checked = []
-
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        print(f"Web syncing {part.name}...")
+        print(f"Web syncing {extra[WebSyncAction.PART_FULL_NAME]}...")
 
         super().perform_for_part(part, args, context, extra)
 
@@ -229,5 +227,3 @@ class WebSyncAction(DestinationsAwareAction):
                 post_folder.remove_metafile(PostMetafile)
         else:
             assert False
-
-        self.checked.append(post_metafile.post_id)

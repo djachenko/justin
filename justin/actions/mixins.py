@@ -22,8 +22,6 @@ class EventUtils:
                 f"Enter event url: ",
             )
 
-            answer = answer.strip(" " + string.ascii_letters)
-
             if not answer:
                 filesystem.open_file_manager(posts_folder.path)
             elif not EventUtils.__validate(answer):

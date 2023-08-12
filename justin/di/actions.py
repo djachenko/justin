@@ -6,19 +6,17 @@ from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.drone import HandleDroneAction, JpgDngDuplicatesAction, PanoExtractAction
 from justin.actions.event import SetupEventAction, CreateEventAction
+from justin.actions.fix_metafile_action import FixMetafileAction
 from justin.actions.location import LocationAction
 from justin.actions.move_action import MoveAction
-from justin.actions.fix_metafile_action import FixMetafileAction
-from justin.actions.make_gifs_action import MakeGifAction
-from justin.actions.resize_gif_sources_action import ResizeGifSourcesAction
+from justin.actions.rearrange_action import RearrangeAction
+from justin.actions.sequence_action import SequenceAction
 from justin.actions.split_action import SplitAction
 from justin.actions.stage.stage_action import StageAction
 from justin.actions.upload_action import UploadAction
 from justin.actions.web_sync_action import WebSyncAction
-from justin.actions.people import FixPeopleAction, RegisterPeopleAction
-from justin.actions.rearrange_action import RearrangeAction
-from justin.actions.sequence_action import SequenceAction
-from justin.cms.cms import CMSAction
+from justin.cms.cms_action import CMSIndexAction
+from justin.cms.people import RegisterPeopleAction, FixPeopleAction, SpecifyPersonAction
 from justin.di.checks import ChecksFactory
 from justin.di.stages import StagesFactory
 from justin.shared.helpers.checks_runner import ChecksRunner
@@ -49,10 +47,6 @@ class ActionFactory:
         )
 
     @lru_cache()
-    def make_gif_action(self) -> Action:
-        return MakeGifAction()
-
-    @lru_cache()
     def split_action(self) -> Action:
         return SplitAction()
 
@@ -75,10 +69,6 @@ class ActionFactory:
     @lru_cache()
     def delay_action(self) -> Action:
         return DelayAction()
-
-    @lru_cache()
-    def resize_gif_action(self) -> Action:
-        return ResizeGifSourcesAction()
 
     @lru_cache()
     def upload_action(self) -> Action:
@@ -130,9 +120,13 @@ class ActionFactory:
         return FixPeopleAction()
 
     @lru_cache()
-    def cms(self) -> Action:
-        return CMSAction()
+    def migrate_person(self) -> Action:
+        return SpecifyPersonAction()
 
     @lru_cache()
     def location(self) -> Action:
         return LocationAction()
+
+    @lru_cache()
+    def cms_index(self) -> Action:
+        return CMSIndexAction()

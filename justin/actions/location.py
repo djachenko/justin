@@ -68,7 +68,8 @@ class LocationAction(PatternAction):
 
         metafile = LocationMetafile(
             location_name=location_name,
-            location_description=location_description
+            location_description=location_description,
+            location_order=0
         )
 
         folder.save_metafile(metafile)

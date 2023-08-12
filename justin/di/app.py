@@ -1,3 +1,7 @@
+from functools import lru_cache
+
+from lazy_object_proxy import Proxy
+
 from justin.shared.config import Config
 from justin.di.actions import ActionFactory
 from justin.di.checks import ChecksFactory
@@ -12,28 +16,54 @@ class DI:
     def __init__(self, config: Config) -> None:
         super().__init__()
 
-        selector_factory = SelectorFactory(config[Config.Keys.PHOTOSET_STRUCTURE])
-
-        extractor_factory = ExtractorFactory(selector_factory)
-
-        checks_factory = ChecksFactory(
-            selector_factory,
-            extractor_factory
-        )
-
-        stages_factory = StagesFactory(
-            checks_factory,
-            extractor_factory
-        )
-
-        actions_factory = ActionFactory(
-            stages_factory,
-            checks_factory,
-            ChecksRunner.instance()
-        )
-
-        self.__commands_factory = CommandFactory(stages_factory, actions_factory)
+        self.__selector_factory_ = Proxy(lambda: SelectorFactory(config[Config.Keys.PHOTOSET_STRUCTURE]))
 
     @property
+    @lru_cache()
+    def __selector_factory(self) -> SelectorFactory:
+        return self.__selector_factory_
+
+    @property
+    @lru_cache()
+    def __extractor_factory(self):
+        return ExtractorFactory(
+            self.__selector_factory
+        )
+
+    @property
+    @lru_cache()
+    def __checks_factory(self) -> ChecksFactory:
+        return ChecksFactory(
+            self.__selector_factory,
+            self.__extractor_factory
+        )
+
+    @property
+    @lru_cache()
+    def __stages_factory(self) -> StagesFactory:
+        return StagesFactory(
+            self.__checks_factory,
+            self.__extractor_factory
+        )
+
+    @property
+    @lru_cache()
+    def __actions_factory(self) -> ActionFactory:
+        return ActionFactory(
+            self.__stages_factory,
+            self.__checks_factory,
+            self.__checks_runner
+        )
+
+    @property
+    @lru_cache()
+    def __checks_runner(self) -> ChecksRunner:
+        return ChecksRunner()
+
+    @property
+    @lru_cache()
     def commands_factory(self) -> CommandFactory:
-        return self.__commands_factory
+        return CommandFactory(
+            self.__stages_factory,
+            self.__actions_factory
+        )

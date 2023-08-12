@@ -48,7 +48,6 @@ class StagesFactory:
                 self.__checks_factory.unselected(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.structure(),
-                self.__checks_factory.missing_gifs()
             ],
         )
 
@@ -109,7 +108,6 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.unselected(),
-                self.__checks_factory.missing_gifs()
             ],
             outcoming_checks=[
                 self.__checks_factory.structure(),
@@ -125,7 +123,6 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.unselected(),
-                self.__checks_factory.missing_gifs(),
                 self.__checks_factory.structure(),
                 self.__checks_factory.metafile(),
                 self.__checks_factory.everything_is_published(),
@@ -141,7 +138,6 @@ class StagesFactory:
                 self.__checks_factory.metadata(),
                 self.__checks_factory.odd_selection(),
                 self.__checks_factory.unselected(),
-                self.__checks_factory.missing_gifs(),
                 self.__checks_factory.structure(),
             ],
             outcoming_checks=[

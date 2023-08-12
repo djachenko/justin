@@ -35,15 +35,6 @@ class ChecksFactory:
         )
 
     @lru_cache()
-    def missing_gifs(self) -> Check:
-        return Check(
-            name="missing gifs check",
-            selector=self.__selector_factory.missing_gifs(),
-            hook=self.__extractor_factory.missing_gifs(),
-            message="You have missing gif. Generate?"
-        )
-
-    @lru_cache()
     def structure(self) -> Check:
         return Check(
             name="structure check",

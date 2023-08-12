@@ -2,7 +2,6 @@ from functools import lru_cache
 
 from justin.actions.stage.logic.base import Extractor
 from justin.actions.stage.logic.metadata import MetadataCheck
-from justin.actions.stage.logic.missing_gifs import MissingGifsHandler
 from justin.actions.stage.logic.progress import ProgressResultsCheck, ProgressExtractor
 from justin.actions.stage.logic.structure import StructureExtractor
 from justin.di.selectors import SelectorFactory
@@ -51,14 +50,6 @@ class ExtractorFactory:
         )
 
     @lru_cache()
-    def missing_gifs(self) -> Extractor:
-        return MissingGifsHandler(
-            selector=self.__selector_factory.missing_gifs(),
-            filter_folder="",
-            prechecks=[]
-        )
-
-    @lru_cache()
     def structure(self) -> Extractor:
         return StructureExtractor(
             selector=self.__selector_factory.structure(),
@@ -72,5 +63,5 @@ class ExtractorFactory:
     def progress(self) -> Extractor:
         return ProgressExtractor(prechecks=[
             self.__metadata_check,
-            ProgressResultsCheck(self.__selector_factory.progress_has_results())
+            # ProgressResultsCheck(self.__selector_factory.progress_has_results())
         ])

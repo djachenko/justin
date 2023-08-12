@@ -1,6 +1,6 @@
 from argparse import Namespace
 from collections import defaultdict
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from PIL import Image
 
@@ -21,7 +21,7 @@ class CheckRatiosAction(PatternAction):
         ]
 
     def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
-        ratios = defaultdict(lambda: [])
+        ratios: Dict[float, List[File]] = defaultdict(lambda: [])
 
         precision = args.precision
 
@@ -39,7 +39,7 @@ class CheckRatiosAction(PatternAction):
 
                 print(", ".join([image.name for image in v]))
         else:
-            sorted_by_count: List[Tuple[float, List[File]]] = sorted(
+            sorted_by_count = sorted(
                 ratios.items(),
                 key=lambda x: len(x[1]),
                 reverse=True

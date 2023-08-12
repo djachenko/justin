@@ -1,4 +1,5 @@
-import dataclasses
+from abc import abstractmethod
+from dataclasses import dataclass, asdict, fields
 from enum import Flag, auto
 from typing import Iterable, Tuple, Any, List, Type, TypeVar, Dict
 
@@ -24,9 +25,10 @@ class JpegType(Flag):
     MEETING = auto()
     KOT_I_KIT = auto()
     MY_PEOPLE = auto()
+    DRIVE = auto()
     CLOSED = auto()
     PHOTOCLUB = auto()
-    SIGNED = JUSTIN | MY_PEOPLE | CLOSED | PHOTOCLUB | MEETING | KOT_I_KIT
+    SIGNED = JUSTIN | MY_PEOPLE | CLOSED | PHOTOCLUB | MEETING | KOT_I_KIT | DRIVE
     ALL = SELECTION | SIGNED
 
 
@@ -34,16 +36,40 @@ V = TypeVar('V')
 Json = Dict[str, 'Json'] | List['Json'] | str
 
 
+class JsonSerializable:
+    @classmethod
+    @abstractmethod
+    def from_json(cls: Type[V], json_object: Json) -> V:
+        pass
+
+    @abstractmethod
+    def as_json(self) -> Json:
+        pass
+
+
+@dataclass
+class JsonDataclass(JsonSerializable):
+    @classmethod
+    def from_json(cls: Type[V], json_object: Json) -> V:
+        return fromdict(json_object, cls)
+
+    def as_json(self) -> Json:
+        return asdict(self)
+
+
 def fromdict(obj: Json, data_class: Type[V]) -> V:
-    fields = dataclasses.fields(data_class)
+    fields_ = fields(data_class)
 
     dict_ = {}
 
-    for field in fields:
+    for field in fields_:
         field_name = field.name
         try:
             if field_name in obj:
-                dict_[field_name] = field.type(obj[field_name])
+                if issubclass(field.type, JsonSerializable):
+                    dict_[field_name] = field.type.from_json(obj[field_name])
+                else:
+                    dict_[field_name] = field.type(obj[field_name])
             else:
                 dict_[field_name] = field.default
         except (TypeError, ValueError):

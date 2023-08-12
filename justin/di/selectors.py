@@ -5,7 +5,6 @@ from justin.actions.stage.logic.edited import EditedSelector
 from justin.actions.stage.logic.everything_is_published_selector import EverythingIsPublishedSelector
 from justin.actions.stage.logic.gif_sources import GifSourcesSelector
 from justin.actions.stage.logic.metadata import MetadataSelector
-from justin.actions.stage.logic.missing_gifs import MissingGifsSelector
 from justin.actions.stage.logic.odd_selection import OddSelectionSelector
 from justin.actions.stage.logic.progress import AllSourcesHaveResultsSelector
 from justin.actions.stage.logic.structure import ValidateStructureVisitor
@@ -36,10 +35,6 @@ class SelectorFactory:
     @lru_cache()
     def metadata(self) -> Selector:
         return MetadataSelector()
-
-    @lru_cache()
-    def missing_gifs(self) -> Selector:
-        return MissingGifsSelector()
 
     @lru_cache()
     def gif_sources(self) -> Selector:

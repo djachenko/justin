@@ -23,8 +23,6 @@ class SequenceAction(PatternAction):
         files = exif_sorted(folder.files)
         files = [file.path for file in files]
 
-        # files.sort(key=lambda x: x.name)
-
         for index, file in enumerate(files, start=start):
             new_stem = f"{index:04}"
 

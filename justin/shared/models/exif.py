@@ -61,10 +61,18 @@ class NativeExif(Exif):
     @property
     @lru_cache()
     def date_taken(self) -> datetime:
-        return datetime.strptime(
-            self.source_exif.datetime_original,
-            "%Y:%m:%d %H:%M:%S"
-        )
+        if hasattr(self.source_exif, "datetime_original"):
+            return datetime.strptime(
+                self.source_exif.datetime_original,
+                "%Y:%m:%d %H:%M:%S"
+            )
+        elif hasattr(self.source_exif, "datetime_digitized"):
+            return datetime.strptime(
+                self.source_exif.datetime_digitized,
+                "%Y:%m:%d %H:%M:%S"
+            )
+        else:
+            assert False
 
     @property
     def available_names(self):
@@ -90,7 +98,7 @@ def parse_exif(path: Path | File) -> Exif | None:
         return None
 
     if isinstance(path, File):
-        path = path.path
+        return parse_exif(path.path)
 
     if path.is_dir():
         return None

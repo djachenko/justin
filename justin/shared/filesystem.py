@@ -323,7 +323,7 @@ class File(PathBased):
                 name = name_and_modifier[0]
 
         return name
-    
+
     @property
     def suffix(self) -> str:
         return self.path.suffix
@@ -383,7 +383,8 @@ class Folder(PathBased):
 
     @property
     def total_size(self) -> int:
-        return sum(file.size for file in self.flatten())
+        return sum(file.size for file in self.files) + \
+            sum(subfolder.total_size for subfolder in self.subfolders)
 
     @property
     def subfolders(self) -> List['Folder']:
@@ -524,7 +525,7 @@ class Folder(PathBased):
 
     def __truediv__(self, other) -> 'Folder':
         return self.__type_copy(self.path / other)
-    
+
     def mkdir(self) -> None:
         self.path.mkdir(parents=True, exist_ok=True)
 
