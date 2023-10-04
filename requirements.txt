@@ -1,4 +1,4 @@
-Pillow==9.5.0
+Pillow==10.0.1
 pyvko~=0.1.11
 lazy-object-proxy
 justin_utils
