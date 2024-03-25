@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Type, List
 from uuid import UUID
 
-from justin.cms.base_cms import Entry, T, Registry, BaseCMS
+from justin.cms.base_cms import Entry, T, Table, BaseCMS
 from justin.shared.helpers.utils import Json
 from justin.shared.metafile import MetaFolder, PhotosetMetafile
 from justin.shared.models.photoset import Photoset
@@ -21,16 +21,16 @@ class PhotosetEntry(Entry):
     people: List[str]
 
     @classmethod
-    def from_json(cls: Type[T], json_object: Json) -> T:
-        entry = super().from_json(json_object)
+    def from_dict(cls: Type[T], json_object: Json) -> T:
+        entry = super().from_dict(json_object)
 
         entry.location = Location(MetaFolder(Path(json_object["location"])))
         entry.people = json_object["people"]
 
         return entry
 
-    def as_json(self) -> Json:
-        json_object = super().as_json()
+    def as_dict(self) -> Json:
+        json_object = super().as_dict()
 
         json_object["photoset_id"] = self.photoset_id.hex
 
@@ -40,8 +40,8 @@ class PhotosetEntry(Entry):
 class PhotosetsCMS(BaseCMS, ABC):
     @property
     @lru_cache()
-    def photosets(self) -> Registry[PhotosetEntry, UUID]:
-        return Registry(self.root / "photosets.json", PhotosetEntry, lambda x: x.photoset_id)
+    def photosets(self) -> Table[PhotosetEntry, UUID]:
+        return Table(self.root / "photosets.json", PhotosetEntry, lambda x: x.photoset_id)
 
     def index_folder(self, folder: MetaFolder, world: World) -> None:
         roots = [folder]
