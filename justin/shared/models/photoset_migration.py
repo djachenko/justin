@@ -151,6 +151,26 @@ class ParseMetafileMigration(PhotosetMigration):
         photoset.folder.save_metafile(PhotosetMetafile())
 
 
+class AIPostfixMigration(PhotosetMigration):
+    __AI_POSTFIX = "-Enhanced-NR"
+
+    def migrate(self, photoset: Photoset) -> None:
+        roots = [photoset.path]
+
+        while roots:
+            current_root = roots.pop(0)
+
+            for item in current_root.iterdir():
+                if item.is_dir():
+                    roots.append(item)
+                elif item.is_file():
+                    if item.stem.endswith(AIPostfixMigration.__AI_POSTFIX):
+                        dst = item.with_stem(item.stem.replace(AIPostfixMigration.__AI_POSTFIX, ""))
+
+                        print(f"{item} -> {dst}")
+                        item.rename(dst)
+
+
 class PhotosetMigrationFactory:
     def __init__(self, cms: CMS) -> None:
         super().__init__()
@@ -163,6 +183,7 @@ class PhotosetMigrationFactory:
             self.__split_metafiles_migration(),
             self.__change_structure_migration(),
             self.__rename_people_migration(),
+            self.__remove_ai_postfix_migration(),
         ]
 
     @lru_cache()
@@ -186,3 +207,7 @@ class PhotosetMigrationFactory:
     @lru_cache()
     def __parse_metafile_migration(self) -> PhotosetMigration:
         return ParseMetafileMigration()
+
+    @lru_cache()
+    def __remove_ai_postfix_migration(self) -> PhotosetMigration:
+        return AIPostfixMigration()
