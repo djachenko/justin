@@ -144,6 +144,7 @@ class SetupEventAction(Action):
 
         event.set_section_state(Event.Section.PHOTOS, Event.SectionState.LIMITED)
         event.set_section_state(Event.Section.WALL, Event.SectionState.LIMITED)
+        event.set_section_state(Event.Section.VIDEOS, Event.SectionState.LIMITED)
         event.set_section_state(Event.Section.MESSAGES, Event.SectionState.ENABLED)
 
         event.is_closed = True

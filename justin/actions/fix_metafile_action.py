@@ -190,8 +190,6 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
         if event_id is None:
             return None
 
-        event_id = str(abs(int(event_id)))
-
         event = community.get_event(event_id)
 
         if event is not None:
