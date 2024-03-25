@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from justin.cms.people_cms import PeopleCMS
-from justin.cms.photosets_cms import PhotosetsCMS
 from justin.cms.posts_cms import PostsCMS
+from justin.cms_old.photosets_cms import PhotosetsCMS
 
 
 class CMS(PostsCMS, PhotosetsCMS, PeopleCMS):
@@ -14,7 +14,3 @@ class CMS(PostsCMS, PhotosetsCMS, PeopleCMS):
     @property
     def root(self) -> Path:
         return self.__root
-
-
-
-

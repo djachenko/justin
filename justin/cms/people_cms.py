@@ -5,7 +5,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Type
 
-from justin.cms.base_cms import Entry, T, Registry, BaseCMS
+from justin.cms.base_cms import BaseCMS
+from justin.cms.tables.json_table import JsonTable
+from justin.cms.tables.table import Table, Entry, T
 from justin.shared.helpers.utils import Json
 from justin_utils import util
 from justin_utils.util import distinct, get_prefixes
@@ -23,15 +25,15 @@ class PersonEntry(Entry):
     register_date: date = date.today()
 
     @classmethod
-    def from_json(cls: Type[T], json_object: Json) -> T:
-        entry = super().from_json(json_object)
+    def from_dict(cls: Type[T], json_object: Json) -> T:
+        entry = super().from_dict(json_object)
 
         entry.register_date = date.fromisoformat(json_object["register_date"])
 
         return entry
 
-    def as_json(self) -> Json:
-        json_object = super().as_json()
+    def as_dict(self) -> Json:
+        json_object = super().as_dict()
 
         json_object["register_date"] = self.register_date.isoformat()
 
@@ -147,12 +149,9 @@ class FixPeopleMixin:
         return person
 
 
-class PeopleRegistry(Registry[PersonEntry, str]):
+class PeopleRegistry(JsonTable[PersonEntry, str]):
     def __init__(self, path: Path):
         super().__init__(path, PersonEntry, lambda x: x.folder)
-
-    # prefix_postfix
-    #
 
     def validate(self, entry: PersonEntry) -> bool:
         for person in self:
@@ -170,13 +169,13 @@ class PeopleRegistry(Registry[PersonEntry, str]):
 class PeopleCMS(BaseCMS, ABC, FixPeopleMixin):
     @property
     @lru_cache()
-    def people(self) -> Registry[PersonEntry, str]:
+    def people(self) -> Table[PersonEntry, str]:
         return PeopleRegistry(self.root / "people.json")
 
     @property
     @lru_cache()
-    def people_migrations(self) -> Registry[PersonMigrationEntry, str]:
-        return Registry(self.root / "people_migrations.json", PersonMigrationEntry, lambda x: x.src)
+    def people_migrations(self) -> Table[PersonMigrationEntry, str]:
+        return JsonTable(self.root / "people_migrations.json", PersonMigrationEntry, lambda x: x.src)
 
     def register_person(self, path: Path, source: str, pyvko: Pyvko) -> None:
         if path.name.startswith("unknown"):

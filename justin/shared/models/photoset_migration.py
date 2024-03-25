@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Iterable, Tuple, List
 from uuid import UUID
 
-from justin.cms.base_cms import Registry
+from justin.cms.base_cms import Table
 from justin.cms.cms import CMS
 from justin.cms.people_cms import PersonMigrationEntry
 from justin.shared.metafile import Json
@@ -118,7 +118,7 @@ class ChangeStructureMigration(RenameFoldersMigration):
 
 class RenamePeopleMigration(RenameFoldersMigration):
 
-    def __init__(self, migrations: Registry[PersonMigrationEntry, str]) -> None:
+    def __init__(self, migrations: Table[PersonMigrationEntry, str]) -> None:
         super().__init__()
 
         self.__migrations = migrations

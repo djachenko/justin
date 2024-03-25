@@ -1,11 +1,12 @@
 from abc import ABC
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Type, List, Dict
+from typing import Dict, Type, List
 
-from justin.cms.base_cms import Entry, Registry, BaseCMS
-from justin.shared.helpers.utils import Json, fromdict
-from justin.shared.metafile import T
+from justin.cms.base_cms import BaseCMS
+from justin.cms.tables.csv_table import CsvTable
+from justin.cms.tables.table import Table, Entry, T
+from justin.shared.helpers.utils import Json
 from pyvko.aspects.posts import Posts, Post
 from pyvko.attachment.photo import Photo
 from pyvko.pyvko_main import Pyvko
@@ -14,8 +15,8 @@ from pyvko.pyvko_main import Pyvko
 @dataclass
 class PostEntry(Entry):
     @classmethod
-    def from_json(cls: Type[T], json_object: Json) -> T:
-        entry = fromdict(json_object, cls)
+    def from_dict(cls: Type[T], json_object: Json) -> T:
+        entry = super().from_dict(json_object)
 
         entry.tags = json_object["tags"]
 
@@ -43,8 +44,8 @@ class PostsCMS(BaseCMS, ABC):
 
     @property
     @lru_cache()
-    def posts(self) -> Registry[PostEntry, str]:
-        return Registry(self.root / "posts.json", PostEntry, lambda x: x.complex_id)
+    def posts(self) -> Table[PostEntry, str]:
+        return CsvTable(self.root / "posts.csv", PostEntry, lambda x: x.complex_id)
 
     @staticmethod
     def __get_index_text(post: Post) -> str:
@@ -59,7 +60,6 @@ class PostsCMS(BaseCMS, ABC):
 
     @staticmethod
     def __extract_tags(post: Post) -> List[str]:
-
         words = PostsCMS.__get_index_text(post).split()
 
         tags = [word for word in words if word.startswith("#") and "@" in word]
@@ -68,17 +68,6 @@ class PostsCMS(BaseCMS, ABC):
         tags = [PostsCMS.__TAGS_REPLACE_MAP.get(tag) or tag for tag in tags]
 
         return tags
-
-    def index_group(self, identifier: str, pyvko: Pyvko) -> None:
-        group = pyvko.get(identifier)
-
-        assert isinstance(group, Posts)
-
-        group_id = group.id
-        posts = group.get_posts()
-
-        for post in posts:
-            self.index_post(post, group_id)
 
     def index_post(self, post: Post, group_id: int) -> None:
         text = post.text
@@ -93,4 +82,19 @@ class PostsCMS(BaseCMS, ABC):
         )
 
         self.posts.update(entry)
+        self.posts.save()
+
+    def index_group(self, identifier: str, pyvko: Pyvko) -> None:
+        group = pyvko.get(identifier)
+
+        assert isinstance(group, Posts)
+
+        group_id = group.id
+        posts = group.get_posts()
+
+        self.posts.load()
+
+        for post in posts:
+            self.index_post(post, group_id)
+
         self.posts.save()

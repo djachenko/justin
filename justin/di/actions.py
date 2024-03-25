@@ -15,8 +15,8 @@ from justin.actions.split_action import SplitAction
 from justin.actions.stage.stage_action import StageAction
 from justin.actions.upload_action import UploadAction
 from justin.actions.web_sync_action import WebSyncAction
-from justin.cms.cms_action import CMSIndexAction
-from justin.cms.people import RegisterPeopleAction, FixPeopleAction, SpecifyPersonAction
+from justin.actions.cms_action import CMSIndexAction
+from justin.actions.people import RegisterPeopleAction, FixPeopleAction, SpecifyPersonAction
 from justin.di.checks import ChecksFactory
 from justin.di.stages import StagesFactory
 from justin.shared.helpers.checks_runner import ChecksRunner
