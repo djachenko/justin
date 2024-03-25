@@ -57,6 +57,10 @@ class PatternAction(Action, ABC):
         for migration in context.photoset_migrations_factory.part_less_migrations():
             migration.migrate(photoset)
 
+        for part in photoset.parts:
+            for migration in context.photoset_migrations_factory.part_wise_migrations():
+                migration.migrate(part)
+
         self.perform_for_photoset(photoset, args, context, extra.copy())
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
@@ -69,9 +73,6 @@ class PatternAction(Action, ABC):
                 part_full_name = part.name
 
             extra[PatternAction.PART_FULL_NAME] = part_full_name
-
-            for migration in context.photoset_migrations_factory.part_wise_migrations():
-                migration.migrate(part)
 
             self.perform_for_part(part, args, context, extra.copy())
 
