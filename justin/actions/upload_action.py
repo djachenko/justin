@@ -550,7 +550,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
             success = False
 
-            print(f"Uploading {file.name} ({i}/{file_count})")
+            print(f"Uploading {file.name} ({i}/{file_count})...", end="")
 
             counter = 1
 
@@ -570,6 +570,8 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             metafile.images.append(file.name)
 
             folder.save_metafile(metafile)
+
+            print(" done.")
 
         folder.remove_metafile(AlbumMetafile)
 
