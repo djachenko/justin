@@ -1,5 +1,6 @@
-from functools import lru_cache
+from functools import lru_cache, cache
 
+from justin.actions.append_album_action import AppendAlbumAction
 from justin.actions.check_ratios_action import CheckRatiosAction
 from justin.actions.date_split import DateSplitAction
 from justin.actions.delay_action import DelayAction
@@ -7,6 +8,7 @@ from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.drone import HandleDroneAction, JpgDngDuplicatesAction, PanoExtractAction
 from justin.actions.event import SetupEventAction, CreateEventAction
 from justin.actions.fix_metafile_action import FixMetafileAction
+from justin.actions.get_likers_action import GetLikersAction
 from justin.actions.location import LocationAction
 from justin.actions.move_action import MoveAction
 from justin.actions.rearrange_action import RearrangeAction
@@ -130,3 +132,11 @@ class ActionFactory:
     @lru_cache()
     def cms_index(self) -> Action:
         return CMSIndexAction()
+
+    @lru_cache()
+    def append_album(self) -> Action:
+        return AppendAlbumAction()
+
+    @cache
+    def get_likers(self) -> Action:
+        return GetLikersAction()

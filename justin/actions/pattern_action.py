@@ -59,11 +59,17 @@ class PatternAction(Action, ABC):
         for migration in context.photoset_migrations_factory.part_less_migrations():
             migration.migrate(photoset)
 
+            photoset.folder.refresh()
+
         for part in photoset.parts:
             for migration in context.photoset_migrations_factory.part_wise_migrations():
                 migration.migrate(part)
 
-        self.perform_for_photoset(photoset, args, context, extra.copy())
+                part.folder.refresh()
+
+        photoset.folder.refresh()
+
+        self.perform_for_photoset(photoset, args, context, extra)
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         extra |= {

@@ -24,10 +24,10 @@ class CMSIndexAction(Action):
 
     def perform(self, args: Namespace, context: Context) -> None:
         if args.group:
-            context.cms.index_group(args.group, context.pyvko)
+            context.sqlite_cms.index_group(args.group, context.pyvko)
         elif args.photoset:
             photoset = Photoset.from_path(Path(args.photoset))
 
-            context.cms.index_photoset(photoset, context.world)
+            context.sqlite_cms.index_photoset(photoset)
         elif args.folder:
-            context.cms.index_folder(MetaFolder.from_path(Path(args.folder)), context.world)
+            context.sqlite_cms.index_folder(MetaFolder.from_path(Path(args.folder)))

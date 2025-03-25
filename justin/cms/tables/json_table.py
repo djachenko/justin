@@ -5,7 +5,7 @@ from typing import Callable, Type
 from justin.cms.tables.table import Table, E, K
 
 
-class JsonTable(Table):
+class JsonTable(Table[E, K]):
     __ENTRIES_KEY = "entries"
 
     def __init__(self, path: Path, type_: Type[E], key: Callable[[E], K] = None):

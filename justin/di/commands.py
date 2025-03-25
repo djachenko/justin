@@ -50,5 +50,7 @@ class CommandFactory:
             SingleActionCommand("mig_person", self.__action_factory.migrate_person()),
             SingleActionCommand("drone", self.__action_factory.drone()),
             SingleActionCommand("location", self.__action_factory.location()),
-            SingleActionCommand("cms_index", self.__action_factory.cms_index()),
+            SingleActionCommand("index", self.__action_factory.cms_index()),
+            SingleActionCommand("append_album", self.__action_factory.append_album()),
+            SingleActionCommand("get_likers", self.__action_factory.get_likers()),
         ]
