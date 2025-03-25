@@ -5,6 +5,7 @@ from typing import List
 from lazy_object_proxy import Proxy
 
 from justin.cms.cms import CMS
+from justin.cms_2.sqlite_cms import SQLiteCMS
 from justin.di.app import DI
 from justin.shared.config import Config
 from justin.shared.context import Context
@@ -29,6 +30,7 @@ def __run(config_path: Path, args: List[str] = None):
     pyvko_config = PyvkoConfig.read(pyvko_config_file)
     pyvko = Pyvko(pyvko_config)
     cms = CMS(cms_root)
+    sqlite_cms = SQLiteCMS(cms_root)
 
     config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
         "people": cms.people,
@@ -48,6 +50,7 @@ def __run(config_path: Path, args: List[str] = None):
         my_people_group=get_lazy_group(Config.Keys.MY_PEOPLE_URL),
         pyvko=pyvko,
         cms=cms,
+        sqlite_cms=sqlite_cms,
         photoset_migrations_factory=PhotosetMigrationFactory(cms)
     )
 
@@ -90,6 +93,7 @@ class Commands(str, Enum):
     WEB_SYNC = "web_sync"
     REGISTER_PEOPLE = "reg_people"
     FIX_PEOPLE = "fix_people"
+    DRONE = "drone"
 
 
 class Locations(str, Enum):
@@ -117,12 +121,17 @@ class Stages(str, Enum):
 def main():
     current_location = Locations.MAC_OS_HOME
     current_stage = Stages.SCHEDULE
-    current_command = Commands.REGISTER_PEOPLE
-    current_pattern = "*.aerocolor"
+    current_command = Commands.SPLIT
+    # current_command = Commands.REGISTER_PEOPLE
+    current_pattern = "25.02.23.getlens_testdrive"
 
     commands = {
         0: f"{current_command.value} {current_pattern}",
-        1: "mig_person shtro roman"
+        1: "mig_person shtro roman",
+        2: "append_album 75 305671811",
+        3: "get_likers https://vk.com/wall-100568944_3923 https://vk.com/wall-100568944_3921 https://vk.com/wall-100568944_3902 https://vk.com/wall-100568944_3900 https://vk.com/wall-100568944_3892 https://vk.com/wall-100568944_3889",
+        4: "get_likers https://vk.com/wall-100568944_3923",
+        5: "index --group jvstin",
     }
 
     locations = {

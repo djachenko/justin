@@ -4,16 +4,15 @@ from functools import lru_cache
 from typing import Iterable, Tuple, List
 from uuid import UUID
 
-from justin.cms.base_cms import Table
 from justin.cms.cms import CMS
 from justin.cms.people_cms import PersonMigrationEntry
+from justin.cms.tables.table import Table
 from justin.shared.metafile import Json
 from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
 from justin.shared.models.photoset import Photoset
-from justin_utils.singleton import Singleton
 
 
-class PhotosetMigration(Singleton):
+class PhotosetMigration:
     @abstractmethod
     def migrate(self, photoset: Photoset) -> None:
         pass

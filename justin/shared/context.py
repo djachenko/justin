@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from justin.cms.cms import CMS
+from justin.cms_2.sqlite_cms import SQLiteCMS
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from pyvko.aspects.groups import Group
@@ -20,6 +21,7 @@ class Context:
     pyvko: Pyvko
 
     cms: CMS
+    sqlite_cms: SQLiteCMS
 
     photoset_migrations_factory: PhotosetMigrationFactory
 

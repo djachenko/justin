@@ -61,6 +61,13 @@ class Source(Movable):
 
 
 class InternalMetadataSource(Source):
+    TYPES = [
+        ".jpg",
+        ".tif",
+        ".dng",
+        ".heic",
+    ]
+
     def __init__(self, jpeg: File):
         super().__init__()
 
@@ -84,6 +91,16 @@ class InternalMetadataSource(Source):
 
 
 class ExternalMetadataSource(Source):
+    RAW_TYPES = [
+        ".nef",  # Nikon
+        ".raf",  # Fujifilm GFX
+        ".arw",  # Sony
+    ]
+
+    METADATA_TYPES = [
+        ".xmp",
+    ]
+
     def __init__(self, raw: File, metadata: File):
         super().__init__()
 
@@ -123,9 +140,9 @@ class ExternalMetadataSource(Source):
 def parse_sources(seq: Iterable[File]) -> List[Source]:
     split = list(util.split_by_predicates(
         seq,
-        lambda file: file.extension.lower() in ['.nef', ],
-        lambda file: file.extension.lower() == ".xmp",
-        lambda file: file.extension.lower() in ['.jpg', ".tif", ".dng", ".heic", ]
+        lambda file: file.extension.lower() in ExternalMetadataSource.RAW_TYPES,
+        lambda file: file.extension.lower() in ExternalMetadataSource.METADATA_TYPES,
+        lambda file: file.extension.lower() in InternalMetadataSource.TYPES
     ))
 
     join = joins.left(

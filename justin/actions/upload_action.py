@@ -6,6 +6,8 @@ from datetime import time, date, datetime, timedelta
 from pathlib import Path
 from typing import List, Iterator
 
+from PIL import Image
+
 from justin.actions.destinations_aware_action import DestinationsAwareAction
 from justin.actions.event import SetupEventAction
 from justin.actions.mixins import EventUtils
@@ -108,7 +110,6 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         super().perform_for_photoset(photoset, args, context, extra)
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-
         set_name = extra[UploadAction.SET_NAME]
 
         if part.name != set_name:
@@ -327,56 +328,66 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             if not images_to_upload:
                 continue
 
-            for chunk_index, images_chunk in enumerate(stride(images_to_upload, 5), 1):
-                print(f"Uploading {person_folder.name}, chunk {chunk_index}")
+            print(f"Uploading {person_folder.name}")
 
-                links = []
+            links = []
 
-                photo = None
+            photo = None
 
-                for image in images_chunk:
-                    print(f"Uploading {image.name}...", end="", flush=True)
+            for image in images_to_upload:
+                print(f"Uploading {image.name}...", end="", flush=True)
 
+                if UploadAction.check_photo_limits(image):
                     photo = my_people_group.upload_photo_to_wall(image.path)
 
                     link = photo.largest_link()
-                    short_link = context.pyvko.shorten_link(link)
+                    # short_link = context.pyvko.shorten_link(link)
 
-                    links.append(short_link)
+                    links.append(link)
 
                     print(" done.", flush=True)
-
-                name_components = []
-
-                if person.name:
-                    name_components.append(person.name)
                 else:
-                    name_components.append(person.folder)
+                    links.append(f"{image.name} is too big and should be file.")
 
-                if person.vk_id and person.vk_id != 1:
-                    name_components.append(f"https://vk.com/write{person.vk_id}")
+                    print(" too big, skipping.", flush=True)
 
-                text = "\n\n".join([
-                    ", ".join(name_components),
-                    "\n".join(links),
-                    f"{len(links)} total.",
-                ]).strip()
+            name_components = []
 
-                comment = post.add_comment(CommentModel(
-                    text=text,
-                    from_group=abs(my_people_group.id),
-                    attachments=[photo]
-                ))
+            if person.name:
+                name_components.append(person.name)
+            else:
+                name_components.append(person.folder)
 
-                comment_metafile = CommentMetafile(
-                    id=comment.item_id,
-                    files=[image.name for image in images_chunk],
-                    status=PostStatus.SCHEDULED,
-                )
+            if person.vk_id and person.vk_id != 1:
+                name_components.append(f"https://vk.com/write{person.vk_id}")
 
-                person_metafile.comments.append(comment_metafile)
+            name_components.append(f"{len(links)} total.")
 
-                person_folder.save_metafile(person_metafile)
+            text = "\n\n".join([
+                ", ".join(name_components),
+                "\n".join(links),
+            ]).strip()
+
+            if photo:
+                attachments = [photo]
+            else:
+                attachments = None
+
+            comment = post.add_comment(CommentModel(
+                text=text,
+                from_group=abs(my_people_group.id),
+                attachments=attachments
+            ))
+
+            comment_metafile = CommentMetafile(
+                id=comment.item_id,
+                files=[image.name for image in images_to_upload],
+                status=PostStatus.SCHEDULED,
+            )
+
+            person_metafile.comments.append(comment_metafile)
+
+            person_folder.save_metafile(person_metafile)
 
     def handle_timelapse(self, timelapse_folder: MetaFolder, context: Context, extra: Extra) -> None:
         pass
@@ -574,8 +585,31 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
             print(" done.")
 
-        folder.remove_metafile(AlbumMetafile)
+        # folder.remove_metafile(AlbumMetafile)
 
         return [album]
 
     # endregion uploading
+
+    @staticmethod
+    def check_photo_limits(file: File) -> bool:
+        if file.size > 50 * 1024 * 1024:
+            return False
+
+        with Image.open(file.path) as image:
+            width = image.width
+            height = image.height
+
+        if width == 0 or height == 0:
+            return False
+
+        if width + height > 14000:
+            return False
+
+        if width / height > 20:
+            return False
+
+        if height / width > 20:
+            return False
+
+        return True

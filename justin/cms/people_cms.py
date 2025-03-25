@@ -165,23 +165,36 @@ class PeopleRegistry(JsonTable[PersonEntry, str]):
     def get_all_folders(self):
         return [person.folder for person in self]
 
+    def __contains__(self, item: str) -> bool:
+        for entry in self.entries:
+            if entry.folder == item:
+                return True
+
+        return False
+
 
 class PeopleCMS(BaseCMS, ABC, FixPeopleMixin):
     @property
     @lru_cache()
     def people(self) -> Table[PersonEntry, str]:
-        return PeopleRegistry(self.root / "people.json")
+        people = PeopleRegistry(self.root / "people.json")
+
+        people.load()
+
+        return people
 
     @property
     @lru_cache()
     def people_migrations(self) -> Table[PersonMigrationEntry, str]:
-        return JsonTable(self.root / "people_migrations.json", PersonMigrationEntry, lambda x: x.src)
+        migrations = JsonTable(self.root / "people_migrations.json", PersonMigrationEntry, lambda x: x.src)
+
+        migrations.load()
+
+        return migrations
 
     def register_person(self, path: Path, source: str, pyvko: Pyvko) -> None:
         if path.name.startswith("unknown"):
             return
-
-        print(f"{path.name} {path.name in self.people}")
 
         if path.name in self.people:
             return

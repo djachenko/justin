@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, asdict, fields
 from enum import Flag, auto
 from typing import Iterable, Tuple, Any, List, Type, TypeVar, Dict
@@ -57,23 +58,34 @@ class JsonDataclass(JsonSerializable):
         return asdict(self)
 
 
-def fromdict(obj: Json, data_class: Type[V]) -> V:
+def fromdict(obj: Json, data_class: Type[V], rules: Dict[type, Callable] = None) -> V:
+    if rules is None:
+        rules = {}
+
     fields_ = fields(data_class)
 
     dict_ = {}
 
     for field in fields_:
         field_name = field.name
+        field_type = field.type
+
         try:
             if field_name in obj:
-                if issubclass(field.type, JsonSerializable):
-                    dict_[field_name] = field.type.from_json(obj[field_name])
+                json_value = obj[field_name]
+
+                if field_type in rules:
+                    new_value = rules[field_type](json_value)
+                elif issubclass(field_type, JsonSerializable):
+                    new_value = field_type.from_json(json_value)
                 else:
-                    dict_[field_name] = field.type(obj[field_name])
+                    new_value = field_type(json_value)
             else:
-                dict_[field_name] = field.default
+                new_value = field.default
         except (TypeError, ValueError):
-            dict_[field_name] = None
+            new_value = None
+
+        dict_[field_name] = new_value
 
     new_instance = data_class(**dict_)
 

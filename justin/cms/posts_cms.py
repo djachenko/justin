@@ -65,7 +65,7 @@ class PostsCMS(BaseCMS, ABC):
         tags = [word for word in words if word.startswith("#") and "@" in word]
 
         tags = [tag.split("@")[0] for tag in tags]
-        tags = [PostsCMS.__TAGS_REPLACE_MAP.get(tag) or tag for tag in tags]
+        tags = [PostsCMS.__TAGS_REPLACE_MAP.get(tag, tag) or tag for tag in tags]
 
         return tags
 
