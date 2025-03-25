@@ -21,7 +21,7 @@ class StagesFactory:
 
     @property
     @lru_cache()
-    def commands(self):
+    def commands(self) -> List[str]:
         return [stage.command for stage in self.stages()]
 
     @lru_cache()
