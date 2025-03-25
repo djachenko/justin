@@ -41,9 +41,9 @@ class MoveAction(PatternAction):
         else:
             selected_location = util.ask_for_choice(f"Where would you like to move {path.name}?", new_locations)
 
-        extra[MoveAction.__SELECTED_LOCATION] = selected_location
-
-        super().perform_for_pattern(paths, args, context, extra)
+        super().perform_for_pattern(paths, args, context, extra | {
+            MoveAction.__SELECTED_LOCATION: selected_location,
+        })
 
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
         for parent in path.parents:
