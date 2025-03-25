@@ -5,7 +5,7 @@ from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, MetaFolder
+from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, MetaFolder, AlbumMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 
@@ -119,7 +119,7 @@ class WebSyncAction(DestinationsAwareAction):
                 else:
                     comment = comments[comment_metafile.id]
 
-                    if comment.is_liked():
+                    if comment.has_likes():
                         comment_metafile.status = PostStatus.PUBLISHED
 
                 person_folder.save_metafile(person_metafile)
@@ -205,6 +205,8 @@ class WebSyncAction(DestinationsAwareAction):
                 print(f"was published, now has id {post_metafile.post_id}")
 
                 post_folder.save_metafile(post_metafile)
+
+                post_folder.remove_metafile(AlbumMetafile)
 
             elif post_id in published_ids:
                 # scheduled id can't become an id for published post
