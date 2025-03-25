@@ -18,9 +18,9 @@ class PanoExtractAction(PatternAction):
         5: [6, ]
     }
 
-    @property
-    @lru_cache
-    def reverse_mapping(self) -> dict:
+    @staticmethod
+    @lru_cache()
+    def reverse_mapping() -> dict:
         reverse_mapping = {}
 
         for row, row_members in PanoExtractAction.mapping.items():
@@ -34,7 +34,7 @@ class PanoExtractAction(PatternAction):
             return
 
         for index, file in enumerate(folder.files, start=1):
-            file_row = PanoExtractAction.reverse_mapping[index]
+            file_row = PanoExtractAction.reverse_mapping()[index]
 
             subfolder = folder / f"row_{file_row}"
 
