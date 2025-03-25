@@ -22,11 +22,9 @@ class SplitAction(PatternAction):
         ]
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        print("hello this is split")
-
-        extra[SplitAction.__PHOTOSET_ROOT_KEY] = photoset.path
-
-        super().perform_for_photoset(photoset, args, context, extra)
+        super().perform_for_photoset(photoset, args, context, extra | {
+            SplitAction.__PHOTOSET_ROOT_KEY: photoset.path,
+        })
 
         photoset.folder.refresh()
 

@@ -116,11 +116,12 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
         print(f"Scheduling {set_name}... ")
 
-        extra[UploadAction.__ROOT] = part
-        extra[UploadAction.__ROOT_PATH] = part.path
-        extra[UploadAction.__PART_NAME] = part.name
-
-        super().perform_for_part(part, args, context, extra)
+        super().perform_for_part(part, args, context, extra | {
+            UploadAction.__ROOT: part,
+            UploadAction.__ROOT_PATH: part.path,
+            UploadAction.__PART_NAME: part.name,
+            UploadAction.SET_NAME: set_name,
+        })
 
     # region utils
 

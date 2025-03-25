@@ -39,18 +39,18 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
         self.__cache[group.id] = (published_posts_ids, scheduled_posts_ids)
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        extra[FixMetafileAction.__SET_PATH_KEY] = photoset.path
-
-        super().perform_for_photoset(photoset, args, context, extra)
+        super().perform_for_photoset(photoset, args, context, extra | {
+            FixMetafileAction.__SET_PATH_KEY: photoset.path,
+        })
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         set_path: Path = extra[FixMetafileAction.__SET_PATH_KEY]
 
         print(f"Fixing metafile for {part.path.relative_to(set_path.parent)} photoset.")
 
-        extra[FixMetafileAction.__ROOT_KEY] = part
-
-        super().perform_for_part(part, args, context, extra)
+        super().perform_for_part(part, args, context, extra | {
+            FixMetafileAction.__ROOT_KEY: part,
+        })
 
     def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
         # noinspection PyTypeChecker

@@ -3,6 +3,8 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List, Dict, Any
 
+from frozendict import frozendict
+
 from justin.shared.context import Context
 from justin.shared.metafile import MetaFolder
 from justin.shared.models.photoset import Photoset
@@ -34,17 +36,17 @@ class PatternAction(Action, ABC):
 
         extra = self.get_extra(context)
 
-        self.perform_for_pattern(paths, args, context, extra.copy())
+        self.perform_for_pattern(paths, args, context, extra)
 
     def get_extra(self, context: Context) -> Extra:
-        return {}
+        return frozendict()
 
     def perform_for_pattern(self, paths: List[Path], args: Namespace, context: Context, extra: Extra) -> None:
         for path in paths:
-            self.perform_for_path(path, args, context, extra.copy())
+            self.perform_for_path(path, args, context, extra)
 
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        self.perform_for_folder(MetaFolder.from_path(path), args, context, extra.copy())
+        self.perform_for_folder(MetaFolder.from_path(path), args, context, extra)
 
     def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
         photoset = Photoset.from_folder(folder)
@@ -64,7 +66,9 @@ class PatternAction(Action, ABC):
         self.perform_for_photoset(photoset, args, context, extra.copy())
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        extra[PatternAction.SET_NAME] = photoset.name
+        extra |= {
+            PatternAction.SET_NAME: photoset.name,
+        }
 
         for part in photoset.parts:
             if part.name != photoset.name:
@@ -72,9 +76,9 @@ class PatternAction(Action, ABC):
             else:
                 part_full_name = part.name
 
-            extra[PatternAction.PART_FULL_NAME] = part_full_name
-
-            self.perform_for_part(part, args, context, extra.copy())
+            self.perform_for_part(part, args, context, extra | {
+                PatternAction.PART_FULL_NAME: part_full_name,
+            })
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         assert False
