@@ -292,11 +292,11 @@ class PathBased(Movable):
 class File(PathBased):
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.path.name
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.path.stat().st_size
 
     def is_file(self) -> bool:
@@ -306,23 +306,12 @@ class File(PathBased):
         return self.path.is_dir()
 
     @property
-    def mtime(self):
+    def mtime(self) -> float:
         return self.path.stat().st_mtime
 
     @property
     def stem(self) -> str:
-        name = self.path.stem
-
-        # todo: extract this from File
-        if "-" in name:
-            name_and_modifier = name.rsplit("-", 1)
-
-            modifier = name_and_modifier[1]
-
-            if modifier.isdecimal():
-                name = name_and_modifier[0]
-
-        return name
+        return self.path.stem
 
     @property
     def suffix(self) -> str:
