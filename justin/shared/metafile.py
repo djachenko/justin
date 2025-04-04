@@ -29,6 +29,7 @@ class Metafile:
 
     @abstractmethod
     def as_json(self) -> Json:
+        # todo: asdict(self)
         return {}
 
 

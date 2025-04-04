@@ -585,8 +585,6 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
             print(" done.")
 
-        # folder.remove_metafile(AlbumMetafile)
-
         return [album]
 
     # endregion uploading

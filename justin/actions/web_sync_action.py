@@ -205,7 +205,6 @@ class WebSyncAction(DestinationsAwareAction):
                 print(f"was published, now has id {post_metafile.post_id}")
 
                 post_folder.save_metafile(post_metafile)
-
                 post_folder.remove_metafile(AlbumMetafile)
 
             elif post_id in published_ids:
