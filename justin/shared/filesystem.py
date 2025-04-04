@@ -4,7 +4,7 @@ import webbrowser
 from abc import ABC, abstractmethod
 from functools import partial
 from pathlib import Path
-from typing import List, Optional, Dict, Callable
+from typing import List, Dict, Callable, Self
 
 from justin_utils.data import DataSize
 from justin_utils.time_formatter import format_time
@@ -349,7 +349,7 @@ class Folder(PathBased):
         self.__files: List[File] = None
 
     @property
-    def __subfolders(self) -> Dict[str, 'Folder']:
+    def __subfolders(self) -> Dict[str, Self]:
         if self.__subfolder_mapping is None:
             self.refresh()
 
@@ -376,13 +376,13 @@ class Folder(PathBased):
             sum(subfolder.total_size for subfolder in self.subfolders)
 
     @property
-    def subfolders(self) -> List['Folder']:
+    def subfolders(self) -> List[Self]:
         return sorted(list(self.__subfolders.values()), key=lambda x: x.name)
 
     def __contains__(self, key: str) -> bool:
         return key in self.__subfolders
 
-    def __getitem__(self, key: str | Path) -> Optional['Folder']:
+    def __getitem__(self, key: str | Path) -> Self | None:
         if isinstance(key, str):
             return self.__get_by_str(key)
         elif isinstance(key, Path):
@@ -390,7 +390,7 @@ class Folder(PathBased):
 
         return None
 
-    def __get_by_str(self, key: str) -> Optional['Folder']:
+    def __get_by_str(self, key: str) -> Self | None:
         first, *rest = key.split("/", maxsplit=1)
 
         if rest:
@@ -398,7 +398,7 @@ class Folder(PathBased):
         else:
             return self.__subfolders.get(key)
 
-    def __get_by_path(self, path: Path) -> Optional['Folder']:
+    def __get_by_path(self, path: Path) -> Self | None:
         root, *rest = path.parts
 
         if root in self:
@@ -506,24 +506,24 @@ class Folder(PathBased):
     def __hash__(self):
         return hash(self.__key)
 
-    def __eq__(self, other: 'Folder') -> bool:
+    def __eq__(self, other: Self) -> bool:
         return isinstance(other, type(self)) and other.__key == self.__key
 
-    def __type_copy(self, path: Path) -> 'Folder':
+    def __type_copy(self, path: Path) -> Self:
         return type(self).from_path(path)
 
-    def __truediv__(self, other) -> 'Folder':
+    def __truediv__(self, other) -> Self:
         return self.__type_copy(self.path / other)
 
     def mkdir(self) -> None:
         self.path.mkdir(parents=True, exist_ok=True)
 
     @property
-    def parent(self) -> 'Folder':
+    def parent(self) -> Self:
         return self.__type_copy(self.path.parent)
 
     @classmethod
-    def from_path(cls, path: Path) -> 'Folder':
+    def from_path(cls, path: Path) -> Self:
         return cls(path)
 
 

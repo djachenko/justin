@@ -1,7 +1,7 @@
 import re
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Generic, TypeVar
+from typing import List, Dict, Generic, TypeVar, Self
 
 
 @dataclass(frozen=True)
@@ -11,14 +11,14 @@ class Structure:
 
 @dataclass(frozen=True)
 class XorStructure(Structure):
-    options: List['Structure']
+    options: List[Self]
 
 
 @dataclass(frozen=True)
 class TopStructure(Structure):
-    substructures: Dict[str, 'Structure'] = ()
+    substructures: Dict[str, Self] = ()
 
-    def __getitem__(self, name: str) -> Optional['Structure']:
+    def __getitem__(self, name: str) -> Self | None:
         for pattern, substructure in self.substructures.items():
             pattern = f"^{pattern.strip('^$')}$"
 

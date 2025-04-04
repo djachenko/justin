@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Self
 from uuid import UUID
 
 from justin.shared.filesystem import File, FolderBased
@@ -153,7 +153,7 @@ class Photoset(FolderBased, PartsMixin):
         return True
 
     @classmethod
-    def from_folder(cls, folder: MetaFolder, without_migration: bool = False) -> Optional['Photoset']:
+    def from_folder(cls, folder: MetaFolder, without_migration: bool = False) -> Self | None:
         if not without_migration and not Photoset.is_photoset(folder.path):
             return None
 
@@ -162,5 +162,5 @@ class Photoset(FolderBased, PartsMixin):
         return photoset
 
     @classmethod
-    def from_path(cls, path: Path) -> Optional['Photoset']:
+    def from_path(cls, path: Path) -> Self | None:
         return Photoset.from_folder(MetaFolder.from_path(path))
