@@ -51,18 +51,6 @@ class DBLogger:
         pass
 
 
-# def wrapper(func):
-#     def inner(*args, **kwargs):
-#         first = args[0]
-#
-#         assert isinstance(first, SQLiteDatabase)
-#
-#         with first:
-#             return func(*args, **kwargs)
-#
-#     return inner
-
-
 class SQLiteDatabase:
     def __init__(self, root: Path, file_name: str = "justin.db") -> None:
         self.__db_path = root / file_name
@@ -192,29 +180,23 @@ class SQLiteDatabase:
                     entries
                 )
 
-# class PeopleCMSImpl(PeopleCMS):
-#     @property
-#     def root(self) -> Path:
-#         return self.__root
-#
-#     def __init__(self, root: Path):
-#         self.__root = root
-#
-#
-# if __name__ == '__main__':
-#     root = Path("../../.justin/cms")
-#
-#     db = SQLiteDatabase(root)
-#     cms = PeopleCMSImpl(root)
-#
-#     print(len(list(cms.people)))
-#
-#     cms_people = list(cms.people)
-#     db_people = [Person(
-#         folder=cms_person.folder,
-#         name=cms_person.name,
-#         vk_id=cms_person.vk_id
-#     ) for cms_person in cms_people]
-#
-#     with db:
-#         db.update(*db_people)
+    def delete(self, *entries: T) -> None:
+        if len(entries) == 1 and isinstance(entries[0], list):
+            entries = entries[0]
+
+        grouped_entries: Dict[Type[T], List[T]] = group_by(lambda e: type(e), entries)
+
+        for cls, entries in grouped_entries.items():
+            table_name = cls.type()
+
+            pk = self.__pk(table_name)
+
+            pk_mapping = " AND ".join(f"{field} = :{field}" for field in pk)
+
+            delete_query = f"DELETE FROM {table_name} WHERE {pk_mapping}"
+            dicts_to_delete = [entry.as_dict() for entry in entries]
+
+            self.__db.executemany(
+                delete_query,
+                dicts_to_delete
+            )
