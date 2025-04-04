@@ -45,10 +45,4 @@ class PartsMixin:
 
     @property
     def parts(self) -> List[Folder]:
-        if self.folder is None:
-            return []
-
-        if is_parted(self.folder):
-            return self.folder.subfolders
-        else:
-            return [self.folder]
+        return folder_tree_parts(self.folder)

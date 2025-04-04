@@ -341,6 +341,11 @@ class File(PathBased):
 
 
 class Folder(PathBased):
+    __FILES_TO_UNLINK = [name.lower() for name in [
+        ".DS_store",
+        "NC_FLLST.DAT",
+    ]]
+
     # noinspection PyTypeChecker
     def __init__(self, path: Path) -> None:
         super().__init__(path)
@@ -450,7 +455,7 @@ class Folder(PathBased):
                         self.__subfolders[child.name] = child_tree
 
             elif child.is_file():
-                if child.name.lower() == ".DS_store".lower():
+                if child.name.lower() in Folder.__FILES_TO_UNLINK:
                     child.unlink()
                 elif child.stem.lower() == "_meta":
                     continue  # metafile not included in files
