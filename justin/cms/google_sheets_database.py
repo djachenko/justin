@@ -16,6 +16,10 @@ from justin_utils.util import same
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 
+class Link(str):
+    pass
+
+
 @dataclass
 class GoogleSheetsEntry:
     @classmethod
@@ -57,9 +61,6 @@ GSRow = List
 T = TypeVar("T", bound=GoogleSheetsEntry)
 
 
-
-
-
 class GoogleSheetsDatabase:
     @dataclass
     class Sheet:
@@ -73,11 +74,6 @@ class GoogleSheetsDatabase:
         self.__spreadsheet_id = spreadsheet_id
         self.__sheets: Dict[str, GoogleSheetsDatabase.Sheet] | None = None
         self.__root = root
-
-        self.__service: Service = None
-
-    def create(self, service: Service) -> None:
-        self.__service = service
 
     @property
     @cache
@@ -151,6 +147,10 @@ class GoogleSheetsDatabase:
                 value_dict = {
                     "numberValue": value,
                 }
+            elif isinstance(value, Link):
+                value_dict = {
+                    "formulaValue": f"=HYPERLINK(\"{value}\")"
+                }
             else:
                 value_dict = {
                     "stringValue": str(value),
@@ -184,57 +184,35 @@ class GoogleSheetsDatabase:
     def __checkbox(self, cls: Type[T]) -> List[GSRequest]:
         sheet = self.__get_sheet(cls)
 
-        bool_indices = []
-
-        for i, field in enumerate(fields(cls)):
-            if field.type != bool:
-                continue
-
-            bool_indices.append(i)
-
-        if not bool_indices:
-            return []
-
-        ranges = []
-
-        start = bool_indices[0]
-        end = start + 1
-        prev = start
-
-        for index in bool_indices[1:]:
-            if index == prev + 1:
-                end += 1
-            else:
-                ranges.append((start, end))
-
-                start = index
-                end = start + 1
-
-            prev = index
-
-        ranges.append((start, end))
-
         requests = []
 
-        for start, end in ranges:
-            requests.append({
-                "repeatCell": {
-                    "cell": {
-                        "dataValidation": {
-                            "condition": {
-                                "type": "BOOLEAN",
-                            }
+        for i, field in enumerate(fields(cls)):
+            cell_data = None
+            start = i
+            end = i + 1
+
+            if field.type == bool:
+                cell_data = {
+                    "dataValidation": {
+                        "condition": {
+                            "type": "BOOLEAN",
                         }
-                    },
-                    "range": {
-                        "sheetId": sheet.id,
-                        "startRowIndex": 1,
-                        "startColumnIndex": start,
-                        "endColumnIndex": end,
-                    },
-                    "fields": "dataValidation",
+                    }
                 }
-            })
+
+            if cell_data:
+                requests.append({
+                    "repeatCell": {
+                        "cell": cell_data,
+                        "range": {
+                            "sheetId": sheet.id,
+                            "startRowIndex": 1,
+                            "startColumnIndex": start,
+                            "endColumnIndex": end,
+                        },
+                        "fields": "dataValidation",
+                    }
+                })
 
         return requests
 
