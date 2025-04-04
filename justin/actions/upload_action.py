@@ -102,12 +102,10 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             .flat_map(lambda pt: pt.subfolders) \
             .is_distinct(lambda sf: sf.name)
 
-        extra.update({
+        super().perform_for_photoset(photoset, args, context, extra | {
             UploadAction.__SET_CONTEXT: defaultdict(lambda: {}),
             UploadAction.__SINGLE_NAME: only_one_closed_name,
         })
-
-        super().perform_for_photoset(photoset, args, context, extra)
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         set_name = extra[UploadAction.SET_NAME]

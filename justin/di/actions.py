@@ -1,6 +1,6 @@
 from functools import lru_cache, cache
 
-from justin.actions.append_album_action import AppendAlbumAction
+from justin.actions.append_album_action import AppendAlbumAction, AppendAlbumAction2
 from justin.actions.check_ratios_action import CheckRatiosAction
 from justin.actions.date_split import DateSplitAction
 from justin.actions.delay_action import DelayAction
@@ -135,7 +135,7 @@ class ActionFactory:
 
     @lru_cache()
     def append_album(self) -> Action:
-        return AppendAlbumAction()
+        return AppendAlbumAction2()
 
     @cache
     def get_likers(self) -> Action:
