@@ -65,4 +65,4 @@ class CheckRatiosAction(PatternAction):
                     print(image_list)
 
                     for image in image_list:
-                        image.rename(ratio_subfolder.path / image.name)
+                        image.move_down(ratio_subfolder.name)
