@@ -2,7 +2,8 @@ from abc import abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, asdict, fields
 from enum import Flag, auto
-from typing import Iterable, Tuple, Any, List, Type, TypeVar, Dict
+from types import UnionType, NoneType
+from typing import Iterable, Tuple, Any, List, Type, TypeVar, Dict, get_origin, get_args
 
 from justin.actions.stage.exceptions.no_files_for_name_error import NoFilesForNameError
 
@@ -59,8 +60,7 @@ class JsonDataclass(JsonSerializable):
 
 
 def fromdict(obj: Json, data_class: Type[V], rules: Dict[type, Callable] = None) -> V:
-    if rules is None:
-        rules = {}
+    rules = rules or {}
 
     fields_ = fields(data_class)
 
@@ -69,6 +69,19 @@ def fromdict(obj: Json, data_class: Type[V], rules: Dict[type, Callable] = None)
     for field in fields_:
         field_name = field.name
         field_type = field.type
+
+        origin = get_origin(field_type)
+
+        if origin == UnionType:
+            args = get_args(field_type)
+
+            args = tuple(arg for arg in args if arg != NoneType)
+
+            assert len(args) == 1
+
+            field_type = args[0]
+
+        new_value = None
 
         try:
             if field_name in obj:

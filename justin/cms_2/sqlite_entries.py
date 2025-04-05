@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from sqlite3 import Cursor
-from typing import List, Dict, Any, Self
+from typing import Dict, Any, Self, Type, Callable
 
 from justin.cms_2.sqlite_database import SQLiteEntry
 from pyvko.shared.utils import Json
@@ -58,12 +58,12 @@ class Post(SQLiteEntry):
         return "Posts"
 
     @classmethod
-    def from_dict(cls, json_object: Json) -> Self:
-        result: Self = super().from_dict(json_object)
+    def from_dict(cls, json_object: Json, rules: Dict[Type, Callable] = None) -> Self:
+        rules = rules or {}
 
-        result.date = datetime.fromtimestamp(json_object["date"])
-
-        return result
+        return super().from_dict(json_object, rules | {
+            datetime: lambda json: datetime.fromtimestamp(json)
+        })
 
     def as_dict(self) -> Dict[str, Any]:
         result = super().as_dict()
@@ -84,6 +84,10 @@ class Tag(SQLiteEntry):
     text: str
     tag_id: int | None = None
 
+    @property
+    def clean_text(self) -> str:
+        return self.text.strip("#")
+
     @classmethod
     def type(cls) -> str:
         return "Tags"
@@ -95,6 +99,16 @@ class Tag(SQLiteEntry):
             del result["tag_id"]
 
         return result
+
+
+@dataclass
+class SyncedTagsPost(SQLiteEntry):
+    post_id: int
+    group_id: int
+
+    @classmethod
+    def type(cls) -> str:
+        return "SyncedTags"
 
 
 @dataclass

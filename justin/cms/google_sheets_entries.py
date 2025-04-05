@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Type, Self, Dict, Callable
+from typing import Type, Self, Dict, Callable
 
 from justin.cms.google_sheets_database import DATETIME_FORMAT, GoogleSheetsEntry, Link
-from justin.shared.helpers.utils import fromdict, Json
+from justin.shared.helpers.utils import Json
 
 
 @dataclass
@@ -12,6 +12,7 @@ class PostEntry(GoogleSheetsEntry):
     group_id: int
     post_date: datetime
     link: Link
+    synced: bool
 
     @classmethod
     def from_dict(cls: Type[Self], json_object: Json, rules: Dict[type, Callable] = None) -> Self:
@@ -21,9 +22,6 @@ class PostEntry(GoogleSheetsEntry):
         return super().from_dict(json_object, rules | {
             datetime: lambda json: datetime.strptime(json, DATETIME_FORMAT),
         })
-        # entry.post_date = datetime.strptime(json_object["post_date"], DATETIME_FORMAT)
-
-        # return entry
 
     def as_dict(self) -> Json:
         result = super().as_dict()
