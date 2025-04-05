@@ -1,11 +1,12 @@
 import sqlite3
 from abc import ABC
+from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, fields, asdict
 from functools import cache
 from pathlib import Path
 from sqlite3 import Cursor, Row, Connection
-from typing import TypeVar, List, Type, Self, Iterable, Any, Dict
+from typing import TypeVar, List, Type, Self, Iterable, Any, Dict, Callable
 
 from justin.shared.helpers.utils import fromdict
 from justin_utils.util import group_by
@@ -19,9 +20,9 @@ class SQLiteEntry(ABC):
         return cls.__name__
 
     @classmethod
-    def from_dict(cls, json_object: Json) -> Self:
-        return cls(**json_object)
-        # return fromdict(json_object, cls)
+    def from_dict(cls, json_object: Json, rules: Dict[Type, Callable] = None) -> Self:
+        # return cls(**json_object)
+        return fromdict(json_object, cls, rules)
 
     @classmethod
     def from_cursor(cls, cursor: Cursor, row) -> Self:
@@ -33,28 +34,30 @@ class SQLiteEntry(ABC):
     def as_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
+    def diff(self, other: Self) -> Dict[str, Any]:
+        self_dict = self.as_dict()
+        other_dict = other.as_dict()
+
+        assert self_dict.keys() == other_dict.keys()
+
+        diff = {}
+
+        for key in self_dict:
+            if self_dict[key] != other_dict[key]:
+                diff[key] = self_dict[key]
+
+        return diff
+
 
 T = TypeVar("T", bound=SQLiteEntry)
-
-
-class DBLogger:
-    def commit(self) -> None:
-        pass
-
-    def close(self) -> None:
-        pass
-
-    def execute(self, query: str) -> None:
-        print(query)
-
-    def executemany(self, query: str, entries: Iterable[Dict[str, Any]]) -> None:
-        pass
 
 
 class SQLiteDatabase:
     def __init__(self, root: Path, file_name: str = "justin.db") -> None:
         self.__db_path = root / file_name
         self.__db: Connection | None = None
+
+        self.__cache: Dict[Type[T], List[T]] = {}
 
     @contextmanager
     def connect(self) -> None:
@@ -67,21 +70,26 @@ class SQLiteDatabase:
 
         self.__db = None
 
+    def __drop_cache(self, cls: Type[T]) -> None:
+        del self.__cache[cls]
+
     def get_entries(self, cls: Type[T]) -> List[T]:
-        query = f"SELECT * FROM {cls.type()}"
+        if cls not in self.__cache:
+            query = f"SELECT * FROM {cls.type()}"
 
-        cursor = self.__db.execute(query)
-        fieldnames = tuple(d[0] for d in cursor.description)
+            cursor = self.__db.execute(query)
+            fieldnames = tuple(d[0] for d in cursor.description)
 
-        def row_factory(_, row):
-            row_dict = dict(zip(fieldnames, row))
+            def row_factory(_, row):
+                row_dict = dict(zip(fieldnames, row))
 
-            # return cls(**row_dict)
-            return cls.from_dict(row_dict)
+                return cls.from_dict(row_dict)
 
-        cursor.row_factory = row_factory
+            cursor.row_factory = row_factory
 
-        return cursor.fetchall()
+            self.__cache[cls] = cursor.fetchall()
+
+        return self.__cache[cls].copy()
 
     @cache
     def __pk(self, table: str) -> List[str]:
@@ -98,14 +106,14 @@ class SQLiteDatabase:
         return pk
 
     @cache
-    def __insert_query(self, cls: Type[T], key_mask: Iterable[str] | None = None) -> str:
+    def __insert_query(self, cls: Type[T], field_to_insert: Iterable[str] | None = None) -> str:
         table_name = cls.type()
         fields_ = fields(cls)
 
         field_names = [field.name for field in fields_]
 
-        if key_mask:
-            field_names = [name for name in field_names if name in key_mask]
+        if field_to_insert:
+            field_names = [name for name in field_names if name in field_to_insert]
 
         columns = ", ".join(field_names)
         parameters = ", ".join(f":{name}" for name in field_names)
@@ -113,7 +121,7 @@ class SQLiteDatabase:
         return f"INSERT INTO {table_name} ({columns}) VALUES({parameters})"
 
     @cache
-    def __update_query(self, cls: Type[T], key_mask: Iterable[str] | None = None) -> str:
+    def __update_query(self, cls: Type[T], fields_to_change: Iterable[str] | None = None) -> str:
         table_name = cls.type()
         fields_ = fields(cls)
 
@@ -121,13 +129,13 @@ class SQLiteDatabase:
 
         field_names = [field.name for field in fields_]
 
-        if key_mask:
-            assert not any(key in key_mask for key in pk)
+        if fields_to_change:
+            assert not any(key in fields_to_change for key in pk)
 
-            field_names = [name for name in field_names if name in key_mask]
+            field_names = [name for name in field_names if name in fields_to_change]
 
         fields_mapping = ", ".join(f"{field} = :{field}" for field in field_names)
-        pk_mapping = ", ".join(f"{field} = :{field}" for field in pk)
+        pk_mapping = " AND ".join(f"{field} = :{field}" for field in pk)
 
         return f"UPDATE {table_name} SET {fields_mapping} WHERE {pk_mapping}"
 
@@ -158,27 +166,40 @@ class SQLiteDatabase:
                 if not existing_entry:
                     entries_to_insert.append(entry)
                 elif existing_entry != entry:
-                    entries_to_update.append(entry)
+                    entries_to_update.append((entry, existing_entry))
 
-            dicts_to_insert = [entry.as_dict() for entry in entries_to_insert]
+            if entries_to_insert:
+                dicts_to_insert = [entry.as_dict() for entry in entries_to_insert]
 
-            for key_set, entries in group_by(lambda e: tuple(e.keys()), dicts_to_insert).items():
-                insert_query = self.__insert_query(cls, key_set)
+                # for field_to_insert, dicts in group_by(lambda e: tuple(e.keys()), dicts_to_insert).items():
+                insert_query = self.__insert_query(cls)
 
                 self.__db.executemany(
                     insert_query,
-                    entries
+                    dicts_to_insert
                 )
 
-            dicts_to_update = [entry.as_dict() for entry in entries_to_update]
+                self.__drop_cache(cls)
 
-            for key_set, entries in group_by(lambda e: tuple(e.keys()), dicts_to_update).items():
-                update_query = self.__update_query(cls, key_set)
+            if entries_to_update:
+                fieldsets_grouping = defaultdict(lambda: [])
 
-                self.__db.executemany(
-                    update_query,
-                    entries
-                )
+                for entry, existing_entry in entries_to_update:
+                    diff = entry.diff(existing_entry)
+                    fields_to_update = diff.keys()
+                    fields_to_update = tuple(fields_to_update)
+
+                    fieldsets_grouping[fields_to_update].append(entry.as_dict())
+
+                for fields_to_update, dicts_to_update in fieldsets_grouping.items():
+                    update_query = self.__update_query(cls, fields_to_update)
+
+                    self.__db.executemany(
+                        update_query,
+                        dicts_to_update
+                    )
+
+                self.__drop_cache(cls)
 
     def delete(self, *entries: T) -> None:
         if len(entries) == 1 and isinstance(entries[0], list):
@@ -200,3 +221,5 @@ class SQLiteDatabase:
                 delete_query,
                 dicts_to_delete
             )
+
+            self.__drop_cache(cls)

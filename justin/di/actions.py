@@ -10,6 +10,7 @@ from justin.actions.event import SetupEventAction, CreateEventAction
 from justin.actions.fix_metafile_action import FixMetafileAction
 from justin.actions.get_likers_action import GetLikersAction
 from justin.actions.location import LocationAction
+from justin.actions.manage_tags_action import ManageTagsAction
 from justin.actions.move_action import MoveAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.sequence_action import SequenceAction
@@ -140,3 +141,7 @@ class ActionFactory:
     @cache
     def get_likers(self) -> Action:
         return GetLikersAction()
+
+    @cache
+    def manage_tags(self) -> Action:
+        return ManageTagsAction()

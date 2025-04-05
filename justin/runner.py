@@ -5,6 +5,7 @@ from typing import List
 from lazy_object_proxy import Proxy
 
 from justin.cms.cms import CMS
+from justin.cms.google_sheets_database import GoogleSheetsDatabase
 from justin.cms_2.sqlite_cms import SQLiteCMS
 from justin.di.app import DI
 from justin.shared.config import Config
@@ -20,17 +21,24 @@ __CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
 __PYVKO_CONFIG_FILE = "pyvko_config.json"
 __CMS_FOLDER = "cms"
+__GOOGLE_SHEETS_FOLDER = "google_sheets"
 
 
 def __run(config_path: Path, args: List[str] = None):
     configs_folder = config_path / __CONFIGS_FOLDER
     pyvko_config_file = configs_folder / __PYVKO_CONFIG_FILE
     cms_root = configs_folder / __CMS_FOLDER
+    google_sheets_root = configs_folder / __GOOGLE_SHEETS_FOLDER
 
     pyvko_config = PyvkoConfig.read(pyvko_config_file)
     pyvko = Pyvko(pyvko_config)
     cms = CMS(cms_root)
     sqlite_cms = SQLiteCMS(cms_root)
+
+    sheets_db = GoogleSheetsDatabase(
+        spreadsheet_id="1wpjgMa8PIsi7uVzkVG9G1Q_kP_lOnCgbBLKzZYssKzc",
+        root=google_sheets_root
+    )
 
     config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
         "people": cms.people,
@@ -51,6 +59,7 @@ def __run(config_path: Path, args: List[str] = None):
         pyvko=pyvko,
         cms=cms,
         sqlite_cms=sqlite_cms,
+        sheets_db=sheets_db,
         photoset_migrations_factory=PhotosetMigrationFactory(cms)
     )
 
@@ -132,6 +141,7 @@ def main():
         3: "get_likers https://vk.com/wall-100568944_3923 https://vk.com/wall-100568944_3921 https://vk.com/wall-100568944_3902 https://vk.com/wall-100568944_3900 https://vk.com/wall-100568944_3892 https://vk.com/wall-100568944_3889",
         4: "get_likers https://vk.com/wall-100568944_3923",
         5: "index --group jvstin",
+        6: "manage_tags",
     }
 
     locations = {
@@ -143,7 +153,7 @@ def main():
     with cd(Path(locations[0])):
         __run(
             Path(__file__).parent.parent,
-            commands[0].split()
+            commands[6].split()
         )
 
 

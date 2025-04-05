@@ -53,4 +53,5 @@ class CommandFactory:
             SingleActionCommand("index", self.__action_factory.cms_index()),
             SingleActionCommand("append_album", self.__action_factory.append_album()),
             SingleActionCommand("get_likers", self.__action_factory.get_likers()),
+            SingleActionCommand("manage_tags", self.__action_factory.manage_tags()),
         ]

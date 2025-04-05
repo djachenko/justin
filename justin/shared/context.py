@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from justin.cms.cms import CMS
+from justin.cms.google_sheets_database import GoogleSheetsDatabase
 from justin.cms_2.sqlite_cms import SQLiteCMS
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
@@ -22,6 +23,8 @@ class Context:
 
     cms: CMS
     sqlite_cms: SQLiteCMS
+
+    sheets_db: GoogleSheetsDatabase
 
     photoset_migrations_factory: PhotosetMigrationFactory
 
