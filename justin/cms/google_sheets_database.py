@@ -28,6 +28,7 @@ class GoogleSheetsEntry:
 
     @classmethod
     def header(cls) -> List[str]:
+        # noinspection PyTypeChecker
         return [field.name for field in fields(cls)]
 
     @classmethod
@@ -40,6 +41,7 @@ class GoogleSheetsEntry:
         })
 
     def as_dict(self) -> Json:
+        # noinspection PyTypeChecker
         return asdict(self)
 
     @staticmethod
@@ -66,7 +68,7 @@ class GoogleSheetsDatabase:
     class Sheet:
         id: int
         header: List[str] = None
-        data: List[T] = None
+        data: List[T] | None = None
 
     def __init__(self, spreadsheet_id: str, root: Path) -> None:
         super().__init__()

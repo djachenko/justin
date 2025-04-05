@@ -25,6 +25,7 @@ class PhotosetsCMS:
             if folder is None:
                 return []
 
+            # noinspection PyArgumentList
             return [cls(
                 folder=subfolder.name,
                 photoset=photoset.name,

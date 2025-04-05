@@ -1,5 +1,6 @@
 from argparse import Namespace
 from dataclasses import make_dataclass
+from typing import Type
 
 from justin.cms.google_sheets_database import Link
 from justin.shared.context import Context
@@ -14,8 +15,8 @@ class ManageTagsAction(Action):
 
         sqlite_tags.sort(key=lambda tag: context.sqlite_cms.tag_usage_count(tag.tag_id), reverse=True)
 
-        # noinspection PyPep8Naming
-        TaggedPost = make_dataclass(
+        # noinspection PyPep8Naming,PyTypeChecker
+        TaggedPost: Type[GooglePost] = make_dataclass(
             "TaggedPost",
             fields=[(tag.clean_text, bool) for tag in sqlite_tags],
             bases=(GooglePost,)
