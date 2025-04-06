@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from justin.cms_2.sqlite_database import SQLiteDatabase
+from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase
 from justin.cms_2.sub_cms.photosets_cms import PhotosetsCMS
 from justin.cms_2.sub_cms.posts_to_tags_cms import PostsToTagsCMS
 from justin.cms_2.sub_cms.posts_cms import PostsCMS

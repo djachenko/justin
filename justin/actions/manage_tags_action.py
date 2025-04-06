@@ -2,10 +2,10 @@ from argparse import Namespace
 from dataclasses import make_dataclass
 from typing import Type
 
-from justin.cms.google_sheets_database import Link
+from justin.cms_2.storage.google_sheets.google_sheets_database import Link
+from justin.cms_2.storage.google_sheets.google_sheets_entries import PostEntry as GooglePost
 from justin.shared.context import Context
 from justin_utils.cli import Action
-from justin.cms.google_sheets_entries import PostEntry as GooglePost
 
 
 class ManageTagsAction(Action):

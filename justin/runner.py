@@ -5,8 +5,8 @@ from typing import List
 from lazy_object_proxy import Proxy
 
 from justin.cms.cms import CMS
-from justin.cms.google_sheets_database import GoogleSheetsDatabase
 from justin.cms_2.sqlite_cms import SQLiteCMS
+from justin.cms_2.storage.google_sheets.google_sheets_database import GoogleSheetsDatabase
 from justin.di.app import DI
 from justin.shared.config import Config
 from justin.shared.context import Context

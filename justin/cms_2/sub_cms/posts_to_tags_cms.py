@@ -2,8 +2,8 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import List
 
-from justin.cms_2.sqlite_database import SQLiteDatabase
-from justin.cms_2.sqlite_entries import PostToTag
+from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase
+from justin.cms_2.storage.sqlite.sqlite_entries import PostToTag
 from justin.cms_2.sub_cms.tags_cms import TagsCMS
 
 
