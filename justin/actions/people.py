@@ -3,42 +3,58 @@ from typing import List
 
 from justin.actions.destinations_aware_action import DestinationsAwareAction
 from justin.actions.pattern_action import Extra
-from justin.cms.people_cms import PeopleCMS, PersonEntry
+from justin.cms.people_cms import PersonEntry
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.shared.metafile import MetaFolder
+from justin_utils import util
 from justin_utils.cli import Action, Parameter
+from pyvko.aspects.groups import Group
+from pyvko.entities.user import User
 from pyvko.pyvko_main import Pyvko
 
 
 class RegisterPeopleAction(DestinationsAwareAction):
     def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
-        super().handle_closed(closed_folder, context, extra)
-
-        self.__register_from_path(closed_folder, context.pyvko, context.cms, extra[RegisterPeopleAction.SET_NAME])
-
-    def handle_drive(self, drive_folder: MetaFolder, context: Context, extra: Extra) -> None:
-        super().handle_drive(drive_folder, context, extra)
-
-        self.__register_from_path(drive_folder, context.pyvko, context.cms, extra[RegisterPeopleAction.SET_NAME])
-
-    def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
-        super().handle_my_people(my_people_folder, context, extra)
-
-        self.__register_from_path(
-            my_people_folder,
-            context.pyvko,
-            context.cms,
-            extra[RegisterPeopleAction.SET_NAME]
+        RegisterPeopleAction.__register_from_path(
+            closed_folder,
+            context
         )
 
-    def handle_common(self, folder: MetaFolder, context: Context, extra: Extra) -> None:
-        pass
+    def handle_drive(self, drive_folder: MetaFolder, context: Context, extra: Extra) -> None:
+        RegisterPeopleAction.__register_from_path(
+            drive_folder,
+            context
+        )
+
+    def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
+        RegisterPeopleAction.__register_from_path(
+            my_people_folder,
+            context
+        )
 
     @staticmethod
-    def __register_from_path(tree: Folder, pyvko: Pyvko, register: PeopleCMS, source: str) -> None:
-        for my_person in tree.subfolders:
-            register.register_person(my_person.path, source, pyvko)
+    def __register_from_path(folder_with_people: Folder, context: Context) -> None:
+        for person_folder in folder_with_people.subfolders:
+            vk_entity = RegisterPeopleAction.__get_vk_entity(person_folder.name, context.pyvko)
+
+            context.sqlite_cms.register_person(
+                folder=person_folder.name,
+                name=vk_entity.name,
+                vk_id=vk_entity.id
+            )
+
+    @staticmethod
+    def __get_vk_entity(folder: str, pyvko: Pyvko) -> User | Group | None:
+        abort = None
+        empty = ""
+
+        choice = util.ask_for_choice_flagged(f"Who is {folder} in vk?", [])
+
+        if choice == abort or choice == empty:
+            return None
+        else:
+            return pyvko.get(choice)
 
 
 class FixPeopleAction(Action):

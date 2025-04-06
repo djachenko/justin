@@ -13,15 +13,15 @@ from justin.actions.event import SetupEventAction
 from justin.actions.mixins import EventUtils
 from justin.actions.pattern_action import Context, Extra
 from justin.actions.rearrange_action import RearrangeAction
-from justin.cms.people_cms import PersonEntry
-from justin.shared.filesystem import File, Folder
+from justin.cms_2.storage.sqlite.sqlite_entries import Person
+from justin.shared.filesystem import File
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
     AlbumMetafile, MetaFolder
 from justin.shared.models.exif import parse_exif
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
-from justin_utils.util import stride, flat_map
+from justin_utils.util import flat_map
 from pyvko.aspects.albums import Albums
 from pyvko.aspects.comments import CommentModel
 from pyvko.aspects.events import Event
@@ -289,23 +289,17 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         assert post is not None
 
         for person_folder in my_people_folder.subfolders:
-            person = context.cms.people.get(person_folder.name)
+            person = context.sqlite_cms.get_person(person_folder.name)
 
             if not person and person_folder.name.startswith("unknown"):
-                person = PersonEntry(
+                person = Person(
                     folder=person_folder.name,
                     name=person_folder.name,
-                    vk_id=1,
-                    source=""
+                    vk_id=None,
                 )
 
             if not person:
                 print(f"{person_folder.name} needs to be registered.")
-
-                continue
-
-            if not PersonEntry.is_valid(person):
-                print(f"{person_folder.name} needs to be fixed.")
 
                 continue
 
@@ -356,7 +350,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
             else:
                 name_components.append(person.folder)
 
-            if person.vk_id and person.vk_id != 1:
+            if person.vk_id:
                 name_components.append(f"https://vk.com/write{person.vk_id}")
 
             name_components.append(f"{len(links)} total.")
