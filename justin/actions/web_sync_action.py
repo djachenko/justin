@@ -142,7 +142,7 @@ class WebSyncAction(DestinationsAwareAction):
     def handle_timelapse(self, timelapse_folder: MetaFolder, context: Context, extra: Extra) -> None:
         pass
 
-    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_drive(self, drive_folder: MetaFolder, context: Context, extra: Extra) -> None:
         pass
 
     def __warmup_cache(self, group_id: int, context: Context):

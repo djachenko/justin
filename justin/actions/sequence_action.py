@@ -3,7 +3,7 @@ from typing import List
 
 from justin.actions.check_ratios_action import PatternAction
 from justin.actions.pattern_action import Extra
-from justin.shared.filesystem import Folder
+from justin.shared.metafile import MetaFolder
 from justin.shared.models.exif import exif_sorted
 from justin_utils.cli import Context, Parameter
 
@@ -16,7 +16,7 @@ class SequenceAction(PatternAction):
             Parameter(name="start", default=0, type=int),
         ]
 
-    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
         prefix = args.prefix
         start = args.start
 

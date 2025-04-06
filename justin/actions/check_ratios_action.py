@@ -1,11 +1,12 @@
 from argparse import Namespace
 from collections import defaultdict
-from typing import List, Tuple, Dict
+from typing import List, Dict
 
 from PIL import Image
 
 from justin.actions.pattern_action import PatternAction, Extra
-from justin.shared.filesystem import Folder, File
+from justin.shared.filesystem import File
+from justin.shared.metafile import MetaFolder
 from justin_utils.cli import Context, Parameter
 
 
@@ -20,7 +21,7 @@ class CheckRatiosAction(PatternAction):
             Parameter(flags=["-p", "--precision"], type=int, default=CheckRatiosAction.__DEFAULT_PRECISION),
         ]
 
-    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
         ratios: Dict[float, List[File]] = defaultdict(lambda: [])
 
         precision = args.precision

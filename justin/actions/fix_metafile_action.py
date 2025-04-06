@@ -60,7 +60,7 @@ class FixMetafileAction(DestinationsAwareAction, EventUtils):
             extra
         )
 
-    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_drive(self, drive_folder: MetaFolder, context: Context, extra: Extra) -> None:
         pass
 
     def handle_justin(self, justin_folder: MetaFolder, context: Context, extra: Extra) -> None:
