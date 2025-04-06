@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from typing import List
 
-from justin.cms_2.sqlite_database import SQLiteDatabase
-from justin.cms_2.sqlite_entries import Tag
+from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase
+from justin.cms_2.storage.sqlite.sqlite_entries import Tag
 from justin_utils.util import distinct
 
 

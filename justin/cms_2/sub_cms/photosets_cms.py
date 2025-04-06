@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from typing import List, Type
 
-from justin.cms_2.sqlite_database import SQLiteDatabase, SQLiteEntry
-from justin.cms_2.sqlite_entries import Drive, Closed, MyPeople, Photoset as PhotosetEntry, PersonPhotos
+from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase, SQLiteEntry
+from justin.cms_2.storage.sqlite.sqlite_entries import Closed, Photoset as PhotosetEntry, PersonPhotos, Drive, MyPeople
 from justin.shared.metafile import PhotosetMetafile, MetaFolder
 from justin.shared.models.photoset import Photoset
 from justin_utils.util import bfs

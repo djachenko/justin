@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from justin.cms.cms import CMS
-from justin.cms.google_sheets_database import GoogleSheetsDatabase
 from justin.cms_2.sqlite_cms import SQLiteCMS
+from justin.cms_2.storage.google_sheets.google_sheets_database import GoogleSheetsDatabase
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from pyvko.aspects.groups import Group

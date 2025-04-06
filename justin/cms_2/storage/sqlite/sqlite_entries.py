@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlite3 import Cursor
 from typing import Dict, Any, Self, Type, Callable
 
-from justin.cms_2.sqlite_database import SQLiteEntry
+from justin.cms_2.storage.sqlite.sqlite_database import SQLiteEntry
 from pyvko.shared.utils import Json
 
 
