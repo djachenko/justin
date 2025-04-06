@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import cache
 
 from justin.actions.stage.logic.base import Extractor
 from justin.actions.stage.logic.metadata import MetadataCheck
@@ -19,7 +19,7 @@ class ExtractorFactory:
         self.__selector_factory = selector_factory
         self.__metadata_check = MetadataCheck(selector_factory.metadata())
 
-    @lru_cache()
+    @cache
     def edited(self) -> Extractor:
         return Extractor(
             selector=self.__selector_factory.edited(),
@@ -29,7 +29,7 @@ class ExtractorFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def unselected(self) -> Extractor:
         return Extractor(
             selector=self.__selector_factory.unselected(),
@@ -39,7 +39,7 @@ class ExtractorFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def odd_selection(self) -> Extractor:
         return Extractor(
             selector=self.__selector_factory.odd_selection(),
@@ -49,7 +49,7 @@ class ExtractorFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def structure(self) -> Extractor:
         return StructureExtractor(
             selector=self.__selector_factory.structure(),
@@ -59,7 +59,7 @@ class ExtractorFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def progress(self) -> Extractor:
         return ProgressExtractor(prechecks=[
             self.__metadata_check,
