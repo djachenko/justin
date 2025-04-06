@@ -1,21 +1,20 @@
 import random
 from argparse import Namespace
 from datetime import timedelta, datetime
-from functools import lru_cache
+from functools import cache
 from typing import List
-
-from pyvko.entities.user import Group
 
 from justin.actions.group_action import GroupAction
 from justin_utils.cli import Context, Parameter
 from justin_utils.util import parse_time, random_date
+from pyvko.entities.user import Group
 
 
 class RearrangeAction(GroupAction):
     DEFAULT_STEP = 1
 
     @property
-    @lru_cache()
+    @cache
     def parameters(self) -> List[Parameter]:
         return super().parameters + [
             Parameter("--step", type=int, default=RearrangeAction.DEFAULT_STEP),

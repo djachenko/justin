@@ -18,3 +18,5 @@ build/
 .justin/*
 
 .justin/
+
+justin/cms_2/sub_cms/tmplt_cms.py

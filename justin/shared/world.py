@@ -3,7 +3,7 @@ import platform
 import shutil
 import string
 from abc import abstractmethod
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import List, Iterable, Type
 
@@ -23,13 +23,13 @@ class Roots:
 
 
 class WindowsRoots(Roots):
-    @lru_cache()
+    @cache
     def get_roots(self) -> List[Path]:
         return [Path(disk_letter + ":/") for disk_letter in string.ascii_uppercase]
 
 
 class MacOSRoots(Roots):
-    @lru_cache()
+    @cache
     def get_roots(self) -> List[Path]:
         return [
             Path.home() / "photos",
@@ -49,7 +49,7 @@ class Location(JsonSerializable):
         self.__folder = folder
 
     @property
-    @lru_cache()
+    @cache
     def __metafile(self) -> LocationMetafile:
         return self.__folder.get_metafile(LocationMetafile)
 
@@ -74,7 +74,7 @@ class Location(JsonSerializable):
 
         return free
 
-    @lru_cache()
+    @cache
     def get_sets(self) -> Iterable[Photoset]:
         photosets = []
 
@@ -166,7 +166,7 @@ class World:
         # noinspection PyTypeChecker
         return os.access(path, os.F_OK) and path.exists()
 
-    @lru_cache()
+    @cache
     def get_locations(self) -> List[Location]:
         return self.__discover_locations()
 

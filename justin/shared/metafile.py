@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 from collections import defaultdict
 from dataclasses import dataclass, asdict, field
 from enum import Enum
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Dict, Type, TypeVar, List, Set
 from uuid import UUID, uuid4
@@ -38,7 +38,7 @@ class RootMetafile(Metafile):
     TYPE_KEY = "type"
 
     @classmethod
-    @lru_cache()
+    @cache
     @abstractmethod
     def type(cls) -> str:
         pass
@@ -398,7 +398,7 @@ class MetafileMixin(ABC):
         return self.path / MetafileMixin.__METAFILE_NAME
 
     @property
-    @lru_cache()
+    @cache
     def __reader(self):
         return MetafileReadWriter.instance()
 

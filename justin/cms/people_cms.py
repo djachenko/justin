@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from datetime import date
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Type
 
@@ -175,7 +175,7 @@ class PeopleRegistry(JsonTable[PersonEntry, str]):
 
 class PeopleCMS(BaseCMS, ABC, FixPeopleMixin):
     @property
-    @lru_cache()
+    @cache
     def people(self) -> Table[PersonEntry, str]:
         people = PeopleRegistry(self.root / "people.json")
 
@@ -184,7 +184,7 @@ class PeopleCMS(BaseCMS, ABC, FixPeopleMixin):
         return people
 
     @property
-    @lru_cache()
+    @cache
     def people_migrations(self) -> Table[PersonMigrationEntry, str]:
         migrations = JsonTable(self.root / "people_migrations.json", PersonMigrationEntry, lambda x: x.src)
 

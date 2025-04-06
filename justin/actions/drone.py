@@ -1,6 +1,6 @@
 from argparse import Namespace
 from collections import defaultdict
-from functools import lru_cache
+from functools import cache
 
 from justin.actions.pattern_action import Extra
 from justin.actions.pattern_action import PatternAction
@@ -19,7 +19,7 @@ class PanoExtractAction(PatternAction):
     }
 
     @staticmethod
-    @lru_cache()
+    @cache
     def reverse_mapping() -> dict:
         reverse_mapping = {}
 

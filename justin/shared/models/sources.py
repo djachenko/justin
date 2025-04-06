@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import List, Iterable
 
@@ -85,7 +85,7 @@ class InternalMetadataSource(Source):
         return [self.__jpeg]
 
     @property
-    @lru_cache()
+    @cache
     def exif(self) -> Exif:
         return parse_exif(self.__jpeg.path)
 
@@ -124,7 +124,7 @@ class ExternalMetadataSource(Source):
         return self.raw.stem
 
     @property
-    @lru_cache()
+    @cache
     def exif(self) -> Exif:
         return parse_exif(self.raw.path)
 

@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import cache
 
 from lazy_object_proxy import Proxy
 
@@ -19,19 +19,19 @@ class DI:
         self.__selector_factory_ = Proxy(lambda: SelectorFactory(config[Config.Keys.PHOTOSET_STRUCTURE]))
 
     @property
-    @lru_cache()
+    @cache
     def __selector_factory(self) -> SelectorFactory:
         return self.__selector_factory_
 
     @property
-    @lru_cache()
+    @cache
     def __extractor_factory(self):
         return ExtractorFactory(
             self.__selector_factory
         )
 
     @property
-    @lru_cache()
+    @cache
     def __checks_factory(self) -> ChecksFactory:
         return ChecksFactory(
             self.__selector_factory,
@@ -39,7 +39,7 @@ class DI:
         )
 
     @property
-    @lru_cache()
+    @cache
     def __stages_factory(self) -> StagesFactory:
         return StagesFactory(
             self.__checks_factory,
@@ -47,7 +47,7 @@ class DI:
         )
 
     @property
-    @lru_cache()
+    @cache
     def __actions_factory(self) -> ActionFactory:
         return ActionFactory(
             self.__stages_factory,
@@ -56,12 +56,12 @@ class DI:
         )
 
     @property
-    @lru_cache()
+    @cache
     def __checks_runner(self) -> ChecksRunner:
         return ChecksRunner()
 
     @property
-    @lru_cache()
+    @cache
     def commands_factory(self) -> CommandFactory:
         return CommandFactory(
             self.__stages_factory,

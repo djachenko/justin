@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import List
 
@@ -20,11 +20,11 @@ class StagesFactory:
         self.__stages_by_folders = {stage.folder: stage for stage in stages}
 
     @property
-    @lru_cache()
+    @cache
     def commands(self) -> List[str]:
         return [stage.command for stage in self.stages()]
 
-    @lru_cache()
+    @cache
     def stages(self) -> List[Stage]:
         return [
             self.gif(),
@@ -37,7 +37,7 @@ class StagesFactory:
             self.archive(),
         ]
 
-    @lru_cache()
+    @cache
     def archive(self) -> Stage:
         return ArchiveStage(
             folder=".archive",
@@ -51,7 +51,7 @@ class StagesFactory:
             ],
         )
 
-    @lru_cache()
+    @cache
     def gif(self) -> Stage:
         return DefaultStage(
             folder="stage0.gif",
@@ -61,14 +61,14 @@ class StagesFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def filter(self) -> Stage:
         return DefaultStage(
             folder="stage1.filter",
             command="filter"
         )
 
-    @lru_cache()
+    @cache
     def develop(self) -> Stage:
         return DefaultStage(
             folder="stage2.develop",
@@ -83,7 +83,7 @@ class StagesFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def ourate(self) -> Stage:
         return DefaultStage(
             folder="stage2.ourate",
@@ -99,7 +99,7 @@ class StagesFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def ready(self) -> Stage:
         return DefaultStage(
             folder="stage3.ready",
@@ -114,7 +114,7 @@ class StagesFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def published(self) -> Stage:
         return DefaultStage(
             folder="stage4.published",
@@ -129,7 +129,7 @@ class StagesFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def scheduled(self) -> Stage:
         return DefaultStage(
             folder="stage3.schedule",
@@ -145,7 +145,7 @@ class StagesFactory:
             ]
         )
 
-    @lru_cache()
+    @cache
     def stub(self) -> Stage:
         return Stage(
             folder=""

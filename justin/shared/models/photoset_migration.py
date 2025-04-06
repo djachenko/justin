@@ -1,6 +1,6 @@
 import json
 from abc import abstractmethod, ABC
-from functools import lru_cache
+from functools import cache
 from typing import Iterable, Tuple, List
 from uuid import UUID
 
@@ -107,7 +107,7 @@ class RenameFoldersMigration(PhotosetMigration, ABC):
 
 class ChangeStructureMigration(RenameFoldersMigration):
     @property
-    @lru_cache()
+    @cache
     def renamings(self) -> Iterable[Tuple[str, str]]:
         return [
             ("our_people", "my_people",),
@@ -176,7 +176,7 @@ class PhotosetMigrationFactory:
 
         self.__cms = cms
 
-    @lru_cache()
+    @cache
     def part_wise_migrations(self) -> List[PhotosetMigration]:
         return [
             self.__split_metafiles_migration(),
@@ -185,28 +185,28 @@ class PhotosetMigrationFactory:
             self.__remove_ai_postfix_migration(),
         ]
 
-    @lru_cache()
+    @cache
     def part_less_migrations(self) -> List[PhotosetMigration]:
         return [
             self.__parse_metafile_migration()
         ]
 
-    @lru_cache()
+    @cache
     def __split_metafiles_migration(self) -> PhotosetMigration:
         return SplitMetafilesMigration()
 
-    @lru_cache()
+    @cache
     def __change_structure_migration(self) -> PhotosetMigration:
         return ChangeStructureMigration()
 
-    @lru_cache()
+    @cache
     def __rename_people_migration(self) -> PhotosetMigration:
         return RenamePeopleMigration(self.__cms.people_migrations)
 
-    @lru_cache()
+    @cache
     def __parse_metafile_migration(self) -> PhotosetMigration:
         return ParseMetafileMigration()
 
-    @lru_cache()
+    @cache
     def __remove_ai_postfix_migration(self) -> PhotosetMigration:
         return AIPostfixMigration()
