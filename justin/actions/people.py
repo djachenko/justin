@@ -6,22 +6,23 @@ from justin.actions.pattern_action import Extra
 from justin.cms.people_cms import PeopleCMS, PersonEntry
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
+from justin.shared.metafile import MetaFolder
 from justin_utils.cli import Action, Parameter
 from pyvko.pyvko_main import Pyvko
 
 
 class RegisterPeopleAction(DestinationsAwareAction):
-    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
         super().handle_closed(closed_folder, context, extra)
 
         self.__register_from_path(closed_folder, context.pyvko, context.cms, extra[RegisterPeopleAction.SET_NAME])
 
-    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_drive(self, drive_folder: MetaFolder, context: Context, extra: Extra) -> None:
         super().handle_drive(drive_folder, context, extra)
 
         self.__register_from_path(drive_folder, context.pyvko, context.cms, extra[RegisterPeopleAction.SET_NAME])
 
-    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
         super().handle_my_people(my_people_folder, context, extra)
 
         self.__register_from_path(
@@ -31,7 +32,7 @@ class RegisterPeopleAction(DestinationsAwareAction):
             extra[RegisterPeopleAction.SET_NAME]
         )
 
-    def handle_common(self, folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_common(self, folder: MetaFolder, context: Context, extra: Extra) -> None:
         pass
 
     @staticmethod

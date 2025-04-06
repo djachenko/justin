@@ -4,7 +4,7 @@ from functools import lru_cache
 
 from justin.actions.pattern_action import Extra
 from justin.actions.pattern_action import PatternAction
-from justin.shared.filesystem import Folder
+from justin.shared.metafile import MetaFolder
 from justin_utils.cli import Context
 
 
@@ -29,7 +29,7 @@ class PanoExtractAction(PatternAction):
 
         return reverse_mapping
 
-    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
         if len(folder.files) != 35:
             return
 
@@ -44,7 +44,7 @@ class PanoExtractAction(PatternAction):
 
 
 class JpgDngDuplicatesAction(PatternAction):
-    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
         buckets = defaultdict(lambda: [])
 
         for item in folder.files:
@@ -64,7 +64,7 @@ class HandleDroneAction(PatternAction):
         self.__pano_action = pano_action
         self.__duplicate_action = duplicate_action
 
-    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
         self.__duplicate_action.perform_for_folder(folder / "100MEDIA", args, context, extra)
 
         for pano_folder in (folder / "PANORAMA").subfolders:
