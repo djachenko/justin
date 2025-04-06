@@ -192,28 +192,6 @@ class PeopleCMS(BaseCMS, ABC, FixPeopleMixin):
 
         return migrations
 
-    def register_person(self, path: Path, source: str, pyvko: Pyvko) -> None:
-        if path.name.startswith("unknown"):
-            return
-
-        if path.name in self.people:
-            return
-
-        entry = PersonEntry(
-            folder=path.name,
-            name=None,
-            vk_id=None,
-            source=source
-        )
-
-        entry = self.fix_person(entry, pyvko)
-
-        if entry is None:
-            return
-
-        self.people.update(entry)
-        self.people.save()
-
     def migrate_person(self, src: str, dst: str) -> None:
         assert src in self.people
 
@@ -233,4 +211,3 @@ class PeopleCMS(BaseCMS, ABC, FixPeopleMixin):
 
         self.people_migrations.update(migration)
         self.people_migrations.save()
-
