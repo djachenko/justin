@@ -1,20 +1,15 @@
 from abc import abstractmethod
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import TypeVar, Generic, List, Callable, Hashable, Type
 
-from justin.shared.helpers.utils import fromdict, Json
+from justin.shared.helpers.utils import DictableDataclass
 
 T = TypeVar("T")
 
 
 @dataclass
-class Entry:
-    @classmethod
-    def from_dict(cls: Type[T], json_object: Json) -> T:
-        return fromdict(json_object, cls)
-
-    def as_dict(self) -> Json:
-        return asdict(self)
+class Entry(DictableDataclass):
+    pass
 
 
 E = TypeVar("E", bound=Entry)

@@ -15,17 +15,25 @@ class PostEntry(GoogleSheetsEntry):
     synced: bool
 
     @classmethod
-    def from_dict(cls: Type[Self], json_object: Json, rules: Dict[type, Callable] = None) -> Self:
-        if rules is None:
-            rules = {}
-
-        return super().from_dict(json_object, rules | {
+    def rules(cls) -> Dict[type, Callable]:
+        return super().rules() | {
             datetime: lambda json: datetime.strptime(json, DATETIME_FORMAT),
-        })
+        }
+
+    # @classmethod
+    # def from_dict(cls: Type[Self], json_object: Json, rules: Dict[type, Callable] = None) -> Self:
+    #     if rules is None:
+    #         rules = {}
+    #
+    #     return super().from_dict(json_object, rules | {
+    #         datetime: lambda json: datetime.strptime(json, DATETIME_FORMAT),
+    #     })
 
     def as_dict(self) -> Json:
-        result = super().as_dict()
+        return super().as_dict() | {
+            "post_date": self.post_date.strftime(DATETIME_FORMAT)
+        }
 
-        result["post_date"] = self.post_date.strftime(DATETIME_FORMAT)
-
-        return result
+        # result["post_date"] = self.post_date.strftime(DATETIME_FORMAT)
+        #
+        # return result
