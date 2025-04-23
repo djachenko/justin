@@ -141,13 +141,13 @@ class RenamePeopleMigration(RenameFoldersMigration):
 
 class ParseMetafileMigration(PhotosetMigration):
     def migrate(self, photoset: Photoset) -> None:
-        if photoset.folder.has_metafile(PhotosetMetafile):
-            metafile = photoset.folder.get_metafile(PhotosetMetafile)
+        if PhotosetMetafile.has(photoset.folder):
+            metafile = PhotosetMetafile.get(photoset.folder)
 
             if isinstance(metafile.photoset_id, UUID):
                 return
 
-        photoset.folder.save_metafile(PhotosetMetafile())
+        PhotosetMetafile().save(photoset.folder)
 
 
 class AIPostfixMigration(PhotosetMigration):

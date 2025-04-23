@@ -3,12 +3,13 @@ from typing import List
 
 from justin.actions.pattern_action import PatternAction, Extra
 from justin.shared.context import Context
-from justin.shared.metafile import MetaFolder, LocationMetafile
+from justin.shared.filesystem import Folder
+from justin.shared.metafile import LocationMetafile
 from justin_utils.cli import Parameter
 
 
-def is_location(folder: MetaFolder):
-    return folder.has_metafile(LocationMetafile)
+def is_location(folder: Folder):
+    return LocationMetafile.has(folder)
 
 
 class LocationAction(PatternAction):
@@ -20,7 +21,7 @@ class LocationAction(PatternAction):
         ]
 
     @staticmethod
-    def __touch_location(folder: MetaFolder) -> None:
+    def __touch_location(folder: Folder) -> None:
         if is_location(folder):
             print("Already location.")
 
@@ -32,7 +33,7 @@ class LocationAction(PatternAction):
             return
 
         for parent in folder.path.parents:
-            meta_parent = MetaFolder.from_path(parent)
+            meta_parent = Folder.from_path(parent)
 
             print(meta_parent.path)
 
@@ -72,9 +73,9 @@ class LocationAction(PatternAction):
             location_order=0
         )
 
-        folder.save_metafile(metafile)
+        metafile.save(folder)
 
-    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
         if args.touch:
             self.__touch_location(folder)
         else:

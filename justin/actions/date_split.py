@@ -3,9 +3,10 @@ from datetime import timedelta
 from typing import List
 
 from justin.actions.pattern_action import PatternAction, Extra
-from justin.shared.metafile import MetaFolder
+from justin.shared.context import Context
+from justin.shared.filesystem import Folder
 from justin.shared.models.sources import parse_sources
-from justin_utils.cli import Context, Parameter
+from justin_utils.cli import Parameter
 from justin_utils.util import group_by
 
 
@@ -16,7 +17,7 @@ class DateSplitAction(PatternAction):
             Parameter(flags=["-e", "--epsilon"], default=3, type=lambda x: timedelta(hours=int(x)))
         ]
 
-    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
         sources = parse_sources(folder.files)
 
         if not sources:

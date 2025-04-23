@@ -1,12 +1,12 @@
 import dataclasses
 import json
-from abc import abstractmethod, ABC
+from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 from functools import cache
 from pathlib import Path
-from typing import Dict, Type, TypeVar, List, Set
+from typing import Dict, Type, TypeVar, List, Set, Self
 from uuid import UUID, uuid4
 
 from justin.shared.filesystem import Folder
@@ -35,6 +35,7 @@ class Metafile:
 
 @dataclass
 class RootMetafile(Metafile):
+    __METAFILE_NAME = "_meta.json"
     TYPE_KEY = "type"
 
     @classmethod
@@ -51,6 +52,60 @@ class RootMetafile(Metafile):
         return super().as_json() | {
             RootMetafile.TYPE_KEY: self.type()
         } | asdict(self)
+
+    @classmethod
+    def metafile_path(cls, folder: Folder) -> Path:
+        return folder.path / RootMetafile.__METAFILE_NAME
+
+    @classmethod
+    @cache
+    def __reader(cls) -> 'MetafileReadWriter':
+        return MetafileReadWriter.instance()
+
+    @classmethod
+    def has(cls, folder: Folder) -> bool:
+        if not cls.metafile_path(folder).exists():
+            return False
+
+        # if metafile_type is None:
+        #     return True
+
+        return cls.get(folder) is not None
+
+    @classmethod
+    def get(cls, folder: Folder) -> Self | None:
+        if not cls.metafile_path(folder).exists():
+            return None
+
+        return cls.__reader().read(cls.metafile_path(folder), cls)
+
+    def save(self, folder: Folder) -> None:
+        self.__reader().write(self, self.metafile_path(folder))
+
+    @classmethod
+    def remove(cls, folder: Folder) -> None:
+        metafile_path = cls.metafile_path(folder)
+
+        if cls == RootMetafile:
+            assert False
+
+            metafile_path.unlink(missing_ok=True)
+
+            return
+
+        metafiles: List[RootMetafile] = cls.__reader().read_all(metafile_path)
+
+        saved_metafiles = [metafile for metafile in metafiles if type(metafile) is cls]
+
+        metafile_path.unlink(missing_ok=True)
+
+        for metafile in saved_metafiles:
+            metafile.save(folder)
+
+    @classmethod
+    def collect_metafile_paths(cls, folder: Folder) -> List[Path]:
+        return [cls.metafile_path(folder)] + \
+            util.flat_map(cls.collect_metafile_paths(subfolder) for subfolder in folder.subfolders)
 
 
 class PostStatus(Metafile, Enum):
@@ -380,73 +435,3 @@ MetafileReadWriter.instance().register(
 
 
 # endregion metafile reading
-
-
-# region metafile mixins
-
-class MetafileMixin(ABC):
-    __METAFILE_NAME = "_meta.json"
-
-    # noinspection PyTypeChecker
-    @property
-    @abstractmethod
-    def path(self) -> Path:
-        assert False
-
-    @property
-    def metafile_path(self) -> Path:
-        return self.path / MetafileMixin.__METAFILE_NAME
-
-    @property
-    @cache
-    def __reader(self):
-        return MetafileReadWriter.instance()
-
-    def has_metafile(self, metafile_type: Type[V] = None) -> bool:
-        if not self.metafile_path.exists():
-            return False
-
-        if metafile_type is None:
-            return True
-
-        return self.get_metafile(metafile_type) is not None
-
-    def get_metafile(self, metafile_type: Type[V] = None) -> V | None:
-        if not self.metafile_path.exists():
-            return None
-
-        return self.__reader.read(self.metafile_path, metafile_type)
-
-    def save_metafile(self, metafile: RootMetafile):
-        self.__reader.write(metafile, self.metafile_path)
-
-    def remove_metafile(self, metafile_type: Type[RootMetafile] = None):
-        if metafile_type is None:
-            self.metafile_path.unlink(missing_ok=True)
-
-            return
-
-        metafiles = self.__reader.read_all(self.metafile_path)
-
-        saved_metafiles = [metafile for metafile in metafiles if type(metafile) != metafile_type]
-
-        self.metafile_path.unlink(missing_ok=True)
-
-        for metafile in saved_metafiles:
-            self.save_metafile(metafile)
-
-    def collect_metafile_paths(self) -> List[Path]:
-        return [self.metafile_path]
-
-
-class MetaFolder(Folder, MetafileMixin):
-    @property
-    def subfolders(self) -> List['MetaFolder']:
-        # noinspection PyTypeChecker
-        return super().subfolders
-
-    def collect_metafile_paths(self) -> List[Path]:
-        return super().collect_metafile_paths() + \
-            util.flat_map(subtree.collect_metafile_paths() for subtree in self.subfolders)
-
-# endregion metafile mixins

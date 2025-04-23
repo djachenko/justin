@@ -1,11 +1,10 @@
 from argparse import Namespace, ArgumentParser
 from pathlib import Path
-from typing import List
 
 from justin.shared.context import Context
-from justin.shared.metafile import MetaFolder
+from justin.shared.filesystem import Folder
 from justin.shared.models.photoset import Photoset
-from justin_utils.cli import Action, Parameter
+from justin_utils.cli import Action
 
 
 class CMSIndexAction(Action):
@@ -30,4 +29,4 @@ class CMSIndexAction(Action):
 
             context.sqlite_cms.index_photoset(photoset)
         elif args.folder:
-            context.sqlite_cms.index_folder(MetaFolder.from_path(Path(args.folder)))
+            context.sqlite_cms.index_folder(Folder.from_path(Path(args.folder)))

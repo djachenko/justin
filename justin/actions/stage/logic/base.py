@@ -4,7 +4,7 @@ from typing import List, Iterable
 from justin.shared.filesystem import PathBased, RelativeFileset, File, Folder
 from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import NoPostMetafile
+from justin.shared.metafile import NoPostMetafile, RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.util import flat_map, first
@@ -84,7 +84,7 @@ class Extractor:
         if prechecks_result:
             return prechecks_result
 
-        metafiles = [File(path) for path in filtered.collect_metafile_paths() if path.exists()]
+        metafiles = [File(path) for path in RootMetafile.collect_metafile_paths(filtered) if path.exists()]
 
         filtered_set = RelativeFileset(filtered.path, filtered.flatten() + metafiles)
 
@@ -190,7 +190,7 @@ class DestinationsAwareCheck(Check):
                 for post_folder in folder_tree_parts(name_folder):
                     problems += self.check_post_metafile(post_folder)
 
-        if photoset.timelapse and not photoset.timelapse.has_metafile(NoPostMetafile):
+        if photoset.timelapse and not NoPostMetafile.has(photoset.timelapse):
             problems += self.check_post_metafile(photoset.timelapse)
 
         def check_event(event_folder: Folder) -> Iterable[Problem]:

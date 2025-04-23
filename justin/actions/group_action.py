@@ -2,9 +2,10 @@ from abc import abstractmethod, ABC
 from argparse import Namespace
 from typing import List
 
+from justin.shared.context import Context
 from pyvko.entities.user import Group
 
-from justin_utils.cli import Action, Parameter, Context
+from justin_utils.cli import Action, Parameter
 
 
 class GroupAction(Action, ABC):

@@ -7,8 +7,9 @@ from functools import cache
 from pathlib import Path
 from typing import List, Iterable, Type
 
+from justin.shared.filesystem import Folder
 from justin.shared.helpers.utils import JsonSerializable, Json
-from justin.shared.metafile import MetaFolder, LocationMetafile
+from justin.shared.metafile import LocationMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.util import bfs, T
 
@@ -43,7 +44,7 @@ class MacOSRoots(Roots):
 
 
 class Location(JsonSerializable):
-    def __init__(self, folder: MetaFolder) -> None:
+    def __init__(self, folder: Folder) -> None:
         super().__init__()
 
         self.__folder = folder
@@ -51,7 +52,7 @@ class Location(JsonSerializable):
     @property
     @cache
     def __metafile(self) -> LocationMetafile:
-        return self.__folder.get_metafile(LocationMetafile)
+        return LocationMetafile.get(self.__folder)
 
     @property
     def name(self) -> str:
@@ -78,7 +79,7 @@ class Location(JsonSerializable):
     def get_sets(self) -> Iterable[Photoset]:
         photosets = []
 
-        def wider(folder: MetaFolder) -> List[MetaFolder]:
+        def wider(folder: Folder) -> List[Folder]:
             if folder.name == "stages":
                 return []
 
@@ -98,13 +99,13 @@ class Location(JsonSerializable):
 
     @staticmethod
     def is_location(candidate: Path):
-        return MetaFolder.from_path(candidate).has_metafile(LocationMetafile)
+        return LocationMetafile.has(Folder.from_path(candidate))
 
     @classmethod
     def from_json(cls: Type[T], json_object: Json) -> T:
         assert isinstance(json_object, str)
 
-        return Location(MetaFolder.from_path(Path(json_object)))
+        return Location(Folder.from_path(Path(json_object)))
 
     def as_json(self) -> Json:
         return str(self.name)
@@ -153,7 +154,7 @@ class World:
                     continue
 
                 if Location.is_location(candidate):
-                    locations.append(Location(MetaFolder.from_path(candidate)))
+                    locations.append(Location(Folder.from_path(candidate)))
                 else:
                     roots += [sub for sub in candidate.iterdir() if sub.is_dir() and not sub.name.startswith(".")]
             except PermissionError:
