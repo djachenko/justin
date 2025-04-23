@@ -5,7 +5,7 @@ from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, MetaFolder, AlbumMetafile
+from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, AlbumMetafile, RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 
@@ -23,15 +23,15 @@ class WebSyncAction(DestinationsAwareAction):
 
         print("Performed successfully")
 
-    def handle_justin(self, justin_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
         self.__handle_tagged(justin_folder, context)
 
-    def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
         for name_folder in closed_folder.subfolders:
-            if not name_folder.has_metafile():
+            if not GroupMetafile.has(name_folder):
                 continue
 
-            group_metafile: GroupMetafile = name_folder.get_metafile(GroupMetafile)
+            group_metafile = GroupMetafile.get(name_folder)
             group_id = group_metafile.group_id
 
             self.__warmup_cache(group_id, context)
@@ -39,11 +39,11 @@ class WebSyncAction(DestinationsAwareAction):
             for post_folder in folder_tree_parts(name_folder):
                 self.__handle_post(post_folder, group_id)
 
-    def handle_meeting(self, meeting_folder: MetaFolder, context: Context, extra: Extra) -> None:
-        if not meeting_folder.has_metafile(GroupMetafile):
+    def handle_meeting(self, meeting_folder: Folder, context: Context, extra: Extra) -> None:
+        if not GroupMetafile.has(meeting_folder):
             return
 
-        group_metafile: GroupMetafile = meeting_folder.get_metafile(GroupMetafile)
+        group_metafile = GroupMetafile.get(meeting_folder)
         group_id = group_metafile.group_id
 
         self.__warmup_cache(group_id, context)
@@ -51,24 +51,24 @@ class WebSyncAction(DestinationsAwareAction):
         for post_folder in folder_tree_parts(meeting_folder):
             self.__handle_post(post_folder, group_id)
 
-    def handle_kot_i_kit(self, kot_i_kit_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, context: Context, extra: Extra) -> None:
         self.__handle_tagged(kot_i_kit_folder, context)
 
-    def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
         self.__warmup_cache(context.my_people_group.id, context)
 
-        if not my_people_folder.has_metafile(PostMetafile):
+        if not PostMetafile.has(my_people_folder):
             return
 
-        post_metafile = my_people_folder.get_metafile(PostMetafile)
+        post_metafile = PostMetafile.get(my_people_folder)
 
         _, _, published_ids, _ = self.__cache[context.my_people_group.id]
 
         if post_metafile.post_id not in published_ids:
             for subfolder in my_people_folder.subfolders:
-                subfolder.remove_metafile()
+                RootMetafile.remove(subfolder)
 
-            my_people_folder.remove_metafile()
+            RootMetafile.remove(my_people_folder)
 
             print("Post was deleted")
 
@@ -78,15 +78,15 @@ class WebSyncAction(DestinationsAwareAction):
 
         if post.is_liked():
             for person_folder in my_people_folder.subfolders:
-                if not person_folder.has_metafile(PersonMetafile):
+                if not PersonMetafile.has(person_folder):
                     continue
 
-                person_metafile = person_folder.get_metafile(PersonMetafile)
+                person_metafile = PersonMetafile.get(person_folder)
 
                 for comment_metafile in person_metafile.comments:
                     comment_metafile.status = PostStatus.PUBLISHED
 
-                person_folder.save_metafile(person_metafile)
+                person_metafile.save(person_folder)
 
             print("All people sent.")
 
@@ -99,12 +99,12 @@ class WebSyncAction(DestinationsAwareAction):
         all_sent = True
 
         for person_folder in my_people_folder.subfolders:
-            if not person_folder.has_metafile(PersonMetafile):
+            if not PersonMetafile.has(person_folder):
                 continue
 
             print(f"Syncing {person_folder.name}...", end="", flush=True)
 
-            person_metafile = person_folder.get_metafile(PersonMetafile)
+            person_metafile = PersonMetafile.get(person_folder)
             total_count = len(person_folder.files)
 
             for comment_metafile in person_metafile.comments:
@@ -122,9 +122,9 @@ class WebSyncAction(DestinationsAwareAction):
                     if comment.has_likes():
                         comment_metafile.status = PostStatus.PUBLISHED
 
-                person_folder.save_metafile(person_metafile)
+                person_metafile.save(person_folder)
 
-            person_folder.save_metafile(person_metafile)
+            person_metafile.save(person_folder)
 
             publish_count = sum(len(comment_metafile.files) for comment_metafile in person_metafile.comments if
                                 comment_metafile.status == PostStatus.PUBLISHED)
@@ -139,10 +139,10 @@ class WebSyncAction(DestinationsAwareAction):
         if all_sent:
             post.like()
 
-    def handle_timelapse(self, timelapse_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_timelapse(self, timelapse_folder: Folder, context: Context, extra: Extra) -> None:
         pass
 
-    def handle_drive(self, drive_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
         pass
 
     def __warmup_cache(self, group_id: int, context: Context):
@@ -162,17 +162,17 @@ class WebSyncAction(DestinationsAwareAction):
 
         self.__cache[group_id] = (scheduled_ids, published_timer_ids, published_ids, timed_to_published_mapping)
 
-    def __handle_tagged(self, folder: MetaFolder, context: Context) -> None:
-        if not folder.has_metafile():
+    def __handle_tagged(self, folder: Folder, context: Context) -> None:
+        if not GroupMetafile.has(folder):
             return
 
-        group_metafile = folder.get_metafile(GroupMetafile)
+        group_metafile = GroupMetafile.get(folder)
         group_id = group_metafile.group_id
 
         if group_id > 0:
             group_metafile.group_id = -group_id
 
-            folder.save_metafile(group_metafile)
+            group_metafile.save(folder)
 
         self.__warmup_cache(group_id, context)
 
@@ -184,13 +184,13 @@ class WebSyncAction(DestinationsAwareAction):
         for post_folder in post_folders:
             self.__handle_post(post_folder, group_id)
 
-    def __handle_post(self, post_folder: MetaFolder, group_id: int) -> None:
-        if not post_folder.has_metafile(PostMetafile):
+    def __handle_post(self, post_folder: Folder, group_id: int) -> None:
+        if not PostMetafile.has(post_folder):
             return
 
         scheduled_ids, published_timed_ids, published_ids, timed_to_published_mapping = self.__cache[group_id]
 
-        post_metafile: PostMetafile = post_folder.get_metafile(PostMetafile)
+        post_metafile = PostMetafile.get(post_folder)
         post_id = post_metafile.post_id
 
         print(f"Syncing post with id {post_id}... ", end="")
@@ -204,8 +204,8 @@ class WebSyncAction(DestinationsAwareAction):
 
                 print(f"was published, now has id {post_metafile.post_id}")
 
-                post_folder.save_metafile(post_metafile)
-                post_folder.remove_metafile(AlbumMetafile)
+                post_metafile.save(post_folder)
+                AlbumMetafile.remove(post_folder)
 
             elif post_id in published_ids:
                 # scheduled id can't become an id for published post
@@ -214,7 +214,7 @@ class WebSyncAction(DestinationsAwareAction):
             else:
                 print("was deleted")
 
-                post_folder.remove_metafile()
+                RootMetafile.remove(post_folder)
 
         elif post_metafile.status is PostStatus.PUBLISHED:
             # assert post_id not in scheduled_ids
@@ -225,6 +225,6 @@ class WebSyncAction(DestinationsAwareAction):
             else:
                 print("was deleted")
 
-                post_folder.remove_metafile(PostMetafile)
+                PostMetafile.remove(post_folder)
         else:
             assert False

@@ -7,7 +7,7 @@ from justin.actions.pattern_action import PatternAction
 from justin.actions.stage.logic.base import Check
 from justin.shared.context import Context
 from justin.shared.helpers.checks_runner import ChecksRunner
-from justin.shared.metafile import MetaFolder
+from justin.shared.filesystem import Folder
 from justin.shared.models.photoset import Photoset
 from justin.shared.world import Location
 from justin_utils import util
@@ -56,7 +56,7 @@ class MoveAction(PatternAction):
 
         super().perform_for_path(path, args, context, extra)
 
-    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
 
         roots = [folder]
 

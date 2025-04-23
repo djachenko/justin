@@ -6,7 +6,6 @@ from justin.actions.pattern_action import Extra
 from justin.cms.people_cms import PersonEntry
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
-from justin.shared.metafile import MetaFolder
 from justin_utils import util
 from justin_utils.cli import Action, Parameter
 from pyvko.aspects.groups import Group
@@ -15,23 +14,26 @@ from pyvko.pyvko_main import Pyvko
 
 
 class RegisterPeopleAction(DestinationsAwareAction):
-    def handle_closed(self, closed_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
         RegisterPeopleAction.__register_from_path(
             closed_folder,
             context
         )
 
-    def handle_drive(self, drive_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
         RegisterPeopleAction.__register_from_path(
             drive_folder,
             context
         )
 
-    def handle_my_people(self, my_people_folder: MetaFolder, context: Context, extra: Extra) -> None:
+    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
         RegisterPeopleAction.__register_from_path(
             my_people_folder,
             context
         )
+
+    def handle_common(self, folder: Folder, context: Context, extra: Extra) -> None:
+        pass
 
     @staticmethod
     def __register_from_path(folder_with_people: Folder, context: Context) -> None:

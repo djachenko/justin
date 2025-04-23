@@ -3,7 +3,8 @@ from typing import List, Type
 
 from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase, SQLiteEntry
 from justin.cms_2.storage.sqlite.sqlite_entries import Closed, Photoset as PhotosetEntry, PersonPhotos, Drive, MyPeople
-from justin.shared.metafile import PhotosetMetafile, MetaFolder
+from justin.shared.filesystem import Folder
+from justin.shared.metafile import PhotosetMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.util import bfs
 
@@ -15,13 +16,13 @@ class PhotosetsCMS:
         pass
 
     def index_photoset(self, photoset: Photoset) -> None:
-        assert photoset.folder.has_metafile(PhotosetMetafile)
+        assert PhotosetMetafile.has(photoset.folder)
 
         entries_to_index = [PhotosetEntry(
             folder=photoset.name
         )]
 
-        def to_entries(folder: MetaFolder | None, cls: Type[PersonPhotos]) -> List[SQLiteEntry]:
+        def to_entries(folder: Folder | None, cls: Type[PersonPhotos]) -> List[SQLiteEntry]:
             if folder is None:
                 return []
 
@@ -39,9 +40,9 @@ class PhotosetsCMS:
         with self.db.connect():
             self.db.update(*entries_to_index)
 
-    def index_folder(self, folder: MetaFolder) -> None:
-        def provider(candidate: MetaFolder) -> List[MetaFolder]:
-            if candidate.has_metafile(PhotosetMetafile):
+    def index_folder(self, folder: Folder) -> None:
+        def provider(candidate: Folder) -> List[Folder]:
+            if Photoset.is_photoset(candidate):
                 self.index_photoset(Photoset.from_folder(candidate))
 
                 return []

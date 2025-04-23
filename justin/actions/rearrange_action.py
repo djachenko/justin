@@ -5,7 +5,8 @@ from functools import cache
 from typing import List
 
 from justin.actions.group_action import GroupAction
-from justin_utils.cli import Context, Parameter
+from justin.shared.context import Context
+from justin_utils.cli import Parameter
 from justin_utils.util import parse_time, random_date
 from pyvko.entities.user import Group
 

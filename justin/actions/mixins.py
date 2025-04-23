@@ -1,16 +1,15 @@
-import string
-
 from justin.shared import filesystem
-from justin.shared.metafile import GroupMetafile, MetaFolder
+from justin.shared.filesystem import Folder
+from justin.shared.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 
 
 class EventUtils:
     @staticmethod
-    def get_community_id(posts_folder: MetaFolder, root_photoset: Photoset) -> str | None:
+    def get_community_id(posts_folder: Folder, root_photoset: Photoset) -> str | None:
         root_path = root_photoset.path
 
-        group_metafile = posts_folder.get_metafile(GroupMetafile)
+        group_metafile = GroupMetafile.get(posts_folder)
 
         if group_metafile is not None:
             return str(group_metafile.group_id)

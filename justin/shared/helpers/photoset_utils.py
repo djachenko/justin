@@ -2,7 +2,7 @@ from typing import Iterable, List
 
 from justin.shared.filesystem import PathBased, File
 from justin.shared.helpers.utils import __validate_join, JpegType
-from justin.shared.metafile import MetaFolder
+from justin.shared.metafile import RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import joins, util
 
@@ -53,18 +53,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
 
     jpegs_set = set(jpegs_to_move)
 
-    def collect_metafiles(tree_: MetaFolder):
-        result = []
-
-        if jpegs_set.issuperset(tree_.flatten()):
-            result.append(tree_.metafile_path)
-
-        for subtree in tree_.subfolders:
-            result += collect_metafiles(subtree)
-
-        return result
-
-    metafile_paths = util.flat_map(collect_metafiles(tree) for tree in jpeg_trees)
+    metafile_paths = util.flat_map(RootMetafile.collect_metafile_paths(tree) for tree in jpeg_trees)
     metafiles = [File(path) for path in metafile_paths if path.exists()]
 
     files_to_move = jpegs_to_move + sources_contents_to_move + metafiles

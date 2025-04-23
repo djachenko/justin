@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 from frozendict import frozendict
 
 from justin.shared.context import Context
-from justin.shared.metafile import MetaFolder
+from justin.shared.filesystem import Folder
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.cli import Parameter, Action
@@ -46,9 +46,9 @@ class PatternAction(Action, ABC):
             self.perform_for_path(path, args, context, extra)
 
     def perform_for_path(self, path: Path, args: Namespace, context: Context, extra: Extra) -> None:
-        self.perform_for_folder(MetaFolder.from_path(path), args, context, extra)
+        self.perform_for_folder(Folder.from_path(path), args, context, extra)
 
-    def perform_for_folder(self, folder: MetaFolder, args: Namespace, context: Context, extra: Extra) -> None:
+    def perform_for_folder(self, folder: Folder, args: Namespace, context: Context, extra: Extra) -> None:
         photoset = Photoset.from_folder(folder)
 
         if photoset is None:

@@ -2,9 +2,9 @@ from pathlib import Path
 from typing import List, Self
 from uuid import UUID
 
-from justin.shared.filesystem import File, FolderBased
+from justin.shared.filesystem import File, FolderBased, Folder
 from justin.shared.helpers.parts import PartsMixin
-from justin.shared.metafile import PhotosetMetafile, MetaFolder
+from justin.shared.metafile import PhotosetMetafile
 from justin.shared.models import sources
 from justin.shared.models.sources import Source
 from justin_utils import util
@@ -21,16 +21,11 @@ class Photoset(FolderBased, PartsMixin):
     __MY_PEOPLE = "my_people"
 
     def __str__(self) -> str:
-        return "Photoset: " + self.folder.name
+        return f"Photoset {self.folder.name}"
 
     @property
     def __metafile(self):
-        return self.folder.get_metafile(PhotosetMetafile)
-
-    @property
-    def folder(self) -> MetaFolder:
-        # noinspection PyTypeChecker
-        return super().folder
+        return PhotosetMetafile.get(self.folder)
 
     @property
     def id(self) -> UUID:
@@ -61,7 +56,7 @@ class Photoset(FolderBased, PartsMixin):
             return None
 
     @property
-    def photoclub(self) -> MetaFolder | None:
+    def photoclub(self) -> Folder | None:
         return self.folder[Photoset.__PHOTOCLUB]
 
     @property
@@ -74,35 +69,35 @@ class Photoset(FolderBased, PartsMixin):
         return result
 
     @property
-    def justin(self) -> MetaFolder | None:
+    def justin(self) -> Folder | None:
         return self.folder[Photoset.__JUSTIN]
 
     @property
-    def gif(self) -> MetaFolder | None:
+    def gif(self) -> Folder | None:
         return self.folder[Photoset.__GIF]
 
     @property
-    def timelapse(self) -> MetaFolder | None:
+    def timelapse(self) -> Folder | None:
         return self.folder["timelapse"]
 
     @property
-    def closed(self) -> MetaFolder | None:
+    def closed(self) -> Folder | None:
         return self.folder[Photoset.__CLOSED]
 
     @property
-    def meeting(self) -> MetaFolder | None:
+    def meeting(self) -> Folder | None:
         return self.folder[Photoset.__MEETING]
 
     @property
-    def kot_i_kit(self) -> MetaFolder | None:
+    def kot_i_kit(self) -> Folder | None:
         return self.folder[Photoset.__KOT_I_KIT]
 
     @property
-    def my_people(self) -> MetaFolder | None:
+    def my_people(self) -> Folder | None:
         return self.folder[Photoset.__MY_PEOPLE]
 
     @property
-    def drive(self) -> MetaFolder | None:
+    def drive(self) -> Folder | None:
         return self.folder["drive"]
 
     @property
@@ -135,11 +130,11 @@ class Photoset(FolderBased, PartsMixin):
         return jpegs
 
     @staticmethod
-    def is_photoset(folder: Path | MetaFolder) -> bool:
+    def is_photoset(folder: Path | Folder) -> bool:
         if isinstance(folder, Path):
-            return Photoset.is_photoset(MetaFolder.from_path(folder))
+            return Photoset.is_photoset(Folder.from_path(folder))
 
-        if folder.has_metafile(PhotosetMetafile):
+        if PhotosetMetafile.has(folder):
             return True
 
         name_split = folder.name.split(".")
@@ -153,7 +148,7 @@ class Photoset(FolderBased, PartsMixin):
         return True
 
     @classmethod
-    def from_folder(cls, folder: MetaFolder, without_migration: bool = False) -> Self | None:
+    def from_folder(cls, folder: Folder, without_migration: bool = False) -> Self | None:
         if not without_migration and not Photoset.is_photoset(folder.path):
             return None
 
@@ -163,4 +158,4 @@ class Photoset(FolderBased, PartsMixin):
 
     @classmethod
     def from_path(cls, path: Path) -> Self | None:
-        return Photoset.from_folder(MetaFolder.from_path(path))
+        return Photoset.from_folder(Folder.from_path(path))

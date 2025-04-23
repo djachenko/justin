@@ -5,7 +5,8 @@ from datetime import date, time, datetime, timedelta
 from typing import List
 
 from justin.shared.context import Context
-from justin.shared.metafile import MetaFolder, GroupMetafile
+from justin.shared.filesystem import Folder
+from justin.shared.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.cli import Action, Parameter
@@ -94,8 +95,8 @@ class SetupEventAction(Action):
 
             photoset = Photoset.from_path(path)
 
-            def needs_event(folder: MetaFolder | None) -> bool:
-                return folder is not None and not folder.has_metafile(GroupMetafile)
+            def needs_event(folder: Folder | None) -> bool:
+                return folder is not None and not GroupMetafile.has(folder)
 
             if args.parent:
                 event_parent = context.pyvko.get(args.parent)
