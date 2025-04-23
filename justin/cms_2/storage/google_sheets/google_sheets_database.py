@@ -1,15 +1,15 @@
 import webbrowser
-from dataclasses import dataclass, fields, asdict
+from dataclasses import dataclass, fields
 from functools import cache
 from pathlib import Path
-from typing import Type, List, Dict, Callable, TypeVar, Self
+from typing import Type, List, Dict, Callable, TypeVar
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from justin.shared.helpers.utils import fromdict, Json
+from justin.shared.helpers.utils import DictableDataclass
 from justin_utils.util import same
 
 # If modifying these scopes, delete the file token.json.
@@ -21,7 +21,7 @@ class Link(str):
 
 
 @dataclass
-class GoogleSheetsEntry:
+class GoogleSheetsEntry(DictableDataclass):
     @classmethod
     def sheet_name(cls) -> str:
         return cls.__name__
@@ -32,17 +32,26 @@ class GoogleSheetsEntry:
         return [field.name for field in fields(cls)]
 
     @classmethod
-    def from_dict(cls: Type[Self], json_object: Json, rules: Dict[Type, Callable] = None) -> Self:
-        if rules is None:
-            rules = {}
-
-        return fromdict(json_object, cls, rules=rules | {
+    def rules(cls) -> Dict[type, Callable]:
+        return super().rules() | {
             bool: GoogleSheetsEntry.__parse_bool
-        })
+        }
 
-    def as_dict(self) -> Json:
-        # noinspection PyTypeChecker
-        return asdict(self)
+    # @classmethod
+    # def from_dict(cls: Type[Self], json_object: Json, rules: Dict[Type, Callable]) -> Self:
+    #     if rules is None:
+    #         rules = {}
+    #
+    #     return fromdict(json_object, cls, rules=rules | {
+    #         bool: GoogleSheetsEntry.__parse_bool
+    #     })
+
+    # @classmethod
+    # def from_dict(cls: Type[Self], json_object: Json) -> Self:
+    #     return fromdict(json_object, cls, rules={
+    #         bool: GoogleSheetsEntry.__parse_bool
+    #     })
+
 
     @staticmethod
     def __parse_bool(json) -> bool | None:

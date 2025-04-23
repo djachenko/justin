@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Iterable, Type
 
 from justin.shared.filesystem import Folder
-from justin.shared.helpers.utils import JsonSerializable, Json
+from justin.shared.helpers.utils import Json
 from justin.shared.metafile import LocationMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.util import bfs, T
@@ -43,7 +43,7 @@ class MacOSRoots(Roots):
         ]
 
 
-class Location(JsonSerializable):
+class Location:
     def __init__(self, folder: Folder) -> None:
         super().__init__()
 
@@ -103,11 +103,13 @@ class Location(JsonSerializable):
 
     @classmethod
     def from_json(cls: Type[T], json_object: Json) -> T:
+        assert False
         assert isinstance(json_object, str)
 
         return Location(Folder.from_path(Path(json_object)))
 
     def as_json(self) -> Json:
+        assert False
         return str(self.name)
 
 

@@ -2,27 +2,26 @@ import sqlite3
 from abc import ABC
 from collections import defaultdict
 from contextlib import contextmanager
-from dataclasses import dataclass, fields, asdict
+from dataclasses import dataclass, fields
 from functools import cache
 from pathlib import Path
 from sqlite3 import Cursor, Row, Connection
-from typing import TypeVar, List, Type, Self, Iterable, Any, Dict, Callable
+from typing import TypeVar, List, Type, Self, Iterable, Any, Dict
 
-from justin.shared.helpers.utils import fromdict
+from justin.shared.helpers.utils import DictableDataclass
 from justin_utils.util import group_by
-from pyvko.shared.utils import Json
 
 
 @dataclass
-class SQLiteEntry(ABC):
+class SQLiteEntry(ABC, DictableDataclass):
     @classmethod
     def type(cls) -> str:
         return cls.__name__
 
-    @classmethod
-    def from_dict(cls, json_object: Json, rules: Dict[Type, Callable] = None) -> Self:
-        # return cls(**json_object)
-        return fromdict(json_object, cls, rules)
+    # @classmethod
+    # def from_dict(cls, json_object: Json, rules: Dict[Type, Callable] = None) -> Self:
+    #     # return cls(**json_object)
+    #     return fromdict(json_object, cls, rules)
 
     @classmethod
     def from_cursor(cls, cursor: Cursor, row) -> Self:
@@ -30,9 +29,6 @@ class SQLiteEntry(ABC):
 
         # noinspection PyArgumentList
         return cls(**object_mapping)
-
-    def as_dict(self) -> Dict[str, Any]:
-        return asdict(self)
 
     def diff(self, other: Self) -> Dict[str, Any]:
         self_dict = self.as_dict()

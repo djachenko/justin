@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from datetime import date
 from functools import cache
 from pathlib import Path
-from typing import Type
+from typing import Dict, Callable
 
 from justin.cms.base_cms import BaseCMS
 from justin.cms.tables.json_table import JsonTable
-from justin.cms.tables.table import Table, Entry, T
+from justin.cms.tables.table import Table, Entry
 from justin.shared.helpers.utils import Json
 from justin_utils import util
 from justin_utils.util import distinct, get_prefixes
@@ -19,25 +19,36 @@ from pyvko.pyvko_main import Pyvko
 @dataclass
 class PersonEntry(Entry):
     folder: str
-    name: str
-    vk_id: int
-    source: str
+    name: str | None
+    vk_id: int | None
+    source: str | None
     register_date: date = date.today()
 
     @classmethod
-    def from_dict(cls: Type[T], json_object: Json) -> T:
-        entry = super().from_dict(json_object)
-
-        entry.register_date = date.fromisoformat(json_object["register_date"])
-
-        return entry
+    def rules(cls) -> Dict[type, Callable]:
+        return super().rules() | {
+            date: date.fromisoformat
+        }
 
     def as_dict(self) -> Json:
-        json_object = super().as_dict()
+        return super().as_dict() | {
+            "register_date": self.register_date.isoformat()
+        }
 
-        json_object["register_date"] = self.register_date.isoformat()
-
-        return json_object
+    # @classmethod
+    # def from_dict(cls: Type[T], json_object: Json) -> T:
+    #     entry = super().from_dict(json_object)
+    #
+    #     entry.register_date = date.fromisoformat(json_object["register_date"])
+    #
+    #     return entry
+    #
+    # def as_dict(self) -> Json:
+    #     json_object = super().as_dict()
+    #
+    #     json_object["register_date"] = self.register_date.isoformat()
+    #
+    #     return json_object
 
     @staticmethod
     def is_valid(person: 'PersonEntry', strict: bool = False) -> bool:

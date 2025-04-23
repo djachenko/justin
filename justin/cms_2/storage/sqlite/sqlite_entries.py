@@ -58,25 +58,23 @@ class Post(SQLiteEntry):
         return "Posts"
 
     @classmethod
-    def from_dict(cls, json_object: Json, rules: Dict[Type, Callable] = None) -> Self:
-        rules = rules or {}
+    def rules(cls) -> Dict[type, Callable]:
+        return super().rules() | {
+            datetime: datetime.fromtimestamp
+        }
 
-        return super().from_dict(json_object, rules | {
-            datetime: lambda json: datetime.fromtimestamp(json)
-        })
+    # @classmethod
+    # def from_dict(cls, json_object: Json, rules: Dict[Type, Callable] = None) -> Self:
+    #     rules = rules or {}
+    #
+    #     return super().from_dict(json_object, rules | {
+    #         datetime: lambda json: datetime.fromtimestamp(json)
+    #     })
 
     def as_dict(self) -> Dict[str, Any]:
-        result = super().as_dict()
-
-        result["date"] = self.date.timestamp()
-
-        return result
-
-    @classmethod
-    def from_cursor(cls, cursor: Cursor, row) -> Self:
-        result = super().from_cursor(cursor, row)
-
-        return result
+        return super().as_dict() | {
+            "date": self.date.timestamp()
+        }
 
 
 @dataclass
