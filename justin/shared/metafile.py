@@ -95,7 +95,7 @@ class RootMetafile(Metafile):
 
         metafiles: List[RootMetafile] = cls.__reader().read_all(metafile_path)
 
-        saved_metafiles = [metafile for metafile in metafiles if type(metafile) is cls]
+        saved_metafiles = [metafile for metafile in metafiles if type(metafile) is not cls]
 
         metafile_path.unlink(missing_ok=True)
 
