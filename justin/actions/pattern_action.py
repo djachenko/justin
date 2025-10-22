@@ -1,3 +1,4 @@
+import json
 from abc import ABC
 from argparse import Namespace
 from pathlib import Path
@@ -70,6 +71,80 @@ class PatternAction(Action, ABC):
         photoset.folder.refresh()
 
         self.perform_for_photoset(photoset, args, context, extra)
+
+        PatternAction.__handle_aftershoot(photoset, context)
+
+    @staticmethod
+    def __handle_aftershoot(photoset: Photoset, context: Context) -> None:
+        print("__handle_aftershoot")
+
+        root = photoset.folder
+        aftershoot_folder = root["aftershoot"]
+
+        if not aftershoot_folder:
+            return
+
+        af_root = context.aftershoot_stats.with_suffix("")
+        af_root.mkdir(parents=True, exist_ok=True)
+
+        af_json_path = af_root / f"{photoset.name}.json"
+
+        if af_json_path.exists():
+            with af_json_path.open() as af_json:
+                af_stats = json.load(af_json)
+        else:
+            af_stats = {}
+
+        local_stat = af_stats
+
+        for subfolder in aftershoot_folder.subfolders:
+            local_stat[subfolder.name] = [file.stem for file in subfolder.files]
+
+        local_stat["good"] = [source.stem for source in photoset.sources]
+        local_stat["release"] = list(set(jpeg.stem for jpeg in photoset.results))
+
+        # af_stats[root.name] = local_stat
+
+        if PatternAction.__validate_aftershoot(af_stats):
+            with af_json_path.open("w") as af_json:
+                json.dump(af_stats, af_json, indent=4)
+
+            print("aftershoot stats successfully written.")
+        else:
+            print("validation failed")
+
+    @staticmethod
+    def __validate_aftershoot(stats: Dict[str, List[str]]) -> bool:
+        marks = set()
+
+        for i in range(5):
+            i_marks = stats.get(f"{i + 1}", [])
+
+            if not marks.isdisjoint(i_marks):
+                return False
+
+            marks.update(i_marks)
+
+        good = stats["good"]
+
+        if not good:
+            return False
+
+        print(set(good).difference(marks))
+
+        if not marks.issuperset(good):
+            return False
+
+        release = stats["release"]
+
+        if not release:
+            return False
+        if not marks.issuperset(release):
+            return False
+        if not set(good).issuperset(release):
+            return False
+
+        return True
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
         extra |= {
