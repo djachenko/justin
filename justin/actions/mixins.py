@@ -1,6 +1,6 @@
 from justin.shared import filesystem
 from justin.shared.filesystem import Folder
-from justin.shared.metafile import GroupMetafile
+from justin.shared.metafiles.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 
 

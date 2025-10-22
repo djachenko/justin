@@ -4,7 +4,7 @@ from typing import List, Iterable
 from justin.shared.filesystem import PathBased, RelativeFileset, File, Folder
 from justin.shared.helpers import photoset_utils
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import NoPostMetafile, RootMetafile
+from justin.shared.metafiles.metafile import NoPostMetafile, RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.util import flat_map, first

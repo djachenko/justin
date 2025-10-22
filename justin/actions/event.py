@@ -6,7 +6,7 @@ from typing import List
 
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
-from justin.shared.metafile import GroupMetafile
+from justin.shared.metafiles.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.cli import Action, Parameter
