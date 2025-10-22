@@ -398,6 +398,9 @@ class Folder(PathBased):
     def __get_by_str(self, key: str) -> Self | None:
         first, *rest = key.split("/", maxsplit=1)
 
+        if first not in self:
+            return None
+
         if rest:
             return self[first][rest[0]]
         else:
@@ -428,11 +431,20 @@ class Folder(PathBased):
     def empty(self) -> bool:
         return self.file_count() == 0
 
-    def remove(self):
+    def exists(self) -> bool:
+        return self.path.exists()
+
+    def remove(self, *, with_files: bool = False) -> None:
+        if with_files:
+            for file in self.files:
+                file.path.unlink()
+
+            self.refresh()
+
         assert len(self.files) == 0
 
         for subtree in self.subfolders:
-            subtree.remove()
+            subtree.remove(with_files=with_files)
 
         self.path.rmdir()
 

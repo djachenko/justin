@@ -5,7 +5,7 @@ from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, AlbumMetafile, RootMetafile
+from justin.shared.metafiles.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, AlbumMetafile, RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 
@@ -214,7 +214,8 @@ class WebSyncAction(DestinationsAwareAction):
             else:
                 print("was deleted")
 
-                RootMetafile.remove(post_folder)
+                PostMetafile.remove(post_folder)
+                AlbumMetafile.remove(post_folder)
 
         elif post_metafile.status is PostStatus.PUBLISHED:
             # assert post_id not in scheduled_ids

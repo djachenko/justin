@@ -13,11 +13,6 @@ class Exif:
     def date_taken(self) -> datetime:
         pass
 
-    @property
-    @abstractmethod
-    def available_names(self):
-        pass
-
     def __lt__(self, other: 'Exif'):
         return self.date_taken < other.date_taken
 
@@ -35,10 +30,6 @@ class PillowExif(Exif):
             self.__get_tag_value("DateTimeOriginal") or self.__get_tag_value("DateTime"),
             "%Y:%m:%d %H:%M:%S"
         )
-
-    @property
-    def available_names(self):
-        return [k for k, v in PillowExif.__reverse_mapping.items() if v in self.source_exif]
 
     def __get_tag_value(self, tag: str) -> str | None:
         return self.source_exif.get(PillowExif.__reverse_mapping[tag])
@@ -73,10 +64,6 @@ class NativeExif(Exif):
             )
         else:
             assert False
-
-    @property
-    def available_names(self):
-        return self.source_exif.list_all()
 
     def __init__(self, exif: Image) -> None:
         super().__init__()

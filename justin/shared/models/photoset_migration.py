@@ -7,8 +7,8 @@ from uuid import UUID
 from justin.cms.cms import CMS
 from justin.cms.people_cms import PersonMigrationEntry
 from justin.cms.tables.table import Table
-from justin.shared.metafile import Json
-from justin.shared.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
+from justin.shared.metafiles.metafile import Json
+from justin.shared.metafiles.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
 from justin.shared.models.photoset import Photoset
 
 
@@ -29,7 +29,9 @@ class SplitMetafilesMigration(PhotosetMigration):
         with old_metafile_path.open() as metafile_file:
             json_dict = json.load(metafile_file)
 
-        if "migrated" in json_dict and json_dict["migrated"] or "type" in json_dict:
+        if ("migrated" in json_dict and json_dict["migrated"] or
+                "type" in json_dict or
+                "posts" not in json_dict):
             return
 
         posts_jsons: Json = json_dict["posts"]
@@ -151,7 +153,7 @@ class ParseMetafileMigration(PhotosetMigration):
 
 
 class AIPostfixMigration(PhotosetMigration):
-    __AI_POSTFIX = "-Enhanced-NR"
+    __AI_INFIX = "-Enhanced-NR"
 
     def migrate(self, photoset: Photoset) -> None:
         roots = [photoset.path]
@@ -163,8 +165,11 @@ class AIPostfixMigration(PhotosetMigration):
                 if item.is_dir():
                     roots.append(item)
                 elif item.is_file():
-                    if item.stem.endswith(AIPostfixMigration.__AI_POSTFIX):
-                        dst = item.with_stem(item.stem.replace(AIPostfixMigration.__AI_POSTFIX, ""))
+                    if AIPostfixMigration.__AI_INFIX in item.stem:
+                        infix_index = item.stem.index(AIPostfixMigration.__AI_INFIX)
+                        new_stem = item.stem[:infix_index]
+
+                        dst = item.with_stem(new_stem)
 
                         print(f"{item} -> {dst}")
                         item.rename(dst)
