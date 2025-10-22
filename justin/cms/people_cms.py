@@ -164,24 +164,21 @@ class PeopleRegistry(JsonTable[PersonEntry, str]):
     def __init__(self, path: Path):
         super().__init__(path, PersonEntry, lambda x: x.folder)
 
-    def validate(self, entry: PersonEntry) -> bool:
-        for person in self:
-            if entry.folder in get_prefixes(person.folder, "_") or person.folder in get_prefixes(entry.folder, "_"):
-                print(f"{entry.folder} collides with {person.folder}")
-
-                return False
-
-        return True
-
-    def get_all_folders(self):
-        return [person.folder for person in self]
-
-    def __contains__(self, item: str) -> bool:
-        for entry in self.entries:
-            if entry.folder == item:
-                return True
-
-        return False
+    # def validate(self, entry: PersonEntry) -> bool:
+    #     for person in self:
+    #         if entry.folder in get_prefixes(person.folder, "_") or person.folder in get_prefixes(entry.folder, "_"):
+    #             print(f"{entry.folder} collides with {person.folder}")
+    #
+    #             return False
+    #
+    #     return True
+    #
+    # def __contains__(self, item: str) -> bool:
+    #     for entry in self.entries:
+    #         if entry.folder == item:
+    #             return True
+    #
+    #     return False
 
 
 class PeopleCMS(BaseCMS, ABC, FixPeopleMixin):

@@ -2,6 +2,7 @@ from functools import cache
 
 from lazy_object_proxy import Proxy
 
+from justin.di.metafiles import setup_metafiles
 from justin.shared.config import Config
 from justin.di.actions import ActionFactory
 from justin.di.checks import ChecksFactory
@@ -17,6 +18,8 @@ class DI:
         super().__init__()
 
         self.__selector_factory_ = Proxy(lambda: SelectorFactory(config[Config.Keys.PHOTOSET_STRUCTURE]))
+
+        setup_metafiles()
 
     @property
     @cache

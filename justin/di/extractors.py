@@ -1,6 +1,7 @@
 from functools import cache
 
 from justin.actions.stage.logic.base import Extractor
+from justin.actions.stage.logic.candidates import CandidatesExtractor
 from justin.actions.stage.logic.metadata import MetadataCheck
 from justin.actions.stage.logic.progress import ProgressResultsCheck, ProgressExtractor
 from justin.actions.stage.logic.structure import StructureExtractor
@@ -28,6 +29,12 @@ class ExtractorFactory:
                 self.__metadata_check,
             ]
         )
+
+    @cache
+    def candidates(self) -> Extractor:
+        return CandidatesExtractor([
+            self.__metadata_check,
+        ])
 
     @cache
     def unselected(self) -> Extractor:
@@ -63,5 +70,6 @@ class ExtractorFactory:
     def progress(self) -> Extractor:
         return ProgressExtractor(prechecks=[
             self.__metadata_check,
+            # todo: wtf?
             # ProgressResultsCheck(self.__selector_factory.progress_has_results())
         ])

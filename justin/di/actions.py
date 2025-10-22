@@ -1,6 +1,6 @@
 from functools import cache
 
-from justin.actions.append_album_action import AppendAlbumAction2
+from justin.actions.attach_album_action import AttachAlbumAction2
 from justin.actions.check_ratios_action import CheckRatiosAction
 from justin.actions.cms_action import CMSIndexAction
 from justin.actions.date_split import DateSplitAction
@@ -14,10 +14,12 @@ from justin.actions.location import LocationAction
 from justin.actions.manage_tags_action import ManageTagsAction
 from justin.actions.move_action import MoveAction
 from justin.actions.people import RegisterPeopleAction, FixPeopleAction, SpecifyPersonAction
+from justin.actions.populate_action import PopulateAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.sequence_action import SequenceAction
 from justin.actions.split_action import SplitAction
 from justin.actions.stage.stage_action import StageAction
+from justin.actions.step_sources_action import StepSourcesAction
 from justin.actions.upload_action import UploadAction
 from justin.actions.web_sync_action import WebSyncAction
 from justin.di.checks import ChecksFactory
@@ -135,8 +137,8 @@ class ActionFactory:
         return CMSIndexAction()
 
     @cache
-    def append_album(self) -> Action:
-        return AppendAlbumAction2()
+    def attach_album(self) -> Action:
+        return AttachAlbumAction2()
 
     @cache
     def get_likers(self) -> Action:
@@ -145,3 +147,11 @@ class ActionFactory:
     @cache
     def manage_tags(self) -> Action:
         return ManageTagsAction()
+
+    @cache
+    def populate(self) -> Action:
+        return PopulateAction()
+
+    @cache
+    def step_sources(self) -> Action:
+        return StepSourcesAction()
