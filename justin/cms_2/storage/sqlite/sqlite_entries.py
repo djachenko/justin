@@ -98,6 +98,10 @@ class Tag(SQLiteEntry):
 
         return result
 
+    @staticmethod
+    def is_tag(word: str) -> bool:
+        return word.startswith("#") and "@" in word
+
 
 @dataclass
 class SyncedTagsPost(SQLiteEntry):

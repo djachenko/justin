@@ -27,14 +27,14 @@ class StagesFactory:
     @cache
     def stages(self) -> List[Stage]:
         return [
-            self.gif(),
+            # self.gif(),
             self.filter(),
             self.develop(),
             self.ourate(),
             self.ready(),
             self.published(),
             self.scheduled(),
-            self.archive(),
+            # self.archive(),
         ]
 
     @cache
@@ -96,6 +96,7 @@ class StagesFactory:
             preparation_hooks=[
                 self.__extractors_factory.progress(),
                 self.__extractors_factory.edited(),
+                self.__extractors_factory.candidates(),
             ]
         )
 
@@ -142,7 +143,7 @@ class StagesFactory:
             ],
             outcoming_checks=[
                 self.__checks_factory.metafile(),
-            ]
+            ],
         )
 
     @cache
@@ -164,4 +165,4 @@ class StagesFactory:
             if possible_stage is not None:
                 return possible_stage
 
-        return self.archive()
+        return None

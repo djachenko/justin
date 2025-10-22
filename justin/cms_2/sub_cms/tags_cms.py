@@ -25,7 +25,7 @@ class TagsCMS:
     def extract_tags(text: str) -> List[str]:
         words = text.split()
 
-        tags = [word for word in words if word.startswith("#") and "@" in word]
+        tags = [word for word in words if Tag.is_tag(word)]
 
         tags = [tag.split("@")[0] for tag in tags]
         tags = [TagsCMS.__TAGS_REPLACE_MAP.get(tag, tag) for tag in tags]
@@ -36,8 +36,7 @@ class TagsCMS:
     def index_tags(self, text: str) -> None:
         tags = TagsCMS.extract_tags(text)
 
-        with self.db.connect():
-            existing_tags = self.db.get_entries(Tag)
+        existing_tags = self.get_tags()
 
         tags_mapping = {tag.text: tag for tag in existing_tags}
 

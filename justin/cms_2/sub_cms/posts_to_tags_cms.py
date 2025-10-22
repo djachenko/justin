@@ -47,16 +47,15 @@ class PostsToTagsCMS:
         with self.db.connect():
             self.db.delete(*post_to_tags)
 
-    def get_posts_to_tags(self) -> List[PostToTag]:
+    def __get_posts_to_tags(self) -> List[PostToTag]:
         with self.db.connect():
             return self.db.get_entries(PostToTag)
 
     def get_tag_ids_of_post(self, post_id: int, group_id: int) -> List[int]:
-        return [ptt.tag_id for ptt in self.get_posts_to_tags() if ptt.post_id == post_id and ptt.group_id == group_id]
+        return [ptt.tag_id for ptt in self.__get_posts_to_tags() if ptt.post_id == post_id and ptt.group_id == group_id]
 
     def tag_usage_count(self, tag_id: int) -> int:
-        with self.db.connect():
-            posts_to_tags = self.db.get_entries(PostToTag)
+        posts_to_tags = self.__get_posts_to_tags()
 
         stats = defaultdict(lambda: 0)
 
