@@ -9,7 +9,7 @@ from justin.actions.pattern_action import Context, Extra
 from justin.shared import filesystem
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts, is_part
-from justin.shared.metafile import PostStatus, PostMetafile, GroupMetafile, NoPostMetafile
+from justin.shared.metafiles.metafile import PostStatus, PostMetafile, GroupMetafile, NoPostMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import util
 from justin_utils.util import bfs

@@ -4,7 +4,7 @@ from typing import List
 from justin.actions.pattern_action import PatternAction, Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
-from justin.shared.metafile import LocationMetafile
+from justin.shared.metafiles.metafile import LocationMetafile
 from justin_utils.cli import Parameter
 
 
