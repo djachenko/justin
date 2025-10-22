@@ -38,12 +38,27 @@ class RegisterPeopleAction(DestinationsAwareAction):
     @staticmethod
     def __register_from_path(folder_with_people: Folder, context: Context) -> None:
         for person_folder in folder_with_people.subfolders:
+            if context.sqlite_cms.get_person(person_folder.name):
+                continue
+
             vk_entity = RegisterPeopleAction.__get_vk_entity(person_folder.name, context.pyvko)
+
+            if not vk_entity:
+                vk_name = RegisterPeopleAction.__ask_name(person_folder.name)
+                vk_id = None
+            elif isinstance(vk_entity, User):
+                vk_name = f"{vk_entity.first_name} {vk_entity.last_name}"
+                vk_id = vk_entity.id
+            elif isinstance(vk_entity, Group):
+                vk_name = vk_entity.name
+                vk_id = vk_entity.id
+            else:
+                assert False
 
             context.sqlite_cms.register_person(
                 folder=person_folder.name,
-                name=vk_entity.name,
-                vk_id=vk_entity.id
+                name=vk_name,
+                vk_id=vk_id
             )
 
     @staticmethod
@@ -57,6 +72,10 @@ class RegisterPeopleAction(DestinationsAwareAction):
             return None
         else:
             return pyvko.get(choice)
+
+    @staticmethod
+    def __ask_name(folder_name: str) -> str:
+        return input(f"What is {folder_name}'s name?\n> ")
 
 
 class FixPeopleAction(Action):
