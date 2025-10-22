@@ -9,7 +9,7 @@ from typing import List, Iterable, Type
 
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.utils import Json
-from justin.shared.metafile import LocationMetafile
+from justin.shared.metafiles.metafile import LocationMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils.util import bfs, T
 

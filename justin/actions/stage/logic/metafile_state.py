@@ -2,7 +2,7 @@ from typing import Iterable
 
 from justin.actions.stage.logic.base import Problem, DestinationsAwareCheck
 from justin.shared.filesystem import Folder
-from justin.shared.metafile import PostMetafile, GroupMetafile, PostStatus, PersonMetafile
+from justin.shared.metafiles.metafile import PostMetafile, GroupMetafile, PostStatus, PersonMetafile
 
 
 class MetafilesExistCheck(DestinationsAwareCheck):

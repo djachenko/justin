@@ -41,7 +41,7 @@ def __run(config_path: Path, args: List[str] = None):
     )
 
     config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
-        "people": cms.people,
+        "NAMES": sqlite_cms.get_all_folders(),
     })
 
     def get_lazy_group(url_key):
@@ -58,6 +58,8 @@ def __run(config_path: Path, args: List[str] = None):
         my_people_group=get_lazy_group(Config.Keys.MY_PEOPLE_URL),
         pyvko=pyvko,
         cms=cms,
+        aftershoot_stats=cms_root / "aftershoot.json",
+        drive_path=Path.home() / "Yandex.Disk.localized" / "photos",
         sqlite_cms=sqlite_cms,
         sheets_db=sheets_db,
         photoset_migrations_factory=PhotosetMigrationFactory(cms)
@@ -103,6 +105,8 @@ class Commands(str, Enum):
     REGISTER_PEOPLE = "reg_people"
     FIX_PEOPLE = "fix_people"
     DRONE = "drone"
+    ATTACH_ALBUM = "attach_album"
+    STEP = "step_sources"
 
 
 class Locations(str, Enum):
@@ -129,10 +133,9 @@ class Stages(str, Enum):
 
 def main():
     current_location = Locations.MAC_OS_HOME
-    current_stage = Stages.SCHEDULE
-    current_command = Commands.SPLIT
-    # current_command = Commands.REGISTER_PEOPLE
-    current_pattern = "25.02.23.getlens_testdrive"
+    current_stage = Stages.READY
+    current_command = Commands.READY
+    current_pattern = "*schl*"
 
     commands = {
         0: f"{current_command.value} {current_pattern}",
@@ -141,7 +144,8 @@ def main():
         3: "get_likers https://vk.com/wall-100568944_3923 https://vk.com/wall-100568944_3921 https://vk.com/wall-100568944_3902 https://vk.com/wall-100568944_3900 https://vk.com/wall-100568944_3892 https://vk.com/wall-100568944_3889",
         4: "get_likers https://vk.com/wall-100568944_3923",
         5: "index --group jvstin",
-        6: "manage_tags",
+        6: "manage_tags --posts scheduled",
+        7: "json2sqlite",
     }
 
     locations = {
@@ -153,7 +157,7 @@ def main():
     with cd(Path(locations[0])):
         __run(
             Path(__file__).parent.parent,
-            commands[6].split()
+            commands[0].split()
         )
 
 

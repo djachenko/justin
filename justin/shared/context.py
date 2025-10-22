@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 
 from justin.cms.cms import CMS
 from justin.cms_2.sqlite_cms import SQLiteCMS
@@ -23,6 +24,9 @@ class Context:
 
     cms: CMS
     sqlite_cms: SQLiteCMS
+
+    aftershoot_stats: Path
+    drive_path: Path
 
     sheets_db: GoogleSheetsDatabase
 

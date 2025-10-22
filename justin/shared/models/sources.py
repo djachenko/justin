@@ -68,26 +68,26 @@ class InternalMetadataSource(Source):
         ".heic",
     ]
 
-    def __init__(self, jpeg: File):
+    def __init__(self, file: File):
         super().__init__()
 
-        self.__jpeg = jpeg
+        self.__file = file
 
     @property
     def mtime(self):
-        return self.__jpeg.mtime
+        return self.__file.mtime
 
     @property
     def name(self):
-        return self.__jpeg.stem
+        return self.__file.stem
 
     def files(self) -> List[File]:
-        return [self.__jpeg]
+        return [self.__file]
 
     @property
     @cache
     def exif(self) -> Exif:
-        return parse_exif(self.__jpeg.path)
+        return parse_exif(self.__file.path)
 
 
 class ExternalMetadataSource(Source):

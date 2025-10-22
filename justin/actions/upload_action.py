@@ -16,13 +16,13 @@ from justin.actions.rearrange_action import RearrangeAction
 from justin.cms_2.storage.sqlite.sqlite_entries import Person
 from justin.shared.filesystem import File, Folder
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
-    AlbumMetafile
+from justin.shared.metafiles.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
+    AlbumMetafile, DriveMetafile
 from justin.shared.models.exif import parse_exif
 from justin.shared.models.photoset import Photoset
 from justin_utils.pylinq import Sequence
 from justin_utils.util import flat_map
-from pyvko.aspects.albums import Albums
+from pyvko.aspects.albums import Albums, Album
 from pyvko.aspects.comments import CommentModel
 from pyvko.aspects.events import Event
 from pyvko.aspects.posts import Post, PostModel, Posts
@@ -152,7 +152,29 @@ class UploadAction(DestinationsAwareAction, EventUtils):
     # region upload strategies
 
     def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
-        pass
+        set_name = extra[UploadAction.SET_NAME]
+        part_name = extra[UploadAction.__PART_NAME]
+
+        if set_name != part_name:
+            folder_name = f"{set_name}_{part_name}"
+        else:
+            folder_name = set_name
+
+        if len(drive_folder.subfolders) > 1:
+            for subfolder in drive_folder.subfolders:
+                sub_name = f"{folder_name}@{subfolder.name}"
+
+                UploadAction.__copy_folder(
+                    subfolder,
+                    context.drive_path,
+                    sub_name
+                )
+        else:
+            UploadAction.__copy_folder(
+                drive_folder.subfolders[0],
+                context.drive_path,
+                folder_name
+            )
 
     def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
         justin_group = context.justin_group
@@ -507,13 +529,20 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     @staticmethod
     def __upload_folder(community: Community, folder: Folder, params: UploadParams) -> int:
+        text = params.text or ""
+
         if folder.file_count() <= 10:
             attachments = UploadAction.__get_post_attachments(community, folder)
         else:
-            attachments = UploadAction.__get_album_attachments(community, folder, params)
+            album = UploadAction.__get_album(community, folder, params)
+
+            attachments = []
+            text = text.strip()
+            text += f"\n\nА фотки лежат [{album.url}|вот здесь]."
+            text = text.strip()
 
         post_model = PostModel(
-            text=params.text,
+            text=text,
             attachments=attachments,
             date=next(params.date_generator)
         )
@@ -538,7 +567,7 @@ class UploadAction(DestinationsAwareAction, EventUtils):
         return vk_photos
 
     @staticmethod
-    def __get_album_attachments(community: Albums, folder: Folder, params: UploadParams) -> List[Attachment]:
+    def __get_album(community: Albums, folder: Folder, params: UploadParams) -> Album:
         if AlbumMetafile.has(folder):
             metafile = AlbumMetafile.get(folder)
             album = community.get_album_by_id(metafile.album_id)
@@ -579,7 +608,35 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
             print(" done.")
 
-        return [album]
+        return album
+
+    @staticmethod
+    def __copy_folder(folder: Folder, root: Path, name: str) -> None:
+        drive_metafile = DriveMetafile.get(folder)
+
+        # exists
+        # renamed
+        # new
+
+        destination_path = root / name
+
+        if not drive_metafile:
+            destination_path.mkdir(exist_ok=True)
+
+            for file in folder.files:
+                file.copy(destination_path)
+
+            drive_metafile = DriveMetafile(
+                folder_name=name
+            )
+        elif drive_metafile.folder_name != name:
+            current_path = root / drive_metafile.folder_name
+
+            current_path.rename(destination_path)
+
+            drive_metafile.folder_name = name
+
+        drive_metafile.save(folder)
 
     # endregion uploading
 

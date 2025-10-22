@@ -8,7 +8,6 @@ from justin.shared.models.photoset import Photoset
 
 
 class ProgressExtractor(Extractor):
-
     def __init__(self, prechecks: List[AbstractCheck]) -> None:
         # noinspection PyTypeChecker
         super().__init__(

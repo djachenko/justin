@@ -4,7 +4,7 @@ from uuid import UUID
 
 from justin.shared.filesystem import File, FolderBased, Folder
 from justin.shared.helpers.parts import PartsMixin
-from justin.shared.metafile import PhotosetMetafile
+from justin.shared.metafiles.metafile import PhotosetMetafile
 from justin.shared.models import sources
 from justin.shared.models.sources import Source
 from justin_utils import util

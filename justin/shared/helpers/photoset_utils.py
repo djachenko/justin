@@ -2,7 +2,7 @@ from typing import Iterable, List
 
 from justin.shared.filesystem import PathBased, File
 from justin.shared.helpers.utils import __validate_join, JpegType
-from justin.shared.metafile import RootMetafile
+from justin.shared.metafiles.metafile import RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import joins, util
 
