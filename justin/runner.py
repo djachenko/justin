@@ -10,6 +10,7 @@ from justin.cms_2.storage.google_sheets.google_sheets_database import GoogleShee
 from justin.di.app import DI
 from justin.shared.config import Config
 from justin.shared.context import Context
+from justin.shared.filesystem import Folder
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from justin_utils.cd import cd
@@ -60,6 +61,7 @@ def __run(config_path: Path, args: List[str] = None):
         cms=cms,
         aftershoot_stats=cms_root / "aftershoot.json",
         drive_path=Path.home() / "Yandex.Disk.localized" / "photos",
+        people_portraits=Folder.from_path(cms_root / "faces"),
         sqlite_cms=sqlite_cms,
         sheets_db=sheets_db,
         photoset_migrations_factory=PhotosetMigrationFactory(cms)
@@ -107,6 +109,8 @@ class Commands(str, Enum):
     DRONE = "drone"
     ATTACH_ALBUM = "attach_album"
     STEP = "step_sources"
+    FIND_FACES = "find_faces"
+    POPULATE = "populate"
 
 
 class Locations(str, Enum):
@@ -133,9 +137,9 @@ class Stages(str, Enum):
 
 def main():
     current_location = Locations.MAC_OS_HOME
-    current_stage = Stages.READY
-    current_command = Commands.READY
-    current_pattern = "*schl*"
+    current_stage = Stages.SCHEDULE
+    current_command = Commands.UPLOAD
+    current_pattern = "*walk*"
 
     commands = {
         0: f"{current_command.value} {current_pattern}",

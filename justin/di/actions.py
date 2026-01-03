@@ -8,6 +8,7 @@ from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.drone import HandleDroneAction, JpgDngDuplicatesAction, PanoExtractAction
 from justin.actions.event import SetupEventAction, CreateEventAction
+# from justin.actions.find_faces_action import FindFacesAction
 from justin.actions.fix_metafile_action import FixMetafileAction
 from justin.actions.get_likers_action import GetLikersAction
 from justin.actions.location import LocationAction
@@ -155,3 +156,7 @@ class ActionFactory:
     @cache
     def step_sources(self) -> Action:
         return StepSourcesAction()
+
+    # @cache
+    # def find_faces(self) -> Action:
+    #     return FindFacesAction()

@@ -16,6 +16,7 @@ setup(
         "google-auth-httplib2",
         "google-auth-oauthlib",
         "frozendict",
+        "face_recognition",
     ],
     url='',
     license='MIT',
