@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Iterator
 
 from PIL import Image
+from lazy_object_proxy import Proxy
 
 from justin.actions.destinations_aware_action import DestinationsAwareAction
 from justin.actions.event import SetupEventAction
@@ -90,7 +91,8 @@ class UploadAction(DestinationsAwareAction, EventUtils):
 
     def get_extra(self, context: Context) -> Extra:
         return super().get_extra(context) | {
-            UploadAction.__JUSTIN_DATE_GENERATOR: UploadAction.__generator_for_group(context.justin_group)
+            UploadAction.__JUSTIN_DATE_GENERATOR:
+                Proxy(lambda: UploadAction.__generator_for_group(context.justin_group))
         }
 
     def perform_for_photoset(self, photoset: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
