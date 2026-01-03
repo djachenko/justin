@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "justin"
+version = "0.1.1"
+description = "Photo processing and management tool"
+readme = "README.md"
+authors = [
+    { name = "Harry Djachenko", email = "i.s.djachenko@gmail.com" }
+]
+license = { text = "MIT" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+keywords = ["photo", "processing", "face-recognition", "vk"]
+
+# ВАЖНО: Здесь указываются зависимости как для публикации на PyPI.
+# Они должны быть доступны в репозитории.
+dependencies = [
+    "pyvko>=0.1.11",
+    "justin_utils>=0.0.1",
+    "Pillow",
+    "lazy-object-proxy",
+    "six",
+    "py_linq",
+    "exif",
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
+    "frozendict",
+#    "face_recognition",
+]
+
+# Объявление консольной команды (главная точка входа)
+[project.scripts]
+justin = "justin.runner:console_run"
+
+[project.urls]
+Homepage = "https://github.com/djachenko/justin"
+"Bug Tracker" = "https://github.com/djachenko/justin/issues"
+"Source Code" = "https://github.com/djachenko/justin"
