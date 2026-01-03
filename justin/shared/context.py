@@ -4,6 +4,7 @@ from pathlib import Path
 from justin.cms.cms import CMS
 from justin.cms_2.sqlite_cms import SQLiteCMS
 from justin.cms_2.storage.google_sheets.google_sheets_database import GoogleSheetsDatabase
+from justin.shared.filesystem import Folder
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from pyvko.aspects.groups import Group
@@ -27,6 +28,7 @@ class Context:
 
     aftershoot_stats: Path
     drive_path: Path
+    people_portraits: Folder
 
     sheets_db: GoogleSheetsDatabase
 

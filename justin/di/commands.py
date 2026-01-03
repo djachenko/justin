@@ -58,4 +58,5 @@ class CommandFactory:
             SingleActionCommand("json2sqlite", JsonToSqliteAction()),
             SingleActionCommand("populate", self.__action_factory.populate()),
             SingleActionCommand("step_sources", self.__action_factory.step_sources()),
+            # SingleActionCommand("find_faces", self.__action_factory.find_faces()),
         ]
