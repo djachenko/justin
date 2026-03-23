@@ -39,8 +39,9 @@ dependencies = [
     "google-auth-httplib2",
     "google-auth-oauthlib",
     "frozendict",
-    "click>=8.0",
+    "typer[all]>=0.9.0",
     # "face_recognition",  # Опциональная зависимость, может быть добавлена при необходимости
+    "coverage"
 ]
 
 [project.optional-dependencies]
@@ -59,9 +60,14 @@ server = [
 
 # Объявление консольной команды (главная точка входа)
 [project.scripts]
-justin = "justin.runner:console_run"
+justin = "justin.typer.app.console_runner:run"
+justin_old = "justin.runner:console_run"
 
 [project.urls]
 Homepage = "https://github.com/djachenko/justin"
 "Bug Tracker" = "https://github.com/djachenko/justin/issues"
 "Source Code" = "https://github.com/djachenko/justin"
+
+[tool.coverage.run]
+source = ["justin"]
+branch = true

@@ -101,6 +101,10 @@ class Photoset(FolderBased, PartsMixin):
         return self.folder["drive"]
 
     @property
+    def cullen(self) -> Folder | None:
+        return self.folder["cullen"]
+
+    @property
     def results(self) -> List[File]:
         possible_subtrees = [
             self.my_people,

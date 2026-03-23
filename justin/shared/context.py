@@ -6,6 +6,7 @@ from justin.cms_2.sqlite_cms import SQLiteCMS
 from justin.cms_2.storage.google_sheets.google_sheets_database import GoogleSheetsDatabase
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
+from pyvko.aspects.albums import Albums
 from pyvko.aspects.groups import Group
 from pyvko.aspects.posts import Posts
 from pyvko.pyvko_main import Pyvko
@@ -19,6 +20,7 @@ class Context:
     meeting_group: Group
     kot_i_kit_group: Group
     my_people_group: Posts
+    cullen_group: Albums
 
     pyvko: Pyvko
 

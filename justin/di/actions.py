@@ -3,7 +3,6 @@ from functools import cache
 from justin.actions.attach_album_action import AttachAlbumAction2
 from justin.actions.check_ratios_action import CheckRatiosAction
 from justin.actions.cms_action import CMSIndexAction
-from justin.actions.date_split import DateSplitAction
 from justin.actions.delay_action import DelayAction
 from justin.actions.delete_posts_action import DeletePostsAction
 from justin.actions.drone import HandleDroneAction, JpgDngDuplicatesAction, PanoExtractAction
@@ -18,10 +17,9 @@ from justin.actions.populate_action import PopulateAction
 from justin.actions.rearrange_action import RearrangeAction
 from justin.actions.sequence_action import SequenceAction
 from justin.actions.split_action import SplitAction
-from justin.actions.stage.stage_action import StageAction
 from justin.actions.step_sources_action import StepSourcesAction
-from justin.actions.upload_action import UploadAction
-from justin.actions.web_sync_action import WebSyncAction
+from justin.typer.upload_command import UploadCommand
+from justin.typer.web_sync_command import WebSyncCommand
 from justin.di.checks import ChecksFactory
 from justin.di.stages import StagesFactory
 from justin.shared.helpers.checks_runner import ChecksRunner
@@ -61,7 +59,7 @@ class ActionFactory:
 
     @cache
     def web_sync_action(self) -> Action:
-        return WebSyncAction()
+        return WebSyncCommand()
 
     @cache
     def delete_posts_action(self) -> Action:
@@ -77,7 +75,7 @@ class ActionFactory:
 
     @cache
     def upload_action(self) -> Action:
-        return UploadAction(
+        return UploadCommand(
             setup=self.setup_event()
         )
 
@@ -96,10 +94,6 @@ class ActionFactory:
     @cache
     def setup_event(self) -> SetupEventAction:
         return SetupEventAction()
-
-    @cache
-    def date_split(self) -> Action:
-        return DateSplitAction()
 
     @cache
     def register_people(self) -> Action:

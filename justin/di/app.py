@@ -43,7 +43,7 @@ class DI:
 
     @property
     @cache
-    def __stages_factory(self) -> StagesFactory:
+    def stages_factory(self) -> StagesFactory:
         return StagesFactory(
             self.__checks_factory,
             self.__extractor_factory
@@ -53,20 +53,20 @@ class DI:
     @cache
     def __actions_factory(self) -> ActionFactory:
         return ActionFactory(
-            self.__stages_factory,
+            self.stages_factory,
             self.__checks_factory,
-            self.__checks_runner
+            self.checks_runner
         )
 
     @property
     @cache
-    def __checks_runner(self) -> ChecksRunner:
+    def checks_runner(self) -> ChecksRunner:
         return ChecksRunner()
 
     @property
     @cache
     def commands_factory(self) -> CommandFactory:
         return CommandFactory(
-            self.__stages_factory,
+            self.stages_factory,
             self.__actions_factory
         )
