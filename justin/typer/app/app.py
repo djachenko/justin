@@ -134,7 +134,7 @@ def build_app(config_path: Path) -> Typer:
         # manage_tags_app,
         # populate_app,
         # register_people_app,
-        # sequence_app,
+        sequence_app,
         # setup_event_app,
         # split_app,
         # step_sources_app,
