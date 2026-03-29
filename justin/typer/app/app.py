@@ -98,6 +98,11 @@ def build_app(config_path: Path) -> Typer:
     def get_lazy_group(url_key):
         return Proxy(lambda: pyvko.get_by_url(config[url_key]))
 
+    yandex_disk_path = Path.home() / "Yandex.Disk.localized"
+
+    drive_path = yandex_disk_path / "photos"
+    cullen_path = yandex_disk_path / "cullen"
+
     justin_context = JustinContext(
         world=Proxy(lambda: World()),
         justin_group=get_lazy_group(Config.Keys.JUSTIN_URL),
@@ -109,7 +114,8 @@ def build_app(config_path: Path) -> Typer:
         pyvko=pyvko,
         cms=cms,
         aftershoot_stats=cms_root / "aftershoot.json",
-        drive_path=Path.home() / "Yandex.Disk.localized" / "photos",
+        drive_path=drive_path,
+        cullen_path=cullen_path,
         sqlite_cms=sqlite_cms,
         sheets_db=sheets_db,
         photoset_migrations_factory=PhotosetMigrationFactory(cms)

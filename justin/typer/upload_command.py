@@ -11,6 +11,8 @@ from PIL import Image
 from justin_utils.pylinq import Sequence
 from justin_utils.util import flat_map
 from lazy_object_proxy import Proxy
+from vk_api import ApiError
+
 from pyvko.aspects.albums import Albums, Album
 from pyvko.aspects.comments import CommentModel
 from pyvko.aspects.events import Event
@@ -436,12 +438,29 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
 
         links = [photo.largest_link() for photo in photos]
 
-        links_mapping = dict(zip(album_metafile.images, links))
+        links_mapping = list()
 
-        cullen_json_path = cullen_folder.path / f"{set_name}.json"
+        for name, link in zip(album_metafile.images, links):
+            links_mapping.append({
+                "name": name.removesuffix(".jpg"),
+                "url": link,
+            })
+
+        self.context.cullen_path.mkdir(parents=True, exist_ok=True)
+        cullen_json_path = self.context.cullen_path / f"{set_name}.json"
 
         with cullen_json_path.open(mode="w") as cullen_json:
             json.dump(links_mapping, cullen_json, indent=4)
+
+        current_jsons = [item for item in self.context.cullen_path.iterdir() if item.is_file() and item.suffix == ".json" and item.stem != "index"]
+        current_jsons = [item.name for item in current_jsons]
+        current_jsons.sort()
+
+        with (self.context.cullen_path / "index.json").open(mode="w") as index_json:
+            json.dump(current_jsons, index_json, indent=4)
+
+
+
 
     # endregion upload strategies
 
@@ -613,31 +632,66 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
 
         file_count = folder.file_count()
 
-        for i, file in enumerate(sorted(folder.files, key=parse_exif), start=1):
-            if file.name in metafile.images:
-                continue
+        not_uploaded_files = [file for file in folder.files if file.name not in metafile.images]
+        not_uploaded_files.sort(key=parse_exif)
 
-            print(f"Uploading {file.name} ({i}/{file_count})...", end="")
+        if True:
+            print(f"Uploading {file_count} photos...")
 
-            counter = 1
+            batch_size = 10
 
-            while True:
-                # noinspection PyBroadException
+            while not_uploaded_files:
                 try:
-                    album.add_photo(file.path)
+                    uploaded_photos = album.add_photos([file.path for file in not_uploaded_files[:batch_size]])
+                except ApiError as e:
+                    if e.code != 100:
+                        raise
 
-                    metafile.images.append(file.name)
-                    metafile.save(folder)
 
-                    break
-                except KeyboardInterrupt:
-                    raise
-                except:
-                    print(f"Retrying {counter}")
 
-                    counter += 1
+                    print(f"Error, retrying this particular batch")
 
-            print(" done.")
+                    continue
+
+                uploaded_count = len(uploaded_photos)
+
+                uploaded_files = not_uploaded_files[:uploaded_count]
+                not_uploaded_files = not_uploaded_files[uploaded_count:]
+
+                uploaded_names = [file.name for file in uploaded_files]
+
+                metafile.images += uploaded_names
+                metafile.save(folder)
+
+                print(f"Uploaded {uploaded_count} photos: " + ", ".join(uploaded_names) + f" ({len(metafile.images)} / {len(folder.files)})")
+
+            print("done")
+        else:
+            for i, file in enumerate(sorted(folder.files, key=parse_exif), start=1):
+                if file.name in metafile.images:
+                    continue
+
+                print(f"Uploading {file.name} ({i}/{file_count})...", end="")
+
+                counter = 1
+
+                while True:
+                    # noinspection PyBroadException
+                    try:
+                        album.add_photo(file.path)
+
+                        metafile.images.append(file.name)
+                        metafile.save(folder)
+
+                        break
+                    except KeyboardInterrupt:
+                        raise
+                    except:
+                        print(f"Retrying {counter}")
+
+                        counter += 1
+
+                print(" done.")
 
         return album
 
