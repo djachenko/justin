@@ -125,7 +125,7 @@ def build_app(config_path: Path) -> Typer:
 
     subapps = [
         # attach_album_app,
-        # date_split_app,
+        date_split_app,
         # delete_posts_app,
         # drone_app,
         # check_ratios_app,
