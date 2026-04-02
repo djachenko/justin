@@ -60,5 +60,3 @@ class Postmypost:
             file_ids.append(upload_data.id)
 
         return file_ids
-
-    def make_post

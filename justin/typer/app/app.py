@@ -1,12 +1,10 @@
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
 
 import click
+import time
 from lazy_object_proxy import Proxy
-from pyvko.config.config import Config as PyvkoConfig
-from pyvko.pyvko_main import Pyvko
 from typer import Typer, Context, Argument
 from typer.core import TyperGroup
 
@@ -20,23 +18,12 @@ from justin.shared.context import Context as JustinContext
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from justin.typer.app.tracker import write_entry, TrackEntry, setup_tracking
-from justin.typer.attach_album_command import app as attach_album_app
-from justin.typer.check_ratios_command import app as check_ratios_app
 from justin.typer.date_split_command import app as date_split_app
-from justin.typer.delete_posts_command import app as delete_posts_app
-from justin.typer.drone_command import app as drone_app
-from justin.typer.fix_metafile_command import app as fix_metafile_app
-from justin.typer.json2sqlite_command import app as json2sqlite_app
-from justin.typer.manage_tags_command import app as manage_tags_app
-from justin.typer.populate_command import app as populate_app
-from justin.typer.register_people_command import app as register_people_app
 from justin.typer.sequence_command import app as sequence_app
-from justin.typer.setup_event_command import app as setup_event_app
-from justin.typer.split_command import app as split_app
 from justin.typer.stage_command import create_stage_commands
-from justin.typer.step_sources_command import app as step_sources_app
-from justin.typer.web_sync_command import app as web_sync_app
 from justin.typer.upload_command import app as upload_app
+from pyvko.config.config import Config as PyvkoConfig
+from pyvko.pyvko_main import Pyvko
 
 __CONFIGS_FOLDER = ".justin"
 __CONFIG_FILE = "config.py"
@@ -90,13 +77,13 @@ def build_app(config_path: Path) -> Typer:
     )
 
     config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
-        "NAMES": sqlite_cms.get_all_folders(),
+        "names": sqlite_cms.get_all_folders(),
     })
 
     di = DI(config)
 
-    def get_lazy_group(url_key):
-        return Proxy(lambda: pyvko.get_by_url(config[url_key]))
+    def get_lazy_group(url):
+        return Proxy(lambda: pyvko.get_by_url(url))
 
     yandex_disk_path = Path.home() / "Yandex.Disk.localized"
 
@@ -105,12 +92,12 @@ def build_app(config_path: Path) -> Typer:
 
     justin_context = JustinContext(
         world=Proxy(lambda: World()),
-        justin_group=get_lazy_group(Config.Keys.JUSTIN_URL),
-        closed_group=get_lazy_group(Config.Keys.CLOSED_URL),
-        meeting_group=get_lazy_group(Config.Keys.MEETING_URL),
-        kot_i_kit_group=get_lazy_group(Config.Keys.KOT_I_KIT_URL),
-        my_people_group=get_lazy_group(Config.Keys.MY_PEOPLE_URL),
-        cullen_group=get_lazy_group(Config.Keys.CULLEN_URL),
+        justin_group=get_lazy_group(config.justin_url),
+        closed_group=get_lazy_group(config.closed_url),
+        meeting_group=get_lazy_group(config.meeting_url),
+        kot_i_kit_group=get_lazy_group(config.kot_i_kit_url),
+        my_people_group=get_lazy_group(config.my_people_url),
+        cullen_group=get_lazy_group(config.cullen_url),
         pyvko=pyvko,
         cms=cms,
         aftershoot_stats=cms_root / "aftershoot.json",
@@ -124,22 +111,9 @@ def build_app(config_path: Path) -> Typer:
     app = Typer(cls=TrackedGroup)
 
     subapps = [
-        # attach_album_app,
         date_split_app,
-        # delete_posts_app,
-        # drone_app,
-        # check_ratios_app,
-        # fix_metafile_app,
-        # json2sqlite_app,
-        # manage_tags_app,
-        # populate_app,
-        # register_people_app,
         sequence_app,
-        # setup_event_app,
-        # split_app,
-        # step_sources_app,
         upload_app,
-        # web_sync_app,
     ]
 
     for subapp in subapps:

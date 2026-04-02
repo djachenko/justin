@@ -17,7 +17,7 @@ class DI:
     def __init__(self, config: Config) -> None:
         super().__init__()
 
-        self.__selector_factory_ = Proxy(lambda: SelectorFactory(config[Config.Keys.PHOTOSET_STRUCTURE]))
+        self.__selector_factory_ = Proxy(lambda: SelectorFactory(config.photoset_structure))
 
         setup_metafiles()
 

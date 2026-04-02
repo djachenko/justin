@@ -29,6 +29,7 @@ class Context:
 
     aftershoot_stats: Path
     drive_path: Path
+    cullen_path: Path
 
     sheets_db: GoogleSheetsDatabase
 

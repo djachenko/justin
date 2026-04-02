@@ -15,7 +15,6 @@ from justin.actions.move_action import MoveAction
 from justin.actions.people import RegisterPeopleAction, FixPeopleAction, SpecifyPersonAction
 from justin.actions.populate_action import PopulateAction
 from justin.actions.rearrange_action import RearrangeAction
-from justin.actions.sequence_action import SequenceAction
 from justin.actions.split_action import SplitAction
 from justin.actions.step_sources_action import StepSourcesAction
 from justin.typer.upload_command import UploadCommand

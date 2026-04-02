@@ -15,8 +15,6 @@ def run():
     cov.start()
 
     try:
-        print("argv", sys.argv)
-
         from justin.typer.app.app import build_app
         app = build_app(Path.home())
         app()
