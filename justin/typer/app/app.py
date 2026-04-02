@@ -1,12 +1,8 @@
-from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
-import click
-import time
 from lazy_object_proxy import Proxy
 from typer import Typer, Context, Argument
-from typer.core import TyperGroup
 
 from justin.cms.cms import CMS
 from justin.cms_2.sqlite_cms import SQLiteCMS
@@ -17,7 +13,7 @@ from justin.shared.config import Config
 from justin.shared.context import Context as JustinContext
 from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
-from justin.typer.app.tracker import write_entry, TrackEntry, setup_tracking
+from justin.typer.app.tracker import Tracker
 from justin.typer.date_split_command import app as date_split_app
 from justin.typer.sequence_command import app as sequence_app
 from justin.typer.stage_command import create_stage_commands
@@ -34,37 +30,13 @@ __GOOGLE_SHEETS_FOLDER = "google_sheets"
 setup_metafiles()
 
 
-class TrackedGroup(TyperGroup):
-    def invoke(self, ctx: click.Context) -> Any:
-        print("tracking started")
-
-        start = time.perf_counter()
-        error: str | None = None
-        command_name = " ".join(ctx.protected_args + ctx.args)
-
-        try:
-            return super().invoke(ctx)
-        except Exception as e:
-            error = type(e).__name__ + ": " + str(e)
-            raise
-        finally:
-            elapsed = time.perf_counter() - start
-
-            write_entry(TrackEntry(
-                command=command_name or "unknown",
-                timestamp=datetime.now().isoformat(),
-                duration=elapsed,
-                error=error,
-            ))
-
-
 def build_app(config_path: Path) -> Typer:
     configs_folder = config_path / __CONFIGS_FOLDER
     pyvko_config_file = configs_folder / __PYVKO_CONFIG_FILE
     cms_root = configs_folder / __CMS_FOLDER
     google_sheets_root = configs_folder / __GOOGLE_SHEETS_FOLDER
 
-    setup_tracking(configs_folder)
+    Tracker.instance().setup(configs_folder)
 
     pyvko_config = PyvkoConfig.read(pyvko_config_file)
     pyvko = Pyvko(pyvko_config)
@@ -108,7 +80,7 @@ def build_app(config_path: Path) -> Typer:
         photoset_migrations_factory=PhotosetMigrationFactory(cms)
     )
 
-    app = Typer(cls=TrackedGroup)
+    app = Typer()
 
     subapps = [
         date_split_app,

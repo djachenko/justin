@@ -1,23 +1,11 @@
-import sys
 from pathlib import Path
-import time
+
+from justin.typer.app.app import build_app
+from justin.typer.app.tracker import track
 
 
 def run():
-    from coverage import Coverage
+    app = build_app(Path.home())
 
-    data_dir = Path.home() / ".justin" / "coverage"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    data_file = data_dir / f"{int(time.time() * 1000)}.coverage"
-
-    cov = Coverage(data_file=str(data_file))
-    cov.config.disable_warnings = ["module-not-measured"]
-    cov.start()
-
-    try:
-        from justin.typer.app.app import build_app
-        app = build_app(Path.home())
+    with track():
         app()
-    finally:
-        cov.stop()
-        cov.save()

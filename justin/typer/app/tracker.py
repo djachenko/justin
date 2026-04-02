@@ -1,15 +1,22 @@
+import sqlite3
+from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase, SQLiteEntry
+import sys
+import time
+from coverage import Coverage
+from justin_utils.singleton import Singleton
 
 
 @dataclass
-class TrackEntry(SQLiteEntry):
+class TrackEntry:
     command: str
     timestamp: str
-    duration: float
+    clock_duration: float
+    cpu_duration: float
     error: Optional[str] = None
 
     @classmethod
@@ -20,23 +27,77 @@ class TrackEntry(SQLiteEntry):
 _DB_PATH: Optional[Path] = None
 
 
-def setup_tracking(cms_root: Path) -> None:
-    """Call once at app startup, before any commands run."""
-    global _DB_PATH
-    _DB_PATH = cms_root
+class Tracker(Singleton):
+    def __init__(self):
+        super().__init__()
+
+        self.__root = None
+
+    @property
+    def coverage(self):
+        coverage_folder = self.__root / "coverage"
+        coverage_folder.mkdir(parents=True, exist_ok=True)
+        coverage_file = coverage_folder / f"{int(time.time() * 1000)}.coverage"
+
+        coverage = Coverage(data_file=str(coverage_file))
+        coverage.config.disable_warnings = [
+            "module-not-measured",
+            "no-data-collected",
+        ]
+
+        return coverage
+
+    def setup(self, root: Path) -> None:
+        self.__root = root
+
+    def write(
+            self,
+            command: str,
+            timestamp: str,
+            clock_duration: float,
+            cpu_duration: float,
+            error: Optional[str] = None,
+    ) -> None:
+        with sqlite3.connect(self.__root / "tracking.db") as conn:
+            conn.execute(
+                "INSERT INTO TrackEntry (command, timestamp, clock_duration, cpu_duration, error) VALUES (?, ?, ?, ?, ?)",
+                (command, timestamp, clock_duration, cpu_duration, error)
+            )
 
 
-def write_entry(entry: TrackEntry) -> None:
-    if _DB_PATH is None:
-        return
+@contextmanager
+def track():
+    start_timestamp = datetime.now().isoformat()
+
+    start_global_time = time.perf_counter()
+    start_system_time = time.process_time()
+
+    argv = sys.argv
+    command = " ".join(argv)
+    error = None
+
+    tracker = Tracker.instance()
+    coverage = tracker.coverage
+
+    coverage.start()
 
     try:
-        import sqlite3
+        yield
+    except Exception as e:
+        error = type(e).__name__ + ": " + str(e)
+        raise
 
-        with sqlite3.connect(_DB_PATH / "tracking.db") as conn:
-            conn.execute(
-                "INSERT INTO TrackEntry (command, timestamp, duration, error) VALUES (?, ?, ?, ?)",
-                (entry.command, entry.timestamp, entry.duration, entry.error)
-            )
-    except Exception:
-        pass
+    finally:
+        coverage.stop()
+        coverage.save()
+
+        end_global_time = time.perf_counter()
+        end_system_time = time.process_time()
+
+        tracker.write(
+            command=command,
+            timestamp=start_timestamp,
+            clock_duration=end_global_time - start_global_time,
+            cpu_duration=end_system_time - start_system_time,
+            error=error,
+        )

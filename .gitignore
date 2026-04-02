@@ -22,3 +22,5 @@ build/
 justin/cms_2/sub_cms/tmplt_cms.py
 
 .DS_Store
+
+justin/typer/app/ide_runner.py
