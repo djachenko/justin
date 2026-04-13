@@ -8,8 +8,8 @@ from frozendict import frozendict
 
 from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
-from justin.shared.filesystem import Folder
 from justin.shared.models.photoset import Photoset
+from justin_utils.filesystem import Folder
 
 
 class PatternCommand(ABC):
@@ -40,7 +40,7 @@ class PatternCommand(ABC):
         self.run_for_pattern(paths, self.extra)
 
     def run_for_pattern(self, paths: Iterable[Path], extra: Extra) -> None:
-        for path in paths:
+        for path in sorted(paths):
             self.run_for_path(path, extra)
 
     def run_for_path(self, path: Path, extra: Extra) -> None:

@@ -1,32 +1,38 @@
-from argparse import Namespace
+from pathlib import Path
+from typing import Annotated, List, Iterable
 
-from justin.actions.destinations_aware_action import DestinationsAwareAction
+import typer
+
+from justin_utils.filesystem import Folder
+from justin_utils.pylinq import Sequence
+from typer import Typer, Argument
+
 from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
-from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
-from justin.shared.metafiles.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, AlbumMetafile, RootMetafile
+from justin.shared.metafiles.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, AlbumMetafile, \
+    RootMetafile
 from justin.shared.models.photoset import Photoset
-from justin_utils.pylinq import Sequence
+from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
 
 
-class WebSyncAction(DestinationsAwareAction):
-    def __init__(self) -> None:
-        super().__init__()
+class WebSyncCommand(DestinationsAwareCommand):
+    def __init__(self, context: Context, patterns: Iterable[Path]):
+        super().__init__(context, patterns)
 
         self.__cache = {}
 
-    def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        print(f"Web syncing {extra[WebSyncAction.PART_FULL_NAME]}...")
+    def run_for_part(self, part: Photoset, extra: Extra) -> None:
+        print(f"Web syncing {extra[WebSyncCommand.PART_FULL_NAME]}...")
 
-        super().perform_for_part(part, args, context, extra)
+        super().run_for_part(part, extra)
 
         print("Performed successfully")
 
-    def handle_justin(self, justin_folder: Folder, context: Context, extra: Extra) -> None:
-        self.__handle_tagged(justin_folder, context)
+    def handle_justin(self, justin_folder: Folder, extra: Extra) -> None:
+        self.__handle_tagged(justin_folder)
 
-    def handle_closed(self, closed_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_closed(self, closed_folder: Folder, extra: Extra) -> None:
         for name_folder in closed_folder.subfolders:
             if not GroupMetafile.has(name_folder):
                 continue
@@ -34,35 +40,35 @@ class WebSyncAction(DestinationsAwareAction):
             group_metafile = GroupMetafile.get(name_folder)
             group_id = group_metafile.group_id
 
-            self.__warmup_cache(group_id, context)
+            self.__warmup_cache(group_id)
 
             for post_folder in folder_tree_parts(name_folder):
                 self.__handle_post(post_folder, group_id)
 
-    def handle_meeting(self, meeting_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_meeting(self, meeting_folder: Folder, extra: Extra) -> None:
         if not GroupMetafile.has(meeting_folder):
             return
 
         group_metafile = GroupMetafile.get(meeting_folder)
         group_id = group_metafile.group_id
 
-        self.__warmup_cache(group_id, context)
+        self.__warmup_cache(group_id)
 
         for post_folder in folder_tree_parts(meeting_folder):
             self.__handle_post(post_folder, group_id)
 
-    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, context: Context, extra: Extra) -> None:
-        self.__handle_tagged(kot_i_kit_folder, context)
+    def handle_kot_i_kit(self, kot_i_kit_folder: Folder, extra: Extra) -> None:
+        self.__handle_tagged(kot_i_kit_folder)
 
-    def handle_my_people(self, my_people_folder: Folder, context: Context, extra: Extra) -> None:
-        self.__warmup_cache(context.my_people_group.id, context)
+    def handle_my_people(self, my_people_folder: Folder, extra: Extra) -> None:
+        self.__warmup_cache(self.context.my_people_group.id)
 
         if not PostMetafile.has(my_people_folder):
             return
 
         post_metafile = PostMetafile.get(my_people_folder)
 
-        _, _, published_ids, _ = self.__cache[context.my_people_group.id]
+        _, _, published_ids, _ = self.__cache[self.context.my_people_group.id]
 
         if post_metafile.post_id not in published_ids:
             for subfolder in my_people_folder.subfolders:
@@ -74,7 +80,7 @@ class WebSyncAction(DestinationsAwareAction):
 
             return
 
-        post = context.my_people_group.get_post(post_metafile.post_id)
+        post = self.context.my_people_group.get_post(post_metafile.post_id)
 
         if post.is_liked():
             for person_folder in my_people_folder.subfolders:
@@ -139,17 +145,17 @@ class WebSyncAction(DestinationsAwareAction):
         if all_sent:
             post.like()
 
-    def handle_timelapse(self, timelapse_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_timelapse(self, timelapse_folder: Folder, extra: Extra) -> None:
         pass
 
-    def handle_drive(self, drive_folder: Folder, context: Context, extra: Extra) -> None:
+    def handle_drive(self, drive_folder: Folder, extra: Extra) -> None:
         pass
 
-    def __warmup_cache(self, group_id: int, context: Context):
+    def __warmup_cache(self, group_id: int):
         if group_id in self.__cache:
             return
 
-        group = context.pyvko.get(str(group_id))
+        group = self.context.pyvko.get(str(group_id))
 
         scheduled_posts = group.get_scheduled_posts()
         published_posts = group.get_posts()
@@ -162,7 +168,7 @@ class WebSyncAction(DestinationsAwareAction):
 
         self.__cache[group_id] = (scheduled_ids, published_timer_ids, published_ids, timed_to_published_mapping)
 
-    def __handle_tagged(self, folder: Folder, context: Context) -> None:
+    def __handle_tagged(self, folder: Folder) -> None:
         if not GroupMetafile.has(folder):
             return
 
@@ -174,7 +180,7 @@ class WebSyncAction(DestinationsAwareAction):
 
             group_metafile.save(folder)
 
-        self.__warmup_cache(group_id, context)
+        self.__warmup_cache(group_id)
 
         post_folders = Sequence \
             .with_single(folder) \
@@ -229,3 +235,14 @@ class WebSyncAction(DestinationsAwareAction):
                 PostMetafile.remove(post_folder)
         else:
             assert False
+
+
+app = Typer()
+
+
+@app.command()
+def web_sync(
+        context: Annotated[typer.Context, Argument()],
+        pattern: Annotated[List[Path], Argument()] = (Path.cwd(),)
+) -> None:
+    WebSyncCommand(context.obj, pattern).run()
