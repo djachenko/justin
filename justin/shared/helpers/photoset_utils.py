@@ -30,7 +30,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
     jpegs_lists = [tree.flatten() for tree in jpeg_trees]
 
     if JpegType.SELECTION in jpeg_types and photoset.not_signed is not None:
-        jpegs_lists.append(photoset.not_signed)
+        jpegs_lists.append(photoset.not_signed.files)
 
     jpegs_join = joins.left(
         stems,
@@ -50,8 +50,6 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
 
     jpegs_to_move = [jpeg for _, jpeg in jpegs_join]
     sources_contents_to_move = util.flat_map(source.files() for _, source in sources_join)
-
-    jpegs_set = set(jpegs_to_move)
 
     metafile_paths = util.flat_map(RootMetafile.collect_metafile_paths(tree) for tree in jpeg_trees)
     metafiles = [File(path) for path in metafile_paths if path.exists()]

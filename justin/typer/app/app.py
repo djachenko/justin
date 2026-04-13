@@ -17,7 +17,7 @@ from justin.typer.app.tracker import Tracker
 from justin.typer.date_split_command import app as date_split_app
 from justin.typer.register_people_command import app as register_people_app
 from justin.typer.sequence_command import app as sequence_app
-from justin.typer.stage_command import create_stage_commands
+from justin.typer.stage_command.stage_command import create_stage_commands
 from justin.typer.upload_command import app as upload_app
 from pyvko.config.config import Config as PyvkoConfig
 from pyvko.pyvko_main import Pyvko
@@ -93,7 +93,7 @@ def build_app(config_path: Path) -> Typer:
     for subapp in subapps:
         app.add_typer(subapp)
 
-    app.add_typer(create_stage_commands(di))
+    app.add_typer(create_stage_commands(di.stages_factory))
 
     @app.callback()
     def setup(context: Annotated[Context, Argument()]) -> None:

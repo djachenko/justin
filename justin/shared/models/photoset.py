@@ -60,13 +60,8 @@ class Photoset(FolderBased, PartsMixin):
         return self.folder[Photoset.__PHOTOCLUB]
 
     @property
-    def not_signed(self) -> List[File] | None:
-        result = self.__subtree_files(Photoset.__NOT_SIGNED)
-
-        if result is None:
-            return []
-
-        return result
+    def not_signed(self) -> Folder | None:
+        return self.folder[Photoset.__NOT_SIGNED]
 
     @property
     def justin(self) -> Folder | None:
@@ -129,7 +124,7 @@ class Photoset(FolderBased, PartsMixin):
         jpegs = self.results
 
         if self.not_signed is not None:
-            jpegs += self.not_signed
+            jpegs += self.not_signed.files
 
         return jpegs
 

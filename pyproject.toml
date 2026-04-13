@@ -61,7 +61,6 @@ server = [
 # Объявление консольной команды (главная точка входа)
 [project.scripts]
 justin = "justin.typer.app.console_runner:run"
-justin_old = "justin.runner:console_run"
 
 [project.urls]
 Homepage = "https://github.com/djachenko/justin"

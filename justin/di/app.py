@@ -4,69 +4,28 @@ from lazy_object_proxy import Proxy
 
 from justin.di.metafiles import setup_metafiles
 from justin.shared.config import Config
-from justin.di.actions import ActionFactory
-from justin.di.checks import ChecksFactory
-from justin.di.commands import CommandFactory
-from justin.di.extractors import ExtractorFactory
-from justin.di.selectors import SelectorFactory
-from justin.di.stages import StagesFactory
-from justin.shared.helpers.checks_runner import ChecksRunner
+from justin.typer.stage_command.checks_factory import ChecksFactory
+from justin.typer.stage_command.hooks_factory import HooksFactory
+from justin.typer.stage_command.stages_factory import StagesFactory
 
 
 class DI:
     def __init__(self, config: Config) -> None:
         super().__init__()
 
-        self.__selector_factory_ = Proxy(lambda: SelectorFactory(config.photoset_structure))
+        self.__checks_factory = Proxy(lambda: ChecksFactory(config.photoset_structure))
 
         setup_metafiles()
 
     @property
     @cache
-    def __selector_factory(self) -> SelectorFactory:
-        return self.__selector_factory_
-
-    @property
-    @cache
-    def __extractor_factory(self):
-        return ExtractorFactory(
-            self.__selector_factory
-        )
-
-    @property
-    @cache
-    def __checks_factory(self) -> ChecksFactory:
-        return ChecksFactory(
-            self.__selector_factory,
-            self.__extractor_factory
-        )
+    def __hooks_factory(self):
+        return HooksFactory()
 
     @property
     @cache
     def stages_factory(self) -> StagesFactory:
         return StagesFactory(
             self.__checks_factory,
-            self.__extractor_factory
-        )
-
-    @property
-    @cache
-    def __actions_factory(self) -> ActionFactory:
-        return ActionFactory(
-            self.stages_factory,
-            self.__checks_factory,
-            self.checks_runner
-        )
-
-    @property
-    @cache
-    def checks_runner(self) -> ChecksRunner:
-        return ChecksRunner()
-
-    @property
-    @cache
-    def commands_factory(self) -> CommandFactory:
-        return CommandFactory(
-            self.stages_factory,
-            self.__actions_factory
+            self.__hooks_factory
         )

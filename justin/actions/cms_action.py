@@ -8,10 +8,6 @@ from justin_utils.cli import Action
 
 
 class CMSIndexAction(Action):
-
-    def __init__(self) -> None:
-        super().__init__()
-
     def configure_subparser(self, subparser: ArgumentParser) -> None:
         super().configure_subparser(subparser)
 
