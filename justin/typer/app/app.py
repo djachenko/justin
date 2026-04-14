@@ -15,6 +15,7 @@ from justin.shared.models.photoset_migration import PhotosetMigrationFactory
 from justin.shared.world import World
 from justin.typer.app.tracker import Tracker
 from justin.typer.date_split_command import app as date_split_app
+from justin.typer.populate_command import app as populate_app
 from justin.typer.register_people_command import app as register_people_app
 from justin.typer.sequence_command import app as sequence_app
 from justin.typer.stage_command.stage_command import create_stage_commands
@@ -86,9 +87,10 @@ def build_app(config_path: Path) -> Typer:
 
     subapps = [
         date_split_app,
+        populate_app,
+        register_people_app,
         sequence_app,
         upload_app,
-        register_people_app,
         web_sync_app,
     ]
 
