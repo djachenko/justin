@@ -9,13 +9,13 @@ class DestinationsAwareCommand(PatternCommand):
     def run_for_part(self, part: Photoset, extra: Extra) -> None:
         destinations = [
             (part.closed, self.handle_closed),
+            (part.cullen, self.handle_cullen),
             (part.drive, self.handle_drive),
             (part.justin, self.handle_justin),
             (part.kot_i_kit, self.handle_kot_i_kit),
             (part.meeting, self.handle_meeting),
             (part.my_people, self.handle_my_people),
             (part.timelapse, self.handle_timelapse),
-            (part.cullen, self.handle_cullen),
         ]
 
         for destination, handler in destinations:
