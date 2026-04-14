@@ -10,6 +10,7 @@ import typer
 from PIL import Image
 
 from justin.shared.proxy import Proxy
+from justin_utils.exif import parse_exif
 from justin_utils.filesystem import Folder, File
 from justin_utils.pylinq import Sequence
 from justin_utils.util import flat_map
@@ -30,7 +31,6 @@ from justin.cms_2.storage.sqlite.sqlite_entries import Person
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafiles.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
     AlbumMetafile, DriveMetafile
-from justin.shared.models.exif import parse_exif
 from justin.shared.models.photoset import Photoset
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
 
@@ -638,7 +638,7 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
         file_count = folder.file_count()
 
         not_uploaded_files = [file for file in folder.files if file.name not in metafile.images]
-        not_uploaded_files.sort(key=parse_exif)
+        not_uploaded_files.sort(key=lambda file: parse_exif(file.path))
 
         print(f"Uploading {file_count} photos...")
 
