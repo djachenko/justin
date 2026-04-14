@@ -7,10 +7,12 @@ from typing import Iterable, Tuple, Any, List, Type, TypeVar, Dict, get_origin, 
 
 from frozendict import frozendict
 
-from justin.actions.stage.exceptions.no_files_for_name_error import NoFilesForNameError
+@dataclass(frozen=True)
+class NoFilesForNameError(Exception):
+    message: str
 
 
-def __validate_join(join: Iterable[Tuple[str, Any]], name: str):
+def validate_join(join: Iterable[Tuple[str, Any]], name: str):
     names_of_unjoined_files = []
 
     for source_name, source in join:

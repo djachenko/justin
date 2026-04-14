@@ -1,10 +1,10 @@
 from typing import Iterable, List
 
-from justin.shared.filesystem import PathBased, File
-from justin.shared.helpers.utils import __validate_join, JpegType
+from justin.shared.helpers.utils import validate_join, JpegType
 from justin.shared.metafiles.metafile import RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin_utils import joins, util
+from justin_utils.filesystem import PathBased, File
 
 
 def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegType = None) -> List[PathBased]:
@@ -38,7 +38,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
         lambda s, f: s == f.stem
     )
 
-    __validate_join(jpegs_join, "jpegs")
+    validate_join(jpegs_join, "jpegs")
 
     sources_join = list(joins.left(
         stems,
@@ -46,7 +46,7 @@ def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegTyp
         lambda s, f: s == f.stem
     ))
 
-    __validate_join(sources_join, "sources")
+    validate_join(sources_join, "sources")
 
     jpegs_to_move = [jpeg for _, jpeg in jpegs_join]
     sources_contents_to_move = util.flat_map(source.files() for _, source in sources_join)
