@@ -19,6 +19,7 @@ from justin.typer.populate_command import app as populate_app
 from justin.typer.register_people_command import app as register_people_app
 from justin.typer.sequence_command import app as sequence_app
 from justin.typer.stage_command.stage_command import create_stage_commands
+from justin.typer.timelapse_command import app as timelapse_prproj_app
 from justin.typer.upload_command import app as upload_app
 from justin.typer.web_sync_command import app as web_sync_app
 from pyvko.config.config import Config as PyvkoConfig
@@ -90,6 +91,7 @@ def build_app(config_path: Path) -> Typer:
         populate_app,
         register_people_app,
         sequence_app,
+        timelapse_prproj_app,
         upload_app,
         web_sync_app,
     ]
