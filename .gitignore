@@ -1,6 +1,9 @@
 
 \.idea/
 
+.claude/worktrees/
+.claude/settings.local.json
+
 *_pycache__*
 
 justin/config\.py
