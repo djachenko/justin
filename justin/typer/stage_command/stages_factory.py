@@ -76,7 +76,7 @@ class StagesFactory:
     @cached_property
     def ready(self) -> Stage:
         return DefaultStage(
-            folder="stage_command.ready",
+            folder="stage3.ready",
             command="ready",
             incoming_checks=[
                 self.__checks_factory.metadata,
@@ -91,7 +91,7 @@ class StagesFactory:
     @cached_property
     def scheduled(self) -> Stage:
         return DefaultStage(
-            folder="stage_command.schedule",
+            folder="stage3.schedule",
             command="schedule",
             incoming_checks=[
                 self.__checks_factory.metadata,
