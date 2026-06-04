@@ -19,6 +19,7 @@ from justin.typer.register_people_command import app as register_people_app
 from justin.typer.sequence_command import app as sequence_app
 from justin.typer.stage_command.stage_command import create_stage_commands
 from justin.typer.upload_command import app as upload_app
+from justin.typer.setup_event_command import app as setup_event_app
 from justin.typer.web_sync_command import app as web_sync_app
 from pyvko.config.config import Config as PyvkoConfig
 from pyvko.pyvko_main import Pyvko
@@ -90,6 +91,7 @@ def build_app(config_path: Path) -> Typer:
         upload_app,
         register_people_app,
         web_sync_app,
+        setup_event_app,
     ]
 
     for subapp in subapps:

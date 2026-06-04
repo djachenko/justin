@@ -9,7 +9,7 @@ from typing import List, Iterator, Annotated
 import typer
 from PIL import Image
 
-from justin.shared.proxy import Proxy
+# from justin.shared.proxy import Proxy
 from justin_utils.filesystem import Folder, File
 from justin_utils.pylinq import Sequence
 from justin_utils.util import flat_map
