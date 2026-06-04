@@ -68,6 +68,11 @@ Homepage = "https://github.com/djachenko/justin"
 "Bug Tracker" = "https://github.com/djachenko/justin/issues"
 "Source Code" = "https://github.com/djachenko/justin"
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: requires live browser with active VK session",
+]
+
 [tool.coverage.run]
 source = ["justin"]
 branch = true
