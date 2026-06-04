@@ -33,6 +33,7 @@ dependencies = [
     "google-auth-oauthlib",
     "frozendict",
     "typer[all]>=0.26.8",
+    "selenium>=4.0",
     # "face_recognition",  # Опциональная зависимость, может быть добавлена при необходимости
     "coverage"
 ]
