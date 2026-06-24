@@ -57,6 +57,15 @@ server = [
     "websockets>=11.0",
     "pydantic>=2.0",
 ]
+test = [
+    "pytest",
+    "ruff",
+    "mypy",
+]
+release = [
+    "build",
+    "python-semantic-release",
+]
 
 # Объявление консольной команды (главная точка входа)
 [project.scripts]
