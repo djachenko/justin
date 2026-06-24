@@ -1,0 +1,40 @@
+name: Integration
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  integration:
+    uses: djachenko/repokit/.github/workflows/python-integration.yml@0.5
+    secrets: inherit
+
+  publish:
+    needs: integration
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+      - name: Smoke test
+        run: |
+          PACKAGE=$(ls dist/*.whl | head -1 | xargs basename | sed 's/-[0-9].*//')
+          VERSION=$(ls dist/*.tar.gz | sed 's/.*-\(.*\)\.tar\.gz/\1/')
+          for i in {1..5}; do
+            pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ $PACKAGE==$VERSION && break
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          python -c "import $PACKAGE"
