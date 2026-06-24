@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    uses: djachenko/repokit/.github/workflows/python-release.yml@0.5
+    secrets: inherit
+    permissions:
+      contents: write
+
+  publish:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Smoke test
+        run: |
+          PACKAGE=$(ls dist/*.whl | head -1 | xargs basename | sed 's/-[0-9].*//')
+          VERSION=$(ls dist/*.tar.gz | sed 's/.*-\(.*\)\.tar\.gz/\1/')
+          for i in {1..5}; do
+            pip install $PACKAGE==$VERSION && break
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          python -c "import $PACKAGE"

@@ -1,0 +1,13 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+
+jobs:
+  tests:
+    uses: djachenko/repokit/.github/workflows/python-tests.yml@0.5
+    secrets: inherit
