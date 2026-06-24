@@ -9,7 +9,6 @@ from typing import List, Iterator, Annotated
 import typer
 from PIL import Image
 
-from justin.shared.proxy import Proxy
 from justin_utils.exif import parse_exif
 from justin_utils.filesystem import Folder, File
 from justin_utils.pylinq import Sequence
@@ -32,6 +31,7 @@ from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafiles.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
     AlbumMetafile, DriveMetafile
 from justin.shared.models.photoset import Photoset
+from justin.shared.proxy import Proxy
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
 
 Community = Posts | Albums
