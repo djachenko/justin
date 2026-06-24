@@ -22,8 +22,37 @@
 
 1. **Завершить logic2/** — подключить новые чеки, убрать старую `logic/` и ручные фабрики `di/`
 2. **DI на lagom** — `di/container.py`, убрать пять фабрик — детали: `/di`
-3. **Переезд оставшихся команд на Typer** — всё из `actions/` перенести в `typer/`
-4. **Тесты** — покрыть logic2/ чеки (сейчас тесты не запускаются в CI)
+3. **Переезд оставшихся экшенов на Typer** — каждый экшен в отдельной ветке, дропается из master, мержится по мере надобности
+   - `refactor/migrate-attach-album-to-typer`
+   - `refactor/migrate-check-ratios-to-typer`
+   - `refactor/migrate-cms-to-typer`
+   - `refactor/migrate-delay-to-typer`
+   - `refactor/migrate-delete-posts-to-typer`
+   - `refactor/migrate-drone-to-typer`
+   - `refactor/migrate-event-to-typer`
+   - `refactor/migrate-fix-metafile-to-typer`
+   - `refactor/migrate-get-empty-groups-to-typer`
+   - `refactor/migrate-get-likers-to-typer`
+   - `refactor/migrate-location-to-typer`
+   - `refactor/migrate-manage-tags-to-typer`
+   - `refactor/migrate-move-to-typer`
+   - `refactor/migrate-people-to-typer`
+   - `refactor/migrate-populate-to-typer`
+   - `refactor/migrate-rearrange-to-typer`
+   - `refactor/migrate-split-to-typer`
+   - `refactor/migrate-step-sources-to-typer`
+4. **Typer output delegates** — каждая команда в отдельной ветке (разбить на задачи перед стартом)
+   - `refactor/output-delegates-date-split`
+   - `refactor/output-delegates-populate`
+   - `refactor/output-delegates-register-people`
+   - `refactor/output-delegates-sequence`
+   - `refactor/output-delegates-upload`
+   - `refactor/output-delegates-web-sync`
+   - `refactor/output-delegates-stage` (stage_command)
+5. **Тесты** — покрыть logic2/ чеки (сейчас тесты не запускаются в CI)
+6. **Вынести общую логику в justin_utils** — `refactor/justin-utils-extract`
+7. **repokit** — `feat/repokit`
+8. **Стабильные релизы на стабильный pyvko** — `feat/pyvko-stable-releases`
 
 ---
 
