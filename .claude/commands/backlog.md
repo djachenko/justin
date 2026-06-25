@@ -50,6 +50,14 @@
    - `refactor/output-delegates-web-sync`
    - `refactor/output-delegates-stage` (stage_command)
 5. **Тесты** — покрыть logic2/ чеки (сейчас тесты не запускаются в CI)
+6. **mypy cleanup** — `refactor/mypy-cleanup` — 278 pre-existing ошибок, подавлены через `[[tool.mypy.overrides]]` в `pyproject.toml`. Чинить пофайлово: убрать модуль из списка → починить ошибки → коммит. Трекинг: xfail-тест `tests/test_mypy_debt.py`.
+   Файлы по приоритету (много ошибок → мало):
+   `metafile.py` (50), `web_sync_command.py` (24), `photoset_migration.py` (18),
+   `upload_command.py` (16), `migrations.py` (14), `google_sheets_database.py` (12),
+   `manage_tags_action.py` (9), `filesystem.py` (8), `people_cms.py` (8),
+   `stage.py` (7), `sqlite_entries.py` (6), `photoset.py` (5), `structure.py` (4),
+   `extracting/structure.py` (4), `populate_command.py` (4), `readwriters.py` (4),
+   `photosets_cms.py` (4), `event.py` (4), остальные ≤3
 6. **Вынести общую логику в justin_utils** — `refactor/justin-utils-extract`
 7. **repokit** — `feat/repokit`
 8. **Стабильные релизы на стабильный pyvko** — `feat/pyvko-stable-releases`
