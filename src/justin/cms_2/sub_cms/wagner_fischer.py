@@ -61,9 +61,6 @@ def wf(s1: str, s2: str):
     delete_price = 1
     replace_price = 1
 
-    rangeN = [i + 1 for i in range(N)]
-    rangeM = [i + 1 for i in range(M)]
-
     for j in range(len(s2)):
         D[-1, j] = D[-1, j - 1] + insert_price
 

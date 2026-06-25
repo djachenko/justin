@@ -49,9 +49,6 @@ class NewStructureMigration(MetafileMigration):
         for type_ in json_object["type"]:
             fieldset = self.metafiles[type_]
 
-            if "location_order" in fieldset:
-                a = 7
-
             new_dict = {field.name: json_object.get(field.name, field.default) for field in fieldset}
 
             result[type_] = new_dict

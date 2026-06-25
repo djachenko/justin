@@ -10,7 +10,7 @@ from justin.cms.tables.json_table import JsonTable
 from justin.cms.tables.table import Table, Entry
 from justin.shared.helpers.utils import Json
 from justin_utils import util
-from justin_utils.util import distinct, get_prefixes
+from justin_utils.util import distinct
 from pyvko.aspects.groups import Group
 from pyvko.entities.user import User
 from pyvko.pyvko_main import Pyvko

@@ -62,9 +62,9 @@ class GetLikersAction(GroupAction):
                             f"\t\"{photo_id}\": API.likes.getList({{",
                             f"\t\t\"item_id\": {photo_id},",
                             f"\t\t\"owner_id\": {group_id},",
-                            f"\t\t\"type\": \"photo\", ",
-                            f"\t\t\"v\": 5.199",
-                            f"\t}})",
+                            "\t\t\"type\": \"photo\", ",
+                            "\t\t\"v\": 5.199",
+                            "\t})",
                         ]))
 
                     code = "\n".join([

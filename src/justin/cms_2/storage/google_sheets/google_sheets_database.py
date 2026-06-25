@@ -202,7 +202,7 @@ class GoogleSheetsDatabase:
             start = i
             end = i + 1
 
-            if field.type == bool:
+            if field.type is bool:
                 cell_data = {
                     "dataValidation": {
                         "condition": {

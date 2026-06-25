@@ -651,7 +651,7 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
                 if e.code != 100:
                     raise
 
-                print(f"Error, retrying this particular batch")
+                print("Error, retrying this particular batch")
 
                 continue
 

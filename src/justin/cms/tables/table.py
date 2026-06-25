@@ -21,7 +21,8 @@ class Table(Generic[E, K]):
         super().__init__()
 
         if key is None:
-            key = lambda x: x
+            def key(x):
+                return x
 
         self.key = key
         self.type = type_

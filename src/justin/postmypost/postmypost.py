@@ -4,7 +4,7 @@ from typing import Iterable, List
 
 import requests
 from postmypost_rest_sdk import ApiClient, Configuration, PublicationsApi, Publication, ChannelsApi, Channel, \
-    UploadInit, UploadApi, InitUploadRequest, InitUploadByFileRequest, UploadByFile
+    UploadApi, InitUploadByFileRequest, UploadByFile
 
 from justin.postmypost.channels import get_channels
 from justin.postmypost.utils import get_all
