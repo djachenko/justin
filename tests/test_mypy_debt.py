@@ -1,9 +1,11 @@
+import sys
 import tomllib
 from pathlib import Path
 
 import pytest
 
 
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="tomllib requires Python 3.11+")
 @pytest.mark.xfail(strict=False, reason="mypy debt: modules with suppressed errors in pyproject.toml")
 def test_no_mypy_suppressed_modules() -> None:
     with open(Path(__file__).parent.parent / "pyproject.toml", "rb") as f:
