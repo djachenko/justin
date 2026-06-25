@@ -3,7 +3,7 @@
 
 *_pycache__*
 
-justin/config\.py
+src/justin/config\.py
 
 venv
 
@@ -19,10 +19,11 @@ build/
 
 .justin/
 
-justin/cms_2/sub_cms/tmplt_cms.py
+src/justin/cms_2/sub_cms/tmplt_cms.py
 
 .DS_Store
 
 **/ide_runner_local.py
 
 memory/
+.repokit
