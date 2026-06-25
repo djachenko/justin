@@ -61,6 +61,7 @@ test = [
     "pytest",
     "ruff",
     "mypy",
+    "tomli; python_version < '3.11'",
 ]
 release = [
     "build",
