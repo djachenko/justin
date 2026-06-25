@@ -29,7 +29,7 @@ class MetafileReadWriterImpl(MetafileReadWriter):
             return metafiles[0]
 
         for metafile in metafiles:
-            if type(metafile) == metafile_type:
+            if isinstance(metafile, metafile_type):
                 return metafile
 
         return None
@@ -46,9 +46,6 @@ class MetafileReadWriterImpl(MetafileReadWriter):
         metafiles = []
 
         for metafile_type in json_dict:
-            if metafile_type not in self.__mapping:
-                a = 7
-
             assert metafile_type in self.__mapping
 
             metafile_type = self.__mapping[metafile_type]

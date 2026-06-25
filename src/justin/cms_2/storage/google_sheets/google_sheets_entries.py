@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Type, Self, Dict, Callable
+from typing import Dict, Callable
 
 from justin.cms_2.storage.google_sheets.google_sheets_database import DATETIME_FORMAT, GoogleSheetsEntry, Link
 from justin.shared.helpers.utils import Json

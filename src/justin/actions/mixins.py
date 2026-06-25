@@ -18,7 +18,7 @@ class EventUtils:
 
         while True:
             answer = input(
-                f"Enter event url: ",
+                "Enter event url: ",
             )
 
             if not answer:

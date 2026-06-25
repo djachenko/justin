@@ -3,7 +3,7 @@ from functools import cache
 from justin.actions.stage.logic.base import Extractor
 from justin.actions.stage.logic.candidates import CandidatesExtractor
 from justin.actions.stage.logic.metadata import MetadataCheck
-from justin.actions.stage.logic.progress import ProgressResultsCheck, ProgressExtractor
+from justin.actions.stage.logic.progress import ProgressExtractor
 from justin.actions.stage.logic.structure import StructureExtractor
 from justin.di.selectors import SelectorFactory
 
