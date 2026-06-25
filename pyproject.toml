@@ -76,6 +76,67 @@ Homepage = "https://github.com/djachenko/justin"
 "Bug Tracker" = "https://github.com/djachenko/justin/issues"
 "Source Code" = "https://github.com/djachenko/justin"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+# Suppressed files — 278 pre-existing errors, tracked in backlog under "mypy cleanup"
+# To fix: remove the module from this list and fix errors in that file.
+[[tool.mypy.overrides]]
+module = [
+    "justin.actions.check_ratios_action",
+    "justin.actions.cms_action",
+    "justin.actions.event",
+    "justin.actions.fix_metafile_action",
+    "justin.actions.get_likers_action",
+    "justin.actions.manage_tags_action",
+    "justin.actions.move_action",
+    "justin.actions.pattern_action",
+    "justin.actions.populate_action",
+    "justin.cms.people_cms",
+    "justin.cms.tables.json_table",
+    "justin.cms.tables.table",
+    "justin.cms_2.storage.google_sheets.google_sheets_database",
+    "justin.cms_2.storage.google_sheets.google_sheets_entries",
+    "justin.cms_2.storage.sqlite.sqlite_entries",
+    "justin.cms_2.sub_cms.photosets_cms",
+    "justin.cms_2.sub_cms.posts_to_tags_cms",
+    "justin.cms_2.sub_cms.wagner_fischer",
+    "justin.one_timers.embrace_tradition",
+    "justin.shared.filesystem",
+    "justin.shared.helpers.photoset_utils",
+    "justin.shared.metafiles.metafile",
+    "justin.shared.metafiles.migrations",
+    "justin.shared.metafiles.readwriters",
+    "justin.shared.models.exif",
+    "justin.shared.models.photoset",
+    "justin.shared.models.photoset_migration",
+    "justin.shared.models.sources",
+    "justin.shared.world",
+    "justin.typer.base_commands.pattern_command",
+    "justin.typer.date_split_command",
+    "justin.typer.populate_command",
+    "justin.typer.register_people_command",
+    "justin.typer.sequence_command",
+    "justin.typer.stage_command.abstracts.file_mover",
+    "justin.typer.stage_command.checks.extracting.structure",
+    "justin.typer.stage_command.checks.extracting.unselected",
+    "justin.typer.stage_command.checks.simple.gif_sources",
+    "justin.typer.stage_command.checks.simple.metafile_state",
+    "justin.typer.stage_command.hooks.progress",
+    "justin.typer.stage_command.stage",
+    "justin.typer.stage_command.stage_command",
+    "justin.typer.upload_command",
+    "justin.typer.web_sync_command",
+    "justin.shared.structure",
+    "justin.shared.config",
+    "justin.shared.helpers.utils",
+    "justin.cms_2.storage.sqlite.sqlite_database",
+]
+ignore_errors = true
+
 [tool.coverage.run]
 source = ["justin"]
 branch = true
