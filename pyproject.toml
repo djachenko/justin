@@ -76,6 +76,9 @@ Homepage = "https://github.com/djachenko/justin"
 "Bug Tracker" = "https://github.com/djachenko/justin/issues"
 "Source Code" = "https://github.com/djachenko/justin"
 
+[tool.semantic_release]
+major_on_zero = false
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
