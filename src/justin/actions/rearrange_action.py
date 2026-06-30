@@ -1,7 +1,7 @@
 import random
 from argparse import Namespace
 from datetime import timedelta, datetime
-from functools import cache
+from functools import cached_property
 from typing import List
 
 from justin.actions.group_action import GroupAction
@@ -14,8 +14,7 @@ from pyvko.entities.user import Group
 class RearrangeAction(GroupAction):
     DEFAULT_STEP = 1
 
-    @property
-    @cache
+    @cached_property
     def parameters(self) -> List[Parameter]:
         return super().parameters + [
             Parameter("--step", type=int, default=RearrangeAction.DEFAULT_STEP),

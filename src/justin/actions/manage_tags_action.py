@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from argparse import Namespace
 from dataclasses import make_dataclass, dataclass
-from functools import cache
+from functools import cache, cached_property
 from typing import Type, List
 
 from justin.cms_2.storage.google_sheets.google_sheets_database import Link
@@ -22,8 +22,7 @@ class PostStrategy:
 
         self.__context = context
 
-    @property
-    @cache
+    @cached_property
     def tags(self) -> List[Tag]:
         sqlite_tags = self.__context.sqlite_cms.get_tags()
         sqlite_tags.sort(
@@ -33,8 +32,7 @@ class PostStrategy:
 
         return sqlite_tags
 
-    @property
-    @cache
+    @cached_property
     def context(self) -> Context:
         return self.__context
 
@@ -114,8 +112,7 @@ class ScheduledStrategy(PostStrategy):
     def group(self) -> Group:
         return self.context.default_group
 
-    @property
-    @cache
+    @cached_property
     def scheduled_posts(self) -> List[VKPost]:
         return self.group.get_scheduled_posts()
 
