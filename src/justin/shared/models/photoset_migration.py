@@ -1,6 +1,6 @@
 import json
 from abc import abstractmethod, ABC
-from functools import cache
+from functools import cache, cached_property
 from typing import Iterable, Tuple, List
 from uuid import UUID
 
@@ -108,8 +108,7 @@ class RenameFoldersMigration(PhotosetMigration, ABC):
 
 
 class ChangeStructureMigration(RenameFoldersMigration):
-    @property
-    @cache
+    @cached_property
     def renamings(self) -> Iterable[Tuple[str, str]]:
         return [
             ("our_people", "my_people",),

@@ -46,14 +46,14 @@ def build_app(config_path: Path) -> Typer:
     cms = CMS(cms_root)
     sqlite_cms = SQLiteCMS(cms_root)
 
-    sheets_db = GoogleSheetsDatabase(
-        spreadsheet_id="1wpjgMa8PIsi7uVzkVG9G1Q_kP_lOnCgbBLKzZYssKzc",
-        root=google_sheets_root
-    )
-
     config = Config.from_source(configs_folder / __CONFIG_FILE, init_globals={
         "names": sqlite_cms.get_all_folders(),
     })
+
+    sheets_db = GoogleSheetsDatabase(
+        spreadsheet_id=config.spreadsheet_id,
+        root=google_sheets_root
+    )
 
     di = DI(config)
 

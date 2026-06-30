@@ -1,6 +1,6 @@
 import json
 from abc import ABC
-from functools import cache
+from functools import cached_property
 from pathlib import Path
 from typing import Iterable, Dict, Any
 
@@ -16,8 +16,7 @@ class PatternCommand(ABC):
     SET_NAME = "set_name"
     PART_FULL_NAME = "part_full_name"
 
-    @property
-    @cache
+    @cached_property
     def extra(self) -> Extra:
         return frozendict()
 

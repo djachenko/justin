@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from datetime import datetime
-from functools import cache
+from functools import cached_property
 from pathlib import Path
 from typing import Iterable
 
@@ -23,8 +23,7 @@ class PillowExif(Exif):
 
     __reverse_mapping = {v: k for k, v in ExifTags.TAGS.items()}
 
-    @property
-    @cache
+    @cached_property
     def date_taken(self) -> datetime:
         return datetime.strptime(
             self.__get_tag_value("DateTimeOriginal") or self.__get_tag_value("DateTime"),
@@ -49,8 +48,7 @@ class PillowExif(Exif):
 class NativeExif(Exif):
     from exif import Image
 
-    @property
-    @cache
+    @cached_property
     def date_taken(self) -> datetime:
         if hasattr(self.source_exif, "datetime_original"):
             return datetime.strptime(

@@ -1,6 +1,6 @@
 import webbrowser
 from dataclasses import dataclass, fields
-from functools import cache
+from functools import cached_property
 from pathlib import Path
 from typing import Type, List, Dict, Callable, TypeVar
 
@@ -86,8 +86,7 @@ class GoogleSheetsDatabase:
         self.__sheets: Dict[str, GoogleSheetsDatabase.Sheet] | None = None
         self.__root = root
 
-    @property
-    @cache
+    @cached_property
     def __spreadsheets(self):
         token_path = self.__root / "token.json"
         creds = None
