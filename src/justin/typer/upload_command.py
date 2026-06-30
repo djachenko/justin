@@ -654,6 +654,9 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
                 print("Error, retrying this particular batch")
 
                 continue
+            except Exception:
+                print("Error, retrying this particular batch")
+                continue
 
             uploaded_count = len(uploaded_photos)
 
