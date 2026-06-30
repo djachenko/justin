@@ -49,7 +49,7 @@ class DestinationsAwareAction(PatternAction):
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def handle_common(self, folder: Folder, context: Context, extra: Extra) -> None:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement handle_common")
 
     def handle_tagged_folder(self, tagged_folder: Folder, context: Context, extra: Extra) -> None:
         for tag_folder in tagged_folder.subfolders:
@@ -58,4 +58,4 @@ class DestinationsAwareAction(PatternAction):
 
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def handle_tag_part(self, tag_part_folder: Folder, context: Context, extra: Extra) -> None:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement handle_tag_part")

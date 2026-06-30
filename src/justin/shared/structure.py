@@ -35,14 +35,14 @@ T = TypeVar("T")
 class StructureVisitor(Generic[T]):
     @abstractmethod
     def visit_xor(self, structure: XorStructure) -> T:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement visit_xor")
 
     @abstractmethod
     def visit_top(self, structure: TopStructure) -> T:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement visit_top")
 
     def visit_none(self) -> T:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement visit_none")
 
     def visit(self, structure: Structure) -> T:
         if structure is None:

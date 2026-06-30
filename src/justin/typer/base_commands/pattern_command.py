@@ -86,7 +86,7 @@ class PatternCommand(ABC):
             })
 
     def run_for_part(self, part: Photoset, extra: Extra) -> None:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement run_for_part")
 
     @staticmethod
     def __handle_aftershoot(photoset: Photoset, context: Context) -> None:

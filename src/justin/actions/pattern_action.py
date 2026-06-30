@@ -162,4 +162,4 @@ class PatternAction(Action, ABC):
             })
 
     def perform_for_part(self, part: Photoset, args: Namespace, context: Context, extra: Extra) -> None:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement perform_for_part")
