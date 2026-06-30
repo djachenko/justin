@@ -37,7 +37,7 @@ class PartsMixin:
     @property
     @abstractmethod
     def folder(self) -> Folder:
-        assert False
+        raise NotImplementedError(f"{type(self).__name__} must implement folder")
 
     @property
     def is_parted(self) -> bool:
