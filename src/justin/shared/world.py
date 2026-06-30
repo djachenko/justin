@@ -3,7 +3,7 @@ import platform
 import shutil
 import string
 from abc import abstractmethod
-from functools import cache
+from functools import cache, cached_property
 from pathlib import Path
 from typing import List, Iterable, Type
 
@@ -49,8 +49,7 @@ class Location:
 
         self.__folder = folder
 
-    @property
-    @cache
+    @cached_property
     def __metafile(self) -> LocationMetafile:
         return LocationMetafile.get(self.__folder)
 
