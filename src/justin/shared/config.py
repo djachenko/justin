@@ -14,6 +14,8 @@ class Config:
     my_people_url: str
     cullen_url: str
 
+    spreadsheet_id: str
+
     photoset_structure: Structure
     # disk_structure: Structure
 
