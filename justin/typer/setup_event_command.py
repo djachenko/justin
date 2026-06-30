@@ -6,6 +6,8 @@ from justin_utils import util
 from justin_utils.util import parse_date
 from typer import Typer, Argument
 
+from justin.browser.event_settings_settings import EventSettingsSettings, MessagesSettings
+from justin.browser.section_settings import PhotosSettings, PostsSettings, SectionsConfig
 from justin.browser.vk_browser import VKBrowser
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
@@ -99,19 +101,20 @@ class SetupEventCommand:
                     organiser_id=organiser_id,
                     is_closed=True,
                 )
+                print(f"Event created: https://vk.com/event{event_id} (id={event_id})")
             elif self.url:
                 event = self.context.pyvko.get(self.url)
                 event_id = abs(event.id)
             else:
                 raise ValueError("Either --create or --url must be specified")
 
-            self.context.pyvko.new_api.groups.setSettings(
-                group_id=event_id,
-                messages=1,
-            )
-
-            # Set sections: wall=LIMITED, main_section=PHOTOS
-            browser.set_sections(event_id)
+            browser.apply_settings(event_id, EventSettingsSettings(
+                messages=MessagesSettings(enabled=True),
+                sections=SectionsConfig(
+                    posts=PostsSettings(),
+                    photos=PhotosSettings(),
+                ),
+            ))
 
         print(f"Event is ready: https://vk.com/event{event_id}")
 
@@ -139,3 +142,18 @@ def setup_event(
         raise typer.Exit(1)
 
     SetupEventCommand(context.obj, create, url, manual, folder, date_, title, parent).run()
+
+
+if __name__ == "__main__":
+    TEST_EVENT_ID = 239385759
+
+    with VKBrowser() as browser:
+        browser.apply_settings(TEST_EVENT_ID, EventSettingsSettings(
+            messages=MessagesSettings(enabled=True),
+            sections=SectionsConfig(
+                posts=PostsSettings(),
+                photos=PhotosSettings(),
+            ),
+        ))
+
+    print(f"Done: https://vk.com/event{TEST_EVENT_ID}")
