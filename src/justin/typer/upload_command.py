@@ -648,12 +648,12 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
             try:
                 uploaded_photos = album.add_photos([file.path for file in not_uploaded_files[:batch_size]])
             except ApiError as e:
-                if e.code == 100:
-                    print("Error, retrying this particular batch")
+                if e.code != 100:
+                    raise
 
-                    continue
+                print("Error, retrying this particular batch")
 
-                raise
+                continue
             except json.JSONDecodeError:
                 # pu.vk.com periodically returns HTTP 504 with an HTML body instead of JSON;
                 # requests.Response.json() then raises JSONDecodeError instead of ApiError,
