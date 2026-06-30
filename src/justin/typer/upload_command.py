@@ -654,7 +654,10 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
                 print("Error, retrying this particular batch")
 
                 continue
-            except Exception:
+            except json.JSONDecodeError:
+                # pu.vk.com periodically returns HTTP 504 with an HTML body instead of JSON;
+                # requests.Response.json() then raises JSONDecodeError instead of ApiError,
+                # so it isn't caught by the except ApiError above. Treat it the same way: retry the batch.
                 print("Error, retrying this particular batch")
                 continue
 
