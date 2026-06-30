@@ -1,4 +1,4 @@
-from functools import cache
+from functools import cached_property
 
 from lazy_object_proxy import Proxy
 
@@ -17,13 +17,11 @@ class DI:
 
         setup_metafiles()
 
-    @property
-    @cache
+    @cached_property
     def __hooks_factory(self):
         return HooksFactory()
 
-    @property
-    @cache
+    @cached_property
     def stages_factory(self) -> StagesFactory:
         return StagesFactory(
             self.__checks_factory,
