@@ -42,6 +42,13 @@ class VKBrowser:
     def __exit__(self, *_):
         self._driver.quit()
 
+    @property
+    def driver(self) -> webdriver.Chrome:
+        return self._driver
+
+    def new_wait(self) -> WebDriverWait:
+        return WebDriverWait(self._driver, self._TIMEOUT)
+
     def _pause(self, jitter: float = 0.5) -> None:
         if self._PACE > 0:
             time.sleep(self._PACE * random.uniform(1 - jitter, 1 + jitter))
@@ -53,6 +60,8 @@ class VKBrowser:
             PageExplorer(self._driver).explore()
             raise
 
+    _USE_CREATION_SCHEMA = True
+
     def create_event(
         self,
         title: str,
@@ -61,6 +70,26 @@ class VKBrowser:
         organiser_id: int | None = None,
         is_closed: bool = True,
     ) -> int:
+        from justin.browser.event_creation_settings import EventCreationSettings, EventStep1Settings
+        from justin.browser.event_creation_schema import EventCreationSchema
+
+        settings = EventCreationSettings(
+            step1=EventStep1Settings(
+                title=title,
+                start_dt=start_dt,
+                is_closed=is_closed,
+                end_dt=end_dt,
+                organiser_id=organiser_id,
+            ),
+        )
+
+        if self._USE_CREATION_SCHEMA:
+            wait = WebDriverWait(self._driver, self._TIMEOUT)
+            return EventCreationSchema()(settings, self._driver, wait)
+
+        return
+
+        # legacy path
         driver = self._driver
         wait = WebDriverWait(driver, self._TIMEOUT)
 
@@ -158,10 +187,19 @@ class VKBrowser:
         if driver.current_url.rstrip("/").endswith("/groups_create"):
             input("Капча! Реши её в браузере и нажми Enter здесь, когда готово: ")
 
+    def apply_settings(self, event_id: int, settings: "EventSettingsSettings") -> None:
+        from justin.browser.event_settings_schema import EventSettingsSchema
+        EventSettingsSchema()(event_id, settings, self._driver, self.new_wait())
+
     def explore_sections(self, event_id: int, out_dir: Path | None = None) -> None:
         from justin.browser.settings_explorer import SettingsExplorer
         target = out_dir or Path(f"explore_output_{event_id}")
         SettingsExplorer(self._driver, event_id, target).run()
+
+    def explore_edit(self, event_id: int, out_dir: Path | None = None) -> None:
+        from justin.browser.event_edit_explorer import EventEditExplorer
+        target = out_dir or Path(f"explore_edit_{event_id}")
+        EventEditExplorer(self._driver, event_id, target).run()
 
     _USE_SCHEMA = True
 
