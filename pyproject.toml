@@ -128,6 +128,7 @@ ignore_errors = true
 [tool.pytest.ini_options]
 markers = [
     "integration: requires live browser with active VK session",
+    "destructive: creates real VK events, run sparingly",
 ]
 
 [tool.coverage.run]
