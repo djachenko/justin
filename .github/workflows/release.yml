@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    uses: djachenko/repokit/.github/workflows/python-release.yml@0.5
+    uses: djachenko/repokit/.github/workflows/python-release.yml@0.9
     secrets: inherit
     permissions:
       contents: write
