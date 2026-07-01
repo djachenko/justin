@@ -90,7 +90,6 @@ ignore_missing_imports = true
 # To fix: remove the module from this list and fix errors in that file.
 [[tool.mypy.overrides]]
 module = [
-    "justin.actions.pattern_action",
     "justin.cms.people_cms",
     "justin.cms.tables.json_table",
     "justin.cms.tables.table",
