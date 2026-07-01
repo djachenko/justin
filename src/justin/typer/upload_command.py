@@ -24,8 +24,7 @@ from pyvko.pyvko_main import Pyvko
 from typer import Typer, Argument
 
 from justin.actions.mixins import EventUtils
-from justin.actions.pattern_action import Extra
-from justin.actions.rearrange_action import RearrangeAction
+from justin.typer.base_commands.pattern_command import Extra
 from justin.cms_2.storage.sqlite.sqlite_entries import Person
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafiles.metafile import PostMetafile, PostStatus, GroupMetafile, PersonMetafile, CommentMetafile, \
@@ -38,7 +37,8 @@ Community = Posts | Albums
 
 
 class UploadCommand(DestinationsAwareCommand, EventUtils):
-    __STEP = timedelta(days=RearrangeAction.DEFAULT_STEP)
+    __DEFAULT_REARRANGE_STEP = 1
+    __STEP = timedelta(days=__DEFAULT_REARRANGE_STEP)
     __JUSTIN_DATE_GENERATOR = "date_generator"
 
     __SET_CONTEXT = "set_context"

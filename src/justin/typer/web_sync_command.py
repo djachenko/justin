@@ -7,7 +7,7 @@ from justin_utils.filesystem import Folder
 from justin_utils.pylinq import Sequence
 from typer import Typer, Argument
 
-from justin.actions.pattern_action import Extra
+from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafiles.metafile import GroupMetafile, PostMetafile, PostStatus, PersonMetafile, AlbumMetafile, \

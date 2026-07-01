@@ -7,7 +7,7 @@ import typer
 from justin_utils.util import group_by
 from typer import Argument, Typer
 
-from justin.actions.pattern_action import Extra
+from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.shared.models.sources import parse_sources

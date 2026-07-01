@@ -4,7 +4,7 @@ from typing import Annotated, List, Iterable
 import typer
 from typer import Typer, Argument
 
-from justin.actions.pattern_action import Extra
+from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.shared.models.exif import exif_sorted
