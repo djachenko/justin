@@ -5,7 +5,7 @@ from typing import Annotated, List
 import typer
 from typer import Typer, Argument
 
-from justin.actions.pattern_action import Extra
+from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.filesystem import Folder
 from justin.shared.metafiles.metafile import PostMetafile, AlbumMetafile, GroupMetafile
 from justin.typer.base_commands.pattern_command import PatternCommand

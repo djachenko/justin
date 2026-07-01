@@ -6,10 +6,11 @@ from typing import Iterable, Dict, Any
 
 from frozendict import frozendict
 
-from justin.actions.pattern_action import Extra
 from justin.shared.context import Context
 from justin.shared.models.photoset import Photoset
 from justin_utils.filesystem import Folder
+
+Extra = Dict[str, Any]
 
 
 class PatternCommand(ABC):

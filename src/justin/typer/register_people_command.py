@@ -5,7 +5,7 @@ import typer
 from justin_utils import util
 from typer import Typer, Argument
 
-from justin.actions.pattern_action import Extra
+from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
 from justin.shared.filesystem import Folder
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand

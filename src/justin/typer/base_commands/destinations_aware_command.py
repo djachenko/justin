@@ -1,4 +1,4 @@
-from justin.actions.pattern_action import Extra
+from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
