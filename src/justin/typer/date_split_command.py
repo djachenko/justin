@@ -1,5 +1,7 @@
 from datetime import timedelta
 from pathlib import Path
+
+from justin_utils.sources import parse_sources
 from typing import Annotated, Iterable
 from typing import List
 
@@ -10,7 +12,6 @@ from typer import Argument, Typer
 from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
 from justin_utils.filesystem import Folder
-from justin.shared.models.sources import parse_sources
 from justin.typer.base_commands.pattern_command import PatternCommand
 
 
