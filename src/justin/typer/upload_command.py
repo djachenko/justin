@@ -642,7 +642,7 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
 
         print(f"Uploading {file_count} photos...")
 
-        batch_size = 10
+        batch_size = 5
 
         while not_uploaded_files:
             try:
