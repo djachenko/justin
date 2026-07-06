@@ -102,8 +102,6 @@ class WebSyncCommand(DestinationsAwareCommand):
 
         print("Syncing my people...")
 
-        all_sent = True
-
         for person_folder in my_people_folder.subfolders:
             if not PersonMetafile.has(person_folder):
                 continue
@@ -139,11 +137,6 @@ class WebSyncCommand(DestinationsAwareCommand):
                 print(" all sent.")
             else:
                 print(f" {publish_count}/{total_count} sent.")
-
-                all_sent = False
-
-        if all_sent:
-            post.like()
 
     def handle_timelapse(self, timelapse_folder: Folder, extra: Extra) -> None:
         pass
