@@ -144,6 +144,9 @@ class WebSyncCommand(DestinationsAwareCommand):
     def handle_drive(self, drive_folder: Folder, extra: Extra) -> None:
         pass
 
+    def handle_cullen(self, cullen_folder: Folder, extra: Extra) -> None:
+        pass # cullen is being not removed for now for culling training purposes
+
     def __warmup_cache(self, group_id: int):
         if group_id in self.__cache:
             return
