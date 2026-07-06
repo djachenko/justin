@@ -1,5 +1,5 @@
 from justin.typer.base_commands.pattern_command import Extra
-from justin.shared.filesystem import Folder
+from justin_utils.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.models.photoset import Photoset
 from justin.typer.base_commands.pattern_command import PatternCommand

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from justin.shared.filesystem import Folder
+from justin_utils.filesystem import Folder
 
 
 def main():

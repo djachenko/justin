@@ -1,4 +1,4 @@
-from justin.shared.filesystem import File, RelativeFileset
+from justin_utils.filesystem import File, RelativeFileset
 from justin.shared.metafiles.metafile import RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin.typer.stage_command.abstracts.hook import Hook

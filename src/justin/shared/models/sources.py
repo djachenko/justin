@@ -1,12 +1,13 @@
 from abc import abstractmethod
 from functools import cached_property
 from pathlib import Path
+
+from justin_utils.filesystem import Movable, File
 from typing import List, Iterable
 
 from justin.shared.models.exif import parse_exif, Exif
 from justin_utils import util, joins
 
-from justin.shared.filesystem import File, Movable
 
 
 class Source(Movable):

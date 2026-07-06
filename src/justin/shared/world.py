@@ -7,7 +7,7 @@ from functools import cache, cached_property
 from pathlib import Path
 from typing import List, Iterable, Type
 
-from justin.shared.filesystem import Folder
+from justin_utils.filesystem import Folder
 from justin.shared.helpers.utils import Json
 from justin.shared.metafiles.metafile import LocationMetafile
 from justin.shared.models.photoset import Photoset

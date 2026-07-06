@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List, Self
 from uuid import UUID
 
-from justin.shared.filesystem import File, FolderBased, Folder
+from justin_utils.filesystem import File, FolderBased, Folder
 from justin.shared.helpers.parts import PartsMixin
 from justin.shared.metafiles.metafile import PhotosetMetafile
 from justin.shared.models import sources

@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import List, TypeVar
 
-from justin.shared.filesystem import Folder
+from justin_utils.filesystem import Folder
 
 
 def is_part_name(name: str) -> bool:
