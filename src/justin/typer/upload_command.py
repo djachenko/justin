@@ -466,7 +466,6 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
 
 
 
-
     # endregion upload strategies
 
     # region event
