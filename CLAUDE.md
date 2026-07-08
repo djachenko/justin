@@ -76,21 +76,3 @@ stage4.published/ ← опубликовано
 **`Folder`** (`shared/filesystem.py`) — обёртка над Path с удобным доступом к подпапкам (`folder["justin"]`).
 
 **`Context`** (`shared/context.py`) — синглтон сессии. Содержит `pyvko`, `world`, конфиг. Передаётся в команды через `typer.Context.obj`.
-
----
-
-## Скиллы (детальные гайды)
-
-### Архитектура
-- `/patterns` — StageCheck/Hook/Stage иерархия, Problem, StageCheckError, добавление нового чека
-- `/di` — DI: текущие фабрики, план на lagom, принципы
-- `/cms` — CMS_2: SQLite/Google Sheets бэкенды, Sub-CMS паттерн
-- `/metafiles` — _meta.json: типы, накопление контекста, миграции
-
-### Стиль & Качество
-- `/style` — Naming conventions, code style, принципы, чего не делать
-
-### Фичи & Инфраструктура
-- `/cli` — Typer команды, структура команды, Context, Pattern
-- `/backlog` — текущий фокус, технический долг, следующие эпики
-- `/git` — GitHub Flow, semantic commits, worktrees, автор
