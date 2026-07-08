@@ -1,13 +1,13 @@
 from pathlib import Path
+
+from justin_utils.filesystem import File, FolderBased, Folder
+from justin_utils.sources import Source, parse_sources
+from justin_utils.util import flat_map
 from typing import List, Self
 from uuid import UUID
 
-from justin.shared.filesystem import File, FolderBased, Folder
 from justin.shared.helpers.parts import PartsMixin
 from justin.shared.metafiles.metafile import PhotosetMetafile
-from justin.shared.models import sources
-from justin.shared.models.sources import Source
-from justin_utils import util
 
 
 class Photoset(FolderBased, PartsMixin):
@@ -43,7 +43,7 @@ class Photoset(FolderBased, PartsMixin):
 
     @property
     def sources(self) -> List[Source]:
-        sources_ = sources.parse_sources(self.folder.files)
+        sources_ = parse_sources(self.folder.files)
 
         return sources_
 
@@ -115,7 +115,7 @@ class Photoset(FolderBased, PartsMixin):
 
         results_lists = [sub.flatten() for sub in possible_subtrees]
 
-        result = util.flat_map(results_lists)
+        result = flat_map(results_lists)
 
         return result
 

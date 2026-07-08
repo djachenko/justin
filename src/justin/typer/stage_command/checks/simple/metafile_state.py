@@ -7,7 +7,7 @@ from typing import List
 from justin.typer.stage_command.abstracts.simple_check import SimpleCheck
 from justin.typer.stage_command.problems.problem import Problem
 from justin.typer.stage_command.problems.path_problem import PathProblem
-from justin.shared.filesystem import Folder
+from justin_utils.filesystem import Folder
 from justin.shared.helpers.parts import folder_tree_parts
 from justin.shared.metafiles.metafile import PostMetafile, GroupMetafile, PostStatus, PersonMetafile, NoPostMetafile
 from justin.shared.models.photoset import Photoset

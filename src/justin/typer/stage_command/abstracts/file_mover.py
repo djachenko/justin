@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Iterable, List, TYPE_CHECKING
 
-from justin_utils.filesystem import File, RelativeFileset
+from justin_utils.filesystem import File, RelativeFileset, PathBased
 
-from justin.shared.filesystem import PathBased
 from justin.shared.metafiles.metafile import RootMetafile
 from justin.shared.models.photoset import Photoset
 from justin.typer.stage_command.checks.base import StageCheckError

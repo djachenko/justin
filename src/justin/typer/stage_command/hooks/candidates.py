@@ -1,8 +1,8 @@
+from justin_utils.filesystem import PathBased
 from typing import List
 
 from justin_utils.util import flat_map
 
-from justin.shared.filesystem import PathBased
 from justin.shared.models.photoset import Photoset
 from justin.typer.stage_command.abstracts.file_mover import FileMover
 from justin.typer.stage_command.abstracts.hook import Hook

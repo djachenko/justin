@@ -4,7 +4,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Iterable
 
-from justin.shared.filesystem import File
+from justin_utils.filesystem import File
 
 
 class Exif:

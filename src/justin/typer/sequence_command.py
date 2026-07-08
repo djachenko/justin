@@ -6,7 +6,7 @@ from typer import Typer, Argument
 
 from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
-from justin.shared.filesystem import Folder
+from justin_utils.filesystem import Folder
 from justin.shared.models.exif import exif_sorted
 from justin.typer.base_commands.pattern_command import PatternCommand
 

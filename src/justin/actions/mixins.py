@@ -1,5 +1,5 @@
-from justin.shared import filesystem
-from justin.shared.filesystem import Folder
+from justin_utils.filesystem import Folder, open_file_manager
+
 from justin.shared.metafiles.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 
@@ -22,7 +22,7 @@ class EventUtils:
             )
 
             if not answer:
-                filesystem.open_file_manager(posts_folder.path)
+                open_file_manager(posts_folder.path)
             elif not EventUtils.__validate(answer):
                 print("This was not event url. Try another.")
             else:

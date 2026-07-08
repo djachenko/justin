@@ -8,7 +8,7 @@ from postmypost_rest_sdk import ApiClient, Configuration, PublicationsApi, Publi
 
 from justin.postmypost.channels import get_channels
 from justin.postmypost.utils import get_all
-from justin.shared.filesystem import File
+from justin_utils.filesystem import File
 
 configuration = Configuration(
     access_token=os.environ["BEARER_TOKEN"]

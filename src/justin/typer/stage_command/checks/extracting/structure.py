@@ -5,8 +5,7 @@ from typing import List
 
 from justin.typer.stage_command.abstracts.check import Check
 from justin.typer.stage_command.abstracts.extracting_check import ExtractingCheck
-from justin.shared import filesystem
-from justin.shared.filesystem import PathBased
+from justin_utils.filesystem import PathBased, parse_paths
 from justin.shared.models.photoset import Photoset
 from justin.shared.structure import Structure, StructureVisitor, XorStructure, TopStructure
 from justin.typer.stage_command.problems.paths_problem import PathsProblem
@@ -59,7 +58,7 @@ class StructureCheck(ExtractingCheck):
     def files_to_extract(self, photoset: Photoset) -> List[PathBased]:
         wrong_paths = self.__visitor.validate(photoset.path)
 
-        return filesystem.parse_paths(wrong_paths)
+        return parse_paths(wrong_paths)
 
 
 class _ValidateStructureVisitor(StructureVisitor[List[Path]]):
