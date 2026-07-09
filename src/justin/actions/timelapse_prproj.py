@@ -39,10 +39,13 @@ class TimelapseSettings:
 def from_timelapse_dir(timelapse_dir: Path, fps: float = 10.0) -> TimelapseSettings:
     timelapse_dir = timelapse_dir.resolve()
     frames_dir = timelapse_dir / "frames"
+
     if not frames_dir.exists() or not any(frames_dir.glob("*.jpg")):
         raise ValueError(f"No frames in {frames_dir}")
+
     cover_path = timelapse_dir / "cover.jpg"
     sound_dir = timelapse_dir / "sound"
+
     return TimelapseSettings(
         name=timelapse_dir.parent.name,
         timelapse_dir=timelapse_dir,
@@ -339,10 +342,15 @@ def generate_prproj(timelapse_dir: Path, fps: float = 10.0) -> Path:
     output_path = timelapse_dir / f"{settings.name}.prproj"
 
     if output_path.exists():
-        print(f"Skipping {settings.name}: {output_path.name} already exists")
-        return output_path
+        i = 1
+
+        while (candidate := timelapse_dir / f"{settings.name}_{i}.prproj").exists():
+            i += 1
+
+        output_path = candidate
 
     n_frames = _count_frames(timelapse_dir / "frames")
+
     print(f"Photoset:  {settings.name}")
     print(f"Frames:    {n_frames}{' + cover' if settings.cover else ''}")
     print(f"Sounds:    {[s.name for s in settings.sounds]}")
