@@ -191,7 +191,7 @@ class TimelapseSchema:
                 xml = xml.replace(f"./sound/{_WD_SOUND_NAME}", f"./sound/{sound_name}")
                 xml = xml.replace(_WD_SOUND_NAME, sound_name)
             if Path(sound_name).suffix.lower() in _AUDIO_ONLY_EXTS:
-                xml = self._strip_sound_video_stream(xml, sound_name)
+                xml = self._adapt_sound_to_audio_only(xml, sound_name)
             if len(settings.sounds) > 1:
                 xml = self._add_extra_sounds(xml, settings.sounds)
 
@@ -230,8 +230,17 @@ class TimelapseSchema:
         return xml
 
     @staticmethod
-    def _strip_sound_video_stream(xml: str, sound_name: str) -> str:
+    def _adapt_sound_to_audio_only(xml: str, sound_name: str) -> str:
+        """
+        mp4 sound has VideoStream + VideoClip in its structure.
+        For audio-only formats (mp3, wav, etc.) strip the video components:
+          - Remove <VideoStream ObjectRef> from Media block + top-level VideoStream block
+          - Remove VideoClip (and its Markers + VideoMediaSource sub-blocks)
+          - Fix MasterClip Clips list: remove VideoClip entry, re-index AudioClip as Index=0
+        """
         blocks = parse_toplevel_blocks(xml)
+
+        # Find sound's Media block → get VideoStream ref
         sound_media = next(
             (b for b in _blocks_containing(blocks, sound_name) if b[2] == "Media"),
             None,
@@ -240,17 +249,53 @@ class TimelapseSchema:
             return xml
         vs_ref = re.search(r'<VideoStream ObjectRef="(\d+)"/>', sound_media[3])
         if vs_ref is None:
-            return xml
+            return xml  # already audio-only
         vs_id = vs_ref.group(1)
+
+        # Remove VideoStream ref from Media block
         new_media = sound_media[3].replace(f'\t\t<VideoStream ObjectRef="{vs_id}"/>\n', '')
         xml = xml[:sound_media[0]] + new_media + xml[sound_media[1]:]
         blocks = parse_toplevel_blocks(xml)
-        vs_block = next(
-            (b for b in blocks if b[2] == "VideoStream" and f'ObjectID="{vs_id}"' in b[3]),
+
+        # Find MasterClip → get VideoClip ref (Clip Index=0) and its sub-block IDs
+        sound_mc = next(
+            (b for b in _blocks_containing(blocks, sound_name) if b[2] == "MasterClip"),
             None,
         )
-        if vs_block:
-            xml = _remove_blocks_by_positions(xml, [(vs_block[0], vs_block[1])])
+        vc_id: str | None = None
+        vc_sub_ids: set[str] = set()
+        if sound_mc:
+            vc_m = re.search(r'<Clip Index="0" ObjectRef="(\d+)"/>', sound_mc[3])
+            if vc_m:
+                vc_id = vc_m.group(1)
+                vc_block = next(
+                    (b for b in blocks if b[2] == "VideoClip" and f'ObjectID="{vc_id}"' in b[3][:80]),
+                    None,
+                )
+                if vc_block:
+                    vc_sub_ids = set(re.findall(r'ObjectRef="(\d+)"', vc_block[3]))
+
+        # Remove top-level blocks: VideoStream + VideoClip + its sub-blocks (Markers, VideoMediaSource)
+        remove_ids = {vs_id} | ({vc_id} if vc_id else set()) | vc_sub_ids
+        to_delete = [
+            (b[0], b[1]) for b in blocks
+            if any(f'ObjectID="{oid}"' in b[3][:80] for oid in remove_ids)
+        ]
+        xml = _remove_blocks_by_positions(xml, to_delete)
+
+        # Fix MasterClip Clips list
+        if vc_id and sound_mc:
+            blocks = parse_toplevel_blocks(xml)
+            sound_mc = next(
+                (b for b in _blocks_containing(blocks, sound_name) if b[2] == "MasterClip"),
+                None,
+            )
+            if sound_mc:
+                mc_text = sound_mc[3]
+                mc_text = mc_text.replace(f'\t\t<Clip Index="0" ObjectRef="{vc_id}"/>\n', '')
+                mc_text = re.sub(r'<Clip Index="1" ObjectRef=', '<Clip Index="0" ObjectRef=', mc_text, count=1)
+                xml = xml[:sound_mc[0]] + mc_text + xml[sound_mc[1]:]
+
         return xml
 
     @staticmethod
