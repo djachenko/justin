@@ -132,6 +132,9 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
         self.__fix_group(timelapse_folder, group)
         self.__fix_posts(timelapse_folder, extra[FixMetafileCommand.__ROOT_KEY], group)
 
+    def handle_common(self, folder: Folder, extra: Extra) -> None:
+        pass
+
     @staticmethod
     def __fix_group(folder: Folder, group: Posts) -> None:
         if GroupMetafile.has(folder):

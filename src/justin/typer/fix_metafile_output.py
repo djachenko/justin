@@ -71,7 +71,7 @@ class RichFixMetafileOutput(FixMetafileOutput):
         self.__console = Console()
 
     def on_fixing_part(self, name: str) -> None:
-        self.__console.print(f"\n[bold]{name}[/bold]")
+        self.__console.print(f"[bold]{name}[/bold]")
 
     def on_no_such_post(self) -> None:
         self.__console.print("[red]There is no such post[/red]")
@@ -94,7 +94,7 @@ class RichFixMetafileOutput(FixMetafileOutput):
             open_file_manager(path)
 
     def ask_timelapse_community(self, options: list[str]) -> str:
-        self.__console.print("\n[bold]Where was timelapse published?[/bold]")
+        self.__console.print("[bold]Where was timelapse published?[/bold]")
 
         for i, option in enumerate(options, 1):
             self.__console.print(f"  [cyan]{i}[/cyan]. {option}")
