@@ -37,7 +37,8 @@ def count_frames(frames_dir: Path) -> int:
 def find_sound_files(sound_dir: Path) -> list[str]:
     if not sound_dir.exists():
         return []
-    return sorted(f.name for f in sound_dir.glob("*.mp3"))
+    audio_exts = {".mp3", ".mp4", ".wav", ".aac", ".m4a", ".flac", ".ogg"}
+    return sorted(f.name for f in sound_dir.iterdir() if f.is_file() and f.suffix.lower() in audio_exts)
 
 
 def replace_json_field(xml: str, field: str, old_val: int, new_val: int) -> str:
@@ -75,6 +76,45 @@ def remove_blocks_by_positions(xml: str, positions: list[tuple[int, int]]) -> st
 
 def blocks_containing(blocks: list, text: str) -> list:
     return [b for b in blocks if text in b[3]]
+
+
+def remove_dangling_refs(xml: str) -> str:
+    """
+    Удалить из XML объекты с висячими UUID-ссылками:
+    1. <Item ObjectURef="X"/> из BinProjectItem, если X не имеет ObjectUID
+    2. Топ-левел блоки, у которых <Media ObjectURef="X"/> ссылается на несуществующий UUID
+    """
+    uids = set(re.findall(r'ObjectUID="([^"]+)"', xml))
+
+    # --- Шаг 1: очистить Items в BinProjectItem ---
+    def clean_items(m: re.Match) -> str:
+        block = m.group(0)
+        def keep_item(item_m: re.Match) -> str:
+            uref = re.search(r'ObjectURef="([^"]+)"', item_m.group(0))
+            if uref and uref.group(1) not in uids:
+                return ''
+            return item_m.group(0)
+        return re.sub(r'[^\S\n]*<Item[^/]*/>\n', keep_item, block)
+
+    xml = re.sub(r'<Items Version="\d+">.*?</Items>', clean_items, xml, flags=re.DOTALL)
+
+    # --- Шаг 2: удалить топ-левел блоки с dangling Media ObjectURef ---
+    # Пересчитать UIDs после шага 1 (не меняется, но для наглядности)
+    uids = set(re.findall(r'ObjectUID="([^"]+)"', xml))
+
+    blocks = parse_toplevel_blocks(xml)
+    to_delete = []
+    for start, end, tag, text in blocks:
+        media_urefs = re.findall(r'<Media ObjectURef="([^"]+)"', text)
+        for uref in media_urefs:
+            if uref not in uids:
+                to_delete.append((start, end))
+                break
+
+    if to_delete:
+        xml = remove_blocks_by_positions(xml, to_delete)
+
+    return xml
 
 
 def clone_sound_blocks(template_blocks: list[tuple], old_name: str, new_name: str, id_offset: int) -> str:
@@ -182,6 +222,9 @@ def generate_prproj(timelapse_dir: Path, fps: float = 9.0) -> Path:
         blocks = parse_toplevel_blocks(xml)
         snd0_blocks_new = blocks_containing(blocks, tmpl_snd0)
         xml = remove_blocks_by_positions(xml, [(b[0], b[1]) for b in snd0_blocks_new])
+
+    # Почистить висячие UUID-ссылки
+    xml = remove_dangling_refs(xml)
 
     with gzip.open(output_path, 'wb') as f:
         f.write(xml.encode('utf-8'))
