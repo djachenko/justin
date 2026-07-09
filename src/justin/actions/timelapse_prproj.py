@@ -15,6 +15,7 @@ TEMPLATE_COVER_END   = TEMPLATE_FRAME_TICKS
 TEMPLATE_SEQ_DURATION = (TEMPLATE_N_FRAMES + 1) * TEMPLATE_FRAME_TICKS
 TEMPLATE_VS_DURATION  = TEMPLATE_N_FRAMES * TEMPLATE_FRAME_TICKS
 TEMPLATE_SOUNDS      = ["caravany.mp3", "gagarin.mp3"]
+TEMPLATE_COVER       = "cover.jpg"
 
 TEMPLATE_PATH = Path(__file__).parent.parent / "resources" / "timelapse_template.prproj"
 
@@ -152,15 +153,16 @@ def generate_prproj(timelapse_dir: Path, fps: float = 9.0) -> Path:
     n_frames    = count_frames(frames_dir)
     sound_files = find_sound_files(sound_dir)
 
+    has_cover    = (timelapse_dir / TEMPLATE_COVER).exists()
     frame_ticks  = fps_to_ticks(fps)
     cover_end    = frame_ticks
-    seq_duration = (n_frames + 1) * frame_ticks
+    seq_duration = (n_frames + (1 if has_cover else 0)) * frame_ticks
     vs_duration  = n_frames * frame_ticks
     base_path    = str(timelapse_dir)
     output_path  = timelapse_dir / f"{photoset_name}.prproj"
 
     print(f"Photoset:  {photoset_name}")
-    print(f"Frames:    {n_frames} + 1 cover (first: {first_frame})")
+    print(f"Frames:    {n_frames}{' + 1 cover' if has_cover else ''} (first: {first_frame})")
     print(f"FPS:       {fps}")
     print(f"Duration:  {seq_duration / PREMIERE_TIMEBASE:.2f}s")
     print(f"Sounds:    {sound_files}")
@@ -222,6 +224,11 @@ def generate_prproj(timelapse_dir: Path, fps: float = 9.0) -> Path:
         blocks = parse_toplevel_blocks(xml)
         snd0_blocks_new = blocks_containing(blocks, tmpl_snd0)
         xml = remove_blocks_by_positions(xml, [(b[0], b[1]) for b in snd0_blocks_new])
+
+    if not has_cover:
+        blocks = parse_toplevel_blocks(xml)
+        cover_blocks = blocks_containing(blocks, TEMPLATE_COVER)
+        xml = remove_blocks_by_positions(xml, [(b[0], b[1]) for b in cover_blocks])
 
     # Почистить висячие UUID-ссылки
     xml = remove_dangling_refs(xml)
