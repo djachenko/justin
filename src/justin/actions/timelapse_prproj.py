@@ -24,6 +24,7 @@ _TEMPLATE_PATH = (
 )
 
 _AUDIO_EXTS = {".mp3", ".mp4", ".wav", ".aac", ".m4a", ".flac", ".ogg"}
+_AUDIO_ONLY_EXTS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
 
 
 @dataclass
@@ -189,6 +190,8 @@ class TimelapseSchema:
             if sound_name != _WD_SOUND_NAME:
                 xml = xml.replace(f"./sound/{_WD_SOUND_NAME}", f"./sound/{sound_name}")
                 xml = xml.replace(_WD_SOUND_NAME, sound_name)
+            if Path(sound_name).suffix.lower() in _AUDIO_ONLY_EXTS:
+                xml = self._strip_sound_video_stream(xml, sound_name)
             if len(settings.sounds) > 1:
                 xml = self._add_extra_sounds(xml, settings.sounds)
 
@@ -224,6 +227,30 @@ class TimelapseSchema:
     def _clear_audio_caches(xml: str) -> str:
         xml = re.sub(r'<ConformedAudioPath>[^<]+</ConformedAudioPath>', '<ConformedAudioPath></ConformedAudioPath>', xml)
         xml = re.sub(r'<PeakFilePath>[^<]+</PeakFilePath>', '<PeakFilePath></PeakFilePath>', xml)
+        return xml
+
+    @staticmethod
+    def _strip_sound_video_stream(xml: str, sound_name: str) -> str:
+        blocks = parse_toplevel_blocks(xml)
+        sound_media = next(
+            (b for b in _blocks_containing(blocks, sound_name) if b[2] == "Media"),
+            None,
+        )
+        if sound_media is None:
+            return xml
+        vs_ref = re.search(r'<VideoStream ObjectRef="(\d+)"/>', sound_media[3])
+        if vs_ref is None:
+            return xml
+        vs_id = vs_ref.group(1)
+        new_media = sound_media[3].replace(f'\t\t<VideoStream ObjectRef="{vs_id}"/>\n', '')
+        xml = xml[:sound_media[0]] + new_media + xml[sound_media[1]:]
+        blocks = parse_toplevel_blocks(xml)
+        vs_block = next(
+            (b for b in blocks if b[2] == "VideoStream" and f'ObjectID="{vs_id}"' in b[3]),
+            None,
+        )
+        if vs_block:
+            xml = _remove_blocks_by_positions(xml, [(vs_block[0], vs_block[1])])
         return xml
 
     @staticmethod
