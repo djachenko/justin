@@ -11,8 +11,8 @@ from justin.shared.metafiles.metafile import PostStatus, PostMetafile, GroupMeta
 from justin.shared.models.photoset import Photoset
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
 from justin.typer.base_commands.pattern_command import Extra
-from justin_utils import util
-from justin_utils.filesystem import Folder, open_file_manager
+from justin.typer.fix_metafile_output import FixMetafileOutput, make_fix_metafile_output
+from justin_utils.filesystem import Folder
 from justin_utils.util import bfs
 from pyvko.aspects.events import Events
 from pyvko.aspects.posts import Posts
@@ -22,10 +22,11 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
     __ROOT_KEY = "root"
     __SET_PATH_KEY = "set_path"
 
-    def __init__(self, context, patterns) -> None:
+    def __init__(self, context, patterns, output: FixMetafileOutput) -> None:
         super().__init__(context, patterns)
 
         self.__cache = {}
+        self.__output = output
 
     def __warmup_cache(self, group: Posts) -> None:
         if group.id in self.__cache:
@@ -44,7 +45,7 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
     def run_for_part(self, part: Photoset, extra: Extra) -> None:
         set_path: Path = extra[FixMetafileCommand.__SET_PATH_KEY]
 
-        print(f"Fixing metafile for {part.path.relative_to(set_path.parent)} photoset.")
+        self.__output.on_fixing_part(str(part.path.relative_to(set_path.parent)))
 
         super().run_for_part(part, extra | {
             FixMetafileCommand.__ROOT_KEY: part,
@@ -116,10 +117,10 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
             other = "Other community"
             no_post = "Wasn't published"
 
-            name = util.ask_for_choice("Where was timelapse published?", list(names_mapping.keys()) + [other, no_post])
+            name = self.__output.ask_timelapse_community(list(names_mapping.keys()) + [other, no_post])
 
             if name == other:
-                group_id = input("Enter community id: ")
+                group_id = self.__output.ask_community_id()
                 group = self.context.pyvko.get(group_id)
             elif name == no_post:
                 NoPostMetafile().save(timelapse_folder)
@@ -179,19 +180,7 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
             post_path = post_folder.path.relative_to(root.path)
 
             while True:
-                while True:
-                    answer = input(
-                        f"You have folder \"{post_path}\" without bound post. What would you like?\n"
-                        f"* Enter a number - bind to existing post\n"
-                        f"* Enter a \"-\" symbol - leave it as is\n"
-                        f"* Just press Enter - open folder\n"
-                        f"> "
-                    ).strip()
-
-                    if answer != "":
-                        break
-
-                    open_file_manager(post_folder.path)
+                answer = self.__output.ask_post_action(post_path)
 
                 if answer == "-":
                     break
@@ -204,7 +193,7 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
                     elif post_id in scheduled_posts_ids:
                         status = PostStatus.SCHEDULED
                     else:
-                        print("There is no such post")
+                        self.__output.on_no_such_post()
 
                         continue
 
@@ -221,4 +210,4 @@ def fix_metafile(
         context: Annotated[typer.Context, Argument()],
         pattern: Annotated[List[Path], Argument()] = (Path.cwd(),)
 ) -> None:
-    FixMetafileCommand(context.obj, pattern).run()
+    FixMetafileCommand(context.obj, pattern, make_fix_metafile_output()).run()
