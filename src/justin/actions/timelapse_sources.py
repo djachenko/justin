@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Self
 
 JPEG_EXTENSIONS = {".jpg", ".jpeg"}
-AUDIO_EXTENSIONS = {".mp3", ".mp4", ".wav", ".aac", ".m4a", ".flac", ".ogg"}
+AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
+VIDEO_AS_AUDIO_EXTENSIONS = {".mp4"}
 
 
 @dataclass(frozen=True)
@@ -81,7 +82,7 @@ class TimelapseSources:
                 continue
                 # raise
 
-            if sound.suffix.lower() not in AUDIO_EXTENSIONS:
+            if sound.suffix.lower() not in AUDIO_ONLY_EXTENSIONS and sound.suffix.lower() not in VIDEO_AS_AUDIO_EXTENSIONS:
                 continue
 
             sounds.append(sound)
