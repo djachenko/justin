@@ -1,20 +1,48 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Iterable, List
 
 import typer
 from typer import Typer, Argument, Option
 
 from justin.actions.timelapse_prproj import generate_prproj
+from justin.shared.context import Context
+from justin.typer.base_commands.pattern_command import Extra
+from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
+from justin_utils.filesystem import Folder
+
+
+class TimelapseCommand(DestinationsAwareCommand):
+    def __init__(
+        self,
+        context: Context,
+        patterns: Iterable[Path],
+        fps: float,
+        timeline_sounds: list[str],
+    ) -> None:
+        super().__init__(context, patterns)
+
+        self.__fps = fps
+        self.__timeline_sounds = timeline_sounds
+
+    def handle_timelapse(self, timelapse_folder: Folder, extra: Extra) -> None:
+        name = extra[TimelapseCommand.SET_NAME]
+
+        output = generate_prproj(timelapse_folder.path, self.__fps, self.__timeline_sounds)
+
+        typer.echo(f"Created: {output}")
+
+    def handle_common(self, folder: Folder, extra: Extra) -> None:
+        pass
+
 
 app = Typer()
 
 
 @app.command()
 def timelapse(
-        photoset_path: Annotated[Path, Argument(help="Path to photoset or timelapse/ folder")],
+        context: Annotated[typer.Context, Argument()],
+        pattern: Annotated[List[Path], Argument()] = (Path.cwd(),),
         fps: Annotated[float, Option(help="Image sequence FPS")] = 10.0,
+        timeline_sound: Annotated[list[str], Option(help="Sound (filename or stem) to lay on the timeline; repeatable. Default: all sounds panel-only")] = [],
 ) -> None:
-    timelapse_dir = photoset_path / "timelapse" if (photoset_path / "timelapse").exists() else photoset_path
-    output = generate_prproj(timelapse_dir, fps)
-
-    typer.echo(f"Created: {output}")
+    TimelapseCommand(context.obj, pattern, fps, timeline_sound).run()
