@@ -157,33 +157,7 @@ class Block(NamedTuple):
 
 
 def parse_toplevel_blocks(xml: str) -> list[Block]:
-    """Break the project text into its top-level chunks.
-
-    Top-level chunks are the ones indented by exactly one tab — the direct
-    children of the project root. (Chunks nested deeper are left alone; we only
-    ever move whole top-level chunks around.)
-    """
-    blocks: list[Block] = []
-
-    for match in re.finditer(r'(?m)^\t<(\w+)([ >])', xml):
-        tag = match.group(1)
-        start = match.start()
-        line_end = xml.index('\n', start)
-        first_line = xml[start:line_end]
-
-        # A chunk written on one line as <Tag .../> has no separate closing tag.
-        if first_line.rstrip().endswith('/>'):
-            blocks.append(Block(start, line_end + 1, tag, xml[start:line_end + 1]))
-            continue
-
-        closing = f'\n\t</{tag}>'
-        closing_pos = xml.find(closing, start)
-        if closing_pos == -1:
-            continue
-        end = closing_pos + len(closing) + 1
-        blocks.append(Block(start, end, tag, xml[start:end]))
-
-    return blocks
+    return Xml(xml).toplevel_blocks()
 
 
 def _remove_blocks_by_positions(xml: str, positions: list[tuple[int, int]]) -> str:
