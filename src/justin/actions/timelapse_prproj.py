@@ -35,13 +35,14 @@ finds where each block starts and ends in the raw text, and we cut blocks out or
 splice them back in with ordinary string slicing.
 """
 
-import gzip
 import re
 import subprocess
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple
+
+from justin.actions.timelapse_xml import Xml
 
 # Premiere measures time in "ticks". This many ticks make one second.
 PREMIERE_TIMEBASE = 254_016_000_000
@@ -216,6 +217,7 @@ def remove_dangling_refs(xml: str) -> str:
     list (``<Items>``) and each track's clip list (``<TrackItems>``).
     """
     for _ in range(10):
+        # Может сюда отдельно добавить эгекс для уида? 
         live_uids = set(re.findall(r'ObjectUID="([^"]+)"', xml))
         live_ids = set(re.findall(r'ObjectID="(\d+)"', xml))
 
@@ -223,9 +225,12 @@ def remove_dangling_refs(xml: str) -> str:
         def prune_panel_items(items_block: re.Match) -> str:
             def keep(item: re.Match) -> str:
                 uref = re.search(r'ObjectURef="([^"]+)"', item.group(0))
+
                 if uref and uref.group(1) not in live_uids:
                     return ''
+
                 return item.group(0)
+
             # The space after "<Item " matters: without it the pattern would also
             # match "<Items " and eat the list's own opening tag.
             return re.sub(r'[^\S\n]*<Item [^/]*/>\n', keep, items_block.group(0))
@@ -306,11 +311,15 @@ def _collect_sound_closure(blocks: list[Block], entry_idxs: list[int]) -> list[i
     """
     media_idxs_by_id: dict[str, list[int]] = {}
     idx_by_uid: dict[str, int] = {}
+
     for idx, block in enumerate(blocks):
         own_id = re.search(r'ObjectID="(\d+)"', block.text[:120])
+
         if own_id and block.tag in _CLIP_MEDIA_TYPES:
             media_idxs_by_id.setdefault(own_id.group(1), []).append(idx)
+
         own_uid = re.search(r'ObjectUID="([^"]+)"', block.text[:120])
+
         if own_uid:
             idx_by_uid[own_uid.group(1)] = idx
 
@@ -397,32 +406,40 @@ class TimelapseSchema:
 
         seq_dur = n_seq_frames * fps_ticks
 
-        with gzip.open(_TEMPLATE_PATH, 'rb') as f:
-            xml = f.read().decode('utf-8')
+        xml_obj = Xml.from_prproj(_TEMPLATE_PATH)
+        xml = xml_obj.xml
 
         xml = self._substitute_paths(xml, settings, first_frame)
         xml = self._substitute_ticks(xml, fps_ticks, frames_dur, seq_dur)
         xml = self._clear_audio_caches(xml)
 
+        # А получится ли здесь не жонглировать вот этими количествами звуков, а просто добавлять, типа снести все текущие звуки и новые добавить?
         if not settings.sounds:
             xml = self._remove_sound(xml)
         else:
             # Point the template's one sound at our first real sound...
             first_sound_name = settings.sounds[0].name
+
             if first_sound_name != _WD_SOUND_NAME:
                 xml = xml.replace(f"./sound/{_WD_SOUND_NAME}", f"./sound/{first_sound_name}")
                 xml = xml.replace(_WD_SOUND_NAME, first_sound_name)
+
             if Path(first_sound_name).suffix.lower() in _AUDIO_ONLY_EXTS:
                 xml = self._adapt_sound_to_audio_only(xml, first_sound_name)
+
             # ...then copy in a fresh version for each of the other sounds.
             if len(settings.sounds) > 1:
                 xml = self._add_extra_sounds(xml, settings.sounds, bool(timeline_sounds))
+
+            # А если здесь просто снести все с таймлайна безусловно и добавить на таймлайн просто все нужные, типа не парясь где какие оставить, все убираем и нужные добавляем.
 
             # At this point every sound exists in the project's clip list. Now
             # take off the timeline the ones we don't want there, and line up the
             # ones we keep so they play back-to-back.
             keep_on_timeline = {sound.name for sound in timeline_sounds}
             xml = self._remove_sounds_from_timeline(xml, keep_on_timeline)
+
+
             if timeline_sounds:
                 xml = self._layout_sounds_in_timeline(xml, timeline_sounds)
 
@@ -431,11 +448,13 @@ class TimelapseSchema:
 
         xml = remove_dangling_refs(xml)
 
-        with gzip.open(output_path, 'wb') as f:
-            f.write(xml.encode('utf-8'))
+        xml_obj.xml = xml
+        xml_obj.to_prproj(output_path)
+
         return output_path
 
-    def _substitute_paths(self, xml: str, settings: TimelapseSettings, first_frame: str) -> str:
+    @staticmethod
+    def _substitute_paths(xml: str, settings: TimelapseSettings, first_frame: str) -> str:
         # Swap every mention of the template's folders/names for the target's.
         xml = xml.replace(_WD_TIMELAPSE_DIR, str(settings.timelapse_dir))
         xml = xml.replace(f"./frames/{_WD_FIRST_FRAME}", f"./frames/{first_frame}")
@@ -443,16 +462,24 @@ class TimelapseSchema:
         xml = xml.replace(_WD_PHOTOSET, settings.name)
         return xml
 
-    def _substitute_ticks(self, xml: str, fps_ticks: int, frames_dur: int, seq_dur: int) -> str:
+    @staticmethod
+    def _substitute_ticks(xml: str, fps_ticks: int, frames_dur: int, seq_dur: int) -> str:
         # Frame rate: how long one frame lasts.
+        # Что значат эти значения?
+        # Типа тут в целом задается фреймрейт для всего проекта или что?
         for tag in ("OveriddenFrameRate", "FrameRate"):
             xml = xml.replace(f"<{tag}>{_WD_FPS_TICKS}</{tag}>", f"<{tag}>{fps_ticks}</{tag}>")
+
         xml = xml.replace(f"<End>{_WD_FPS_TICKS}</End>", f"<End>{fps_ticks}</End>")          # where the cover frame ends
         xml = xml.replace(f"<Start>{_WD_FPS_TICKS}</Start>", f"<Start>{fps_ticks}</Start>")  # where the frames clip starts
+
         # Total lengths.
         xml = xml.replace(f"<End>{_WD_SEQ_DUR}</End>", f"<End>{seq_dur}</End>")  # where the frames clip ends (after the cover)
+
+        # Что значат эти значения?
         for tag in ("OriginalDuration", "OutPoint", "MZ.WorkOutPoint"):
             xml = xml.replace(f"<{tag}>{_WD_FRAMES_DUR}</{tag}>", f"<{tag}>{frames_dur}</{tag}>")
+
         return xml
 
     @staticmethod
@@ -564,8 +591,10 @@ class TimelapseSchema:
         """Remove the template's sound completely (this timelapse has none)."""
         blocks = parse_toplevel_blocks(xml)
         sound_blocks = _blocks_containing(blocks, _WD_SOUND_NAME)
+
         return _remove_blocks_by_positions(xml, [(b.start, b.end) for b in sound_blocks])
 
+    # В чем прикол именно экстра саундс? Почему нельзя сделать... То есть есть какой-то первый саунд и к нему добавляются остальные, а почему нельзя просто взять и добавить все вместе? Типа убираем исходный и добавляем новые туда же.
     @staticmethod
     def _add_extra_sounds(xml: str, sounds: list[Path], timeline: bool = False) -> str:
         """
@@ -582,15 +611,20 @@ class TimelapseSchema:
         """
         blocks = parse_toplevel_blocks(xml)
         first_name = sounds[0].name
-        entry = [i for i, b in enumerate(blocks) if first_name in b.text]
+
+        # индексы блоков с именем первого звука?
+        entry = [i for i, block in enumerate(blocks) if first_name in block.text]
+
         if timeline:
-            entry += [i for i, b in enumerate(blocks) if b.tag == "AudioClipTrackItem"]
+            entry += [i for i, block in enumerate(blocks) if block.tag == "AudioClipTrackItem"]
+
         source_blocks = [blocks[i] for i in _collect_sound_closure(blocks, entry)]
 
         # Remember the first sound's timeline slot and clip-list entry — we'll
         # register each copy's own versions right next to them.
         first_track_item = next((b for b in source_blocks if b.tag == "AudioClipTrackItem"), None)
         first_track_item_id = None
+
         if first_track_item:
             first_track_item_id = re.search(r'ObjectID="(\d+)"', first_track_item.text).group(1)
 
@@ -789,6 +823,8 @@ class TimelapseSchema:
             append_after_last, xml, count=1, flags=re.DOTALL,
         )
 
+    # Здесь нужно еще обработать кейс, когда кавер на таймлайне, но мы его удаляем и соответственно надо весь таймлайн сдвинуть влево.
+    # Или это здесь уже обрабатывается что ли?
     @staticmethod
     def _remove_cover(xml: str, fps_ticks: int, frames_dur: int, seq_dur: int) -> str:
         """Remove the cover frame and slide the image sequence back to the start."""
@@ -798,6 +834,7 @@ class TimelapseSchema:
         # sweeps it away for us.
         blocks = parse_toplevel_blocks(xml)
         cover_blocks = _blocks_containing(blocks, "cover.jpg")
+
         xml = _remove_blocks_by_positions(xml, [(b.start, b.end) for b in cover_blocks])
         xml = remove_dangling_refs(xml)
 
@@ -805,6 +842,7 @@ class TimelapseSchema:
         # With the cover gone it starts at the very beginning: [0 → frames_dur].
         xml = xml.replace(f"<Start>{fps_ticks}</Start>", "<Start>0</Start>")
         xml = xml.replace(f"<End>{seq_dur}</End>", f"<End>{frames_dur}</End>")
+
         return xml
 
 
