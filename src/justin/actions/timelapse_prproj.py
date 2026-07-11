@@ -161,12 +161,7 @@ def parse_toplevel_blocks(xml: str) -> list[Block]:
 
 
 def _remove_blocks_by_positions(xml: str, positions: list[tuple[int, int]]) -> str:
-    # Cut from the end backwards, so cutting one chunk doesn't shift the
-    # positions of the chunks we haven't cut yet.
-    for start, end in sorted(positions, reverse=True):
-        xml = xml[:start] + xml[end:]
-
-    return xml
+    return Xml(xml).remove_blocks_by_positions(positions).xml
 
 
 def _blocks_containing(blocks: list[Block], text: str) -> list[Block]:
