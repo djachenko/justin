@@ -170,100 +170,75 @@ class TimelapseSchema:
 
         # The cover, if there is one, is shown as one extra frame before the
         # sequence proper, so it adds one frame's worth of length.
-        n_seq_frames = n_frames
-
-        if settings.cover:
-            n_seq_frames += 1
-
+        n_seq_frames = n_frames + (1 if settings.cover else 0)
         seq_dur = n_seq_frames * fps_ticks
 
-        xml_obj = Xml.from_prproj(_TEMPLATE_PATH)
-        xml = xml_obj.xml
+        xml = Xml.from_prproj(_TEMPLATE_PATH)
 
-        xml = self._substitute_paths(xml, settings, first_frame)
-        xml = self._substitute_ticks(xml, fps_ticks, frames_dur, seq_dur)
-        xml = self._clear_audio_caches(xml)
+        self._substitute_paths(xml, settings, first_frame)
+        self._substitute_ticks(xml, fps_ticks, frames_dur, seq_dur)
+        self._clear_audio_caches(xml)
 
-        # А получится ли здесь не жонглировать вот этими количествами звуков, а просто добавлять, типа снести все текущие звуки и новые добавить?
         if not settings.sounds:
-            xml = self._remove_sound(xml)
+            self._remove_sound(xml)
         else:
-            # Point the template's one sound at our first real sound...
             first_sound_name = settings.sounds[0].name
 
             if first_sound_name != _WD_SOUND_NAME:
-                xml = xml.replace(f"./sound/{_WD_SOUND_NAME}", f"./sound/{first_sound_name}")
-                xml = xml.replace(_WD_SOUND_NAME, first_sound_name)
+                xml.xml = xml.xml.replace(f"./sound/{_WD_SOUND_NAME}", f"./sound/{first_sound_name}")
+                xml.xml = xml.xml.replace(_WD_SOUND_NAME, first_sound_name)
 
             if Path(first_sound_name).suffix.lower() in _AUDIO_ONLY_EXTS:
-                xml = self._adapt_sound_to_audio_only(xml, first_sound_name)
+                self._adapt_sound_to_audio_only(xml, first_sound_name)
 
-            # ...then copy in a fresh version for each of the other sounds.
             if len(settings.sounds) > 1:
-                xml = self._add_extra_sounds(xml, settings.sounds, bool(timeline_sounds))
+                self._add_extra_sounds(xml, settings.sounds, bool(timeline_sounds))
 
-            # А если здесь просто снести все с таймлайна безусловно и добавить на таймлайн просто все нужные, типа не парясь где какие оставить, все убираем и нужные добавляем.
-
-            # At this point every sound exists in the project's clip list. Now
-            # take off the timeline the ones we don't want there, and line up the
-            # ones we keep so they play back-to-back.
             keep_on_timeline = {sound.name for sound in timeline_sounds}
-            xml = self._remove_sounds_from_timeline(xml, keep_on_timeline)
-
+            self._remove_sounds_from_timeline(xml, keep_on_timeline)
 
             if timeline_sounds:
-                xml = self._layout_sounds_in_timeline(xml, timeline_sounds)
+                self._layout_sounds_in_timeline(xml, timeline_sounds)
 
         if not settings.cover:
-            xml = self._remove_cover(xml, fps_ticks, frames_dur, seq_dur)
+            self._remove_cover(xml, fps_ticks, frames_dur, seq_dur)
 
-        xml = Xml(xml).remove_dangling_refs().xml
-
-        xml_obj.xml = xml
-        xml_obj.to_prproj(output_path)
+        xml.remove_dangling_refs()
+        xml.to_prproj(output_path)
 
         return output_path
 
     @staticmethod
-    def _substitute_paths(xml: str, settings: TimelapseSettings, first_frame: str) -> str:
+    def _substitute_paths(xml: Xml, settings: TimelapseSettings, first_frame: str) -> None:
         # Swap every mention of the template's folders/names for the target's.
-        xml = xml.replace(_WD_TIMELAPSE_DIR, str(settings.timelapse_dir))
-        xml = xml.replace(f"./frames/{_WD_FIRST_FRAME}", f"./frames/{first_frame}")
-        xml = xml.replace(_WD_FIRST_FRAME, first_frame)
-        xml = xml.replace(_WD_PHOTOSET, settings.name)
-        return xml
+        xml.xml = xml.xml.replace(_WD_TIMELAPSE_DIR, str(settings.timelapse_dir))
+        xml.xml = xml.xml.replace(f"./frames/{_WD_FIRST_FRAME}", f"./frames/{first_frame}")
+        xml.xml = xml.xml.replace(_WD_FIRST_FRAME, first_frame)
+        xml.xml = xml.xml.replace(_WD_PHOTOSET, settings.name)
 
     @staticmethod
-    def _substitute_ticks(xml: str, fps_ticks: int, frames_dur: int, seq_dur: int) -> str:
+    def _substitute_ticks(xml: Xml, fps_ticks: int, frames_dur: int, seq_dur: int) -> None:
         # Frame rate: how long one frame lasts.
-        # Что значат эти значения?
-        # Типа тут в целом задается фреймрейт для всего проекта или что?
         for tag in ("OveriddenFrameRate", "FrameRate"):
-            xml = xml.replace(f"<{tag}>{_WD_FPS_TICKS}</{tag}>", f"<{tag}>{fps_ticks}</{tag}>")
+            xml.xml = xml.xml.replace(f"<{tag}>{_WD_FPS_TICKS}</{tag}>", f"<{tag}>{fps_ticks}</{tag}>")
 
-        xml = xml.replace(f"<End>{_WD_FPS_TICKS}</End>", f"<End>{fps_ticks}</End>")          # where the cover frame ends
-        xml = xml.replace(f"<Start>{_WD_FPS_TICKS}</Start>", f"<Start>{fps_ticks}</Start>")  # where the frames clip starts
+        xml.xml = xml.xml.replace(f"<End>{_WD_FPS_TICKS}</End>", f"<End>{fps_ticks}</End>")          # where the cover frame ends
+        xml.xml = xml.xml.replace(f"<Start>{_WD_FPS_TICKS}</Start>", f"<Start>{fps_ticks}</Start>")  # where the frames clip starts
+        xml.xml = xml.xml.replace(f"<End>{_WD_SEQ_DUR}</End>", f"<End>{seq_dur}</End>")              # where the frames clip ends (after the cover)
 
-        # Total lengths.
-        xml = xml.replace(f"<End>{_WD_SEQ_DUR}</End>", f"<End>{seq_dur}</End>")  # where the frames clip ends (after the cover)
-
-        # Что значат эти значения?
         for tag in ("OriginalDuration", "OutPoint", "MZ.WorkOutPoint"):
-            xml = xml.replace(f"<{tag}>{_WD_FRAMES_DUR}</{tag}>", f"<{tag}>{frames_dur}</{tag}>")
-
-        return xml
+            xml.xml = xml.xml.replace(f"<{tag}>{_WD_FRAMES_DUR}</{tag}>", f"<{tag}>{frames_dur}</{tag}>")
 
     @staticmethod
-    def _clear_audio_caches(xml: str) -> str:
+    def _clear_audio_caches(xml: Xml) -> None:
         # The template remembers where it cached the waveform/peaks for its own
         # sound, on the machine it was made on. Blank those paths so Premiere
         # rebuilds the cache for our sound instead of trusting stale files.
-        xml = re.sub(r'<ConformedAudioPath>[^<]+</ConformedAudioPath>', '<ConformedAudioPath></ConformedAudioPath>', xml)
-        xml = re.sub(r'<PeakFilePath>[^<]+</PeakFilePath>', '<PeakFilePath></PeakFilePath>', xml)
-        return xml
+        xml.xml = re.sub(r'<ConformedAudioPath>[^<]+</ConformedAudioPath>', '<ConformedAudioPath></ConformedAudioPath>', xml.xml)
+        xml.xml = re.sub(r'<PeakFilePath>[^<]+</PeakFilePath>', '<PeakFilePath></PeakFilePath>', xml.xml)
 
     @staticmethod
-    def _adapt_sound_to_audio_only(xml: str, sound_name: str) -> str:
+    def _adapt_sound_to_audio_only(xml: Xml, sound_name: str) -> None:
         """
         Turn the template's mp4 sound into a plain audio-only sound (mp3, wav...).
 
@@ -282,7 +257,7 @@ class TimelapseSchema:
         AudioClip. We must never delete a chunk the surviving AudioClip still
         needs, even if it also belonged to the video side.
         """
-        blocks = Xml(xml).toplevel_blocks()
+        blocks = xml.toplevel_blocks()
 
         # The sound's Media chunk is where the video-stream pointer lives.
         sound_media = next(
@@ -290,16 +265,16 @@ class TimelapseSchema:
             None,
         )
         if sound_media is None:
-            return xml
+            return
         video_stream_ref = re.search(r'<VideoStream ObjectRef="(\d+)"/>', sound_media.text)
         if video_stream_ref is None:
-            return xml  # no video part — already an audio-only sound, nothing to do
+            return  # no video part — already an audio-only sound, nothing to do
         video_stream_id = video_stream_ref.group(1)
 
         # Remove the video-stream pointer from the Media chunk.
         media_without_video = sound_media.text.replace(f'\t\t<VideoStream ObjectRef="{video_stream_id}"/>\n', '')
-        xml = xml[:sound_media.start] + media_without_video + xml[sound_media.end:]
-        blocks = Xml(xml).toplevel_blocks()
+        xml.xml = xml.xml[:sound_media.start] + media_without_video + xml.xml[sound_media.end:]
+        blocks = xml.toplevel_blocks()
 
         # The MasterClip lists its clips: slot 0 is the VideoClip, slot 1 the AudioClip.
         master_clip = next(
@@ -339,12 +314,12 @@ class TimelapseSchema:
             (b.start, b.end) for b in blocks
             if any(f'ObjectID="{block_id}"' in b.text[:80] for block_id in ids_to_remove)
         ]
-        xml = Xml(xml).remove_blocks_by_positions(to_delete).xml
+        xml.remove_blocks_by_positions(to_delete)
 
         # Fix up the MasterClip's clip list: drop the VideoClip entry (slot 0)
         # and move the AudioClip from slot 1 to slot 0.
         if video_clip_id and master_clip:
-            blocks = Xml(xml).toplevel_blocks()
+            blocks = xml.toplevel_blocks()
             master_clip = next(
                 (b for b in blocks if sound_name in b.text and b.tag == "MasterClip"),
                 None,
@@ -353,21 +328,17 @@ class TimelapseSchema:
                 clips_list = master_clip.text
                 clips_list = clips_list.replace(f'\t\t<Clip Index="0" ObjectRef="{video_clip_id}"/>\n', '')
                 clips_list = re.sub(r'<Clip Index="1" ObjectRef=', '<Clip Index="0" ObjectRef=', clips_list, count=1)
-                xml = xml[:master_clip.start] + clips_list + xml[master_clip.end:]
-
-        return xml
+                xml.xml = xml.xml[:master_clip.start] + clips_list + xml.xml[master_clip.end:]
 
     @staticmethod
-    def _remove_sound(xml: str) -> str:
+    def _remove_sound(xml: Xml) -> None:
         """Remove the template's sound completely (this timelapse has none)."""
-        blocks = Xml(xml).toplevel_blocks()
-        sound_blocks = [b for b in blocks if _WD_SOUND_NAME in b.text]
-
-        return Xml(xml).remove_blocks_by_positions([(b.start, b.end) for b in sound_blocks]).xml
+        sound_blocks = [b for b in xml.toplevel_blocks() if _WD_SOUND_NAME in b.text]
+        xml.remove_blocks_by_positions([(b.start, b.end) for b in sound_blocks])
 
     # В чем прикол именно экстра саундс? Почему нельзя сделать... То есть есть какой-то первый саунд и к нему добавляются остальные, а почему нельзя просто взять и добавить все вместе? Типа убираем исходный и добавляем новые туда же.
     @staticmethod
-    def _add_extra_sounds(xml: str, sounds: list[Path], timeline: bool = False) -> str:
+    def _add_extra_sounds(xml: Xml, sounds: list[Path], timeline: bool = False) -> None:
         """
         Copy the extra sounds (everything after the first) into the project.
 
@@ -380,12 +351,10 @@ class TimelapseSchema:
         copied cluster also includes the timeline slot, so each copy is placed on
         the audio track as well.
         """
-        blocks = Xml(xml).toplevel_blocks()
+        blocks = xml.toplevel_blocks()
         first_name = sounds[0].name
 
-        # индексы блоков с именем первого звука?
         entry = [i for i, block in enumerate(blocks) if first_name in block.text]
-
         if timeline:
             entry += [i for i, block in enumerate(blocks) if block.tag == "AudioClipTrackItem"]
 
@@ -395,11 +364,10 @@ class TimelapseSchema:
         # register each copy's own versions right next to them.
         first_track_item = next((b for b in source_blocks if b.tag == "AudioClipTrackItem"), None)
         first_track_item_id = None
-
         if first_track_item:
             first_track_item_id = re.search(r'ObjectID="(\d+)"', first_track_item.text).group(1)
 
-        max_id = max(int(i) for i in re.findall(r'ObjectID="(\d+)"', xml))
+        max_id = max(int(i) for i in re.findall(r'ObjectID="(\d+)"', xml.xml))
         insert_pos = max(b.end for b in source_blocks)
 
         first_panel_item = next((b for b in source_blocks if b.tag == "ClipProjectItem"), None)
@@ -422,30 +390,28 @@ class TimelapseSchema:
             if track_item:
                 new_track_item_ids.append(track_item.group(1))
 
-        xml = xml[:insert_pos] + cloned_blocks + xml[insert_pos:]
+        xml.xml = xml.xml[:insert_pos] + cloned_blocks + xml.xml[insert_pos:]
 
         # Add the copies to the project's clip list, right after the original, so
         # they actually show up in the project panel.
         if first_panel_item_uid and new_panel_item_uids:
-            original_item = re.search(rf'<Item Index="(\d+)" ObjectURef="{re.escape(first_panel_item_uid)}"', xml)
+            original_item = re.search(rf'<Item Index="(\d+)" ObjectURef="{re.escape(first_panel_item_uid)}"', xml.xml)
             if original_item:
                 base_index = int(original_item.group(1))
                 added_items = "".join(
                     f'\n\t\t\t\t<Item Index="{base_index + offset}" ObjectURef="{uid}"/>'
                     for offset, uid in enumerate(new_panel_item_uids, start=1)
                 )
-                xml = xml.replace(
+                xml.xml = xml.xml.replace(
                     f'<Item Index="{base_index}" ObjectURef="{first_panel_item_uid}"/>',
                     f'<Item Index="{base_index}" ObjectURef="{first_panel_item_uid}"/>{added_items}',
                 )
 
         if timeline and new_track_item_ids and first_track_item_id:
-            xml = TimelapseSchema._append_track_items(xml, first_track_item_id, new_track_item_ids)
-
-        return xml
+            TimelapseSchema._append_track_items(xml, first_track_item_id, new_track_item_ids)
 
     @staticmethod
-    def _layout_sounds_in_timeline(xml: str, sounds: list[Path]) -> str:
+    def _layout_sounds_in_timeline(xml: Xml, sounds: list[Path]) -> None:
         """
         Line the timeline sounds up back-to-back at their real lengths.
 
@@ -459,7 +425,7 @@ class TimelapseSchema:
         cursor = 0
         placed_ids: set[str] = set()
         while True:
-            blocks = Xml(xml).toplevel_blocks()
+            blocks = xml.toplevel_blocks()
             block_text_by_id = {
                 (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
                 for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
@@ -488,7 +454,7 @@ class TimelapseSchema:
             positioned = re.sub(
                 r'(?:<Start>\d+</Start>\n\t+)?<End>\d+</End>', new_position, track_item.text, count=1,
             )
-            xml = xml[:track_item.start] + positioned + xml[track_item.end:]
+            xml.xml = xml.xml[:track_item.start] + positioned + xml.xml[track_item.end:]
 
             # Set how much of the clip plays, via the AudioClip's end point. We
             # reach the AudioClip by following the slot's SubClip pointer. (Re-scan
@@ -503,16 +469,15 @@ class TimelapseSchema:
                 if audio_clip_text and "<OutPoint>" in audio_clip_text:
                     trimmed = re.sub(r'<OutPoint>\d+</OutPoint>', f'<OutPoint>{duration}</OutPoint>', audio_clip_text, count=1)
                     audio_clip = next(
-                        (b for b in Xml(xml).toplevel_blocks()
+                        (b for b in xml.toplevel_blocks()
                          if b.tag == "AudioClip" and f'ObjectID="{audio_clip_ref.group(1)}"' in b.text[:120]),
                         None,
                     )
                     if audio_clip:
-                        xml = xml[:audio_clip.start] + trimmed + xml[audio_clip.end:]
+                        xml.xml = xml.xml[:audio_clip.start] + trimmed + xml.xml[audio_clip.end:]
 
             placed_ids.add(track_item_id)
             cursor = end
-        return xml
 
     @staticmethod
     def _track_item_sound_name(track_item_text: str, block_text_by_id: dict) -> str | None:
@@ -529,7 +494,7 @@ class TimelapseSchema:
         return name.group(1)
 
     @staticmethod
-    def _remove_sounds_from_timeline(xml: str, keep_names: set[str] = frozenset()) -> str:
+    def _remove_sounds_from_timeline(xml: Xml, keep_names: set[str] = frozenset()) -> None:
         """
         Take sounds off the timeline while keeping them in the project's clip list.
         Any sound whose filename is in ``keep_names`` is left on the timeline.
@@ -543,7 +508,7 @@ class TimelapseSchema:
         needs — is left alone. Finally the removed slots are struck from the
         track's slot list.
         """
-        blocks = Xml(xml).toplevel_blocks()
+        blocks = xml.toplevel_blocks()
         block_text_by_id = {
             (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
             for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
@@ -555,7 +520,7 @@ class TimelapseSchema:
         ]
         kept = [i for i in all_track_items if i not in dropped]
         if not dropped:
-            return xml
+            return
 
         keep_entry = [i for i, b in enumerate(blocks) if b.tag == "ClipProjectItem"] + kept
         keep_closure = set(_collect_sound_closure(blocks, keep_entry))
@@ -563,13 +528,12 @@ class TimelapseSchema:
         to_remove = (dropped_closure - keep_closure) | set(dropped)
 
         dropped_ids = [re.search(r'ObjectID="(\d+)"', blocks[i].text[:120]).group(1) for i in dropped]
-        xml = Xml(xml).remove_blocks_by_positions([(blocks[i].start, blocks[i].end) for i in to_remove]).xml
+        xml.remove_blocks_by_positions([(blocks[i].start, blocks[i].end) for i in to_remove])
         for track_item_id in dropped_ids:
-            xml = re.sub(rf'[^\S\n]*<TrackItem Index="\d+" ObjectRef="{track_item_id}"/>\n', '', xml)
-        return xml
+            xml.xml = re.sub(rf'[^\S\n]*<TrackItem Index="\d+" ObjectRef="{track_item_id}"/>\n', '', xml.xml)
 
     @staticmethod
-    def _append_track_items(xml: str, anchor_id: str, track_item_ids: list[str]) -> str:
+    def _append_track_items(xml: Xml, anchor_id: str, track_item_ids: list[str]) -> None:
         """
         Add the given timeline slots to the audio track's slot list.
 
@@ -588,33 +552,29 @@ class TimelapseSchema:
             )
             return listing.replace(existing[-1].group(0), existing[-1].group(0) + added, 1)
 
-        return re.sub(
+        xml.xml = re.sub(
             rf'<TrackItems Version="\d+">(?:(?!</TrackItems>).)*?'
             rf'<TrackItem Index="\d+" ObjectRef="{anchor_id}"/>.*?</TrackItems>',
-            append_after_last, xml, count=1, flags=re.DOTALL,
+            append_after_last, xml.xml, count=1, flags=re.DOTALL,
         )
 
     # Здесь нужно еще обработать кейс, когда кавер на таймлайне, но мы его удаляем и соответственно надо весь таймлайн сдвинуть влево.
     # Или это здесь уже обрабатывается что ли?
     @staticmethod
-    def _remove_cover(xml: str, fps_ticks: int, frames_dur: int, seq_dur: int) -> str:
+    def _remove_cover(xml: Xml, fps_ticks: int, frames_dur: int, seq_dur: int) -> None:
         """Remove the cover frame and slide the image sequence back to the start."""
         # Cut the cover's own media chunks (the ones that name cover.jpg). The
         # rest of the cover's cluster (its VideoClip, its timeline slot, its slot
         # list entry) then has nothing pointing to it, so remove_dangling_refs
         # sweeps it away for us.
-        blocks = Xml(xml).toplevel_blocks()
-        cover_blocks = [b for b in blocks if "cover.jpg" in b.text]
-
-        xml = Xml(xml).remove_blocks_by_positions([(b.start, b.end) for b in cover_blocks]).xml
-        xml = Xml(xml).remove_dangling_refs().xml
+        cover_blocks = [b for b in xml.toplevel_blocks() if "cover.jpg" in b.text]
+        xml.remove_blocks_by_positions([(b.start, b.end) for b in cover_blocks])
+        xml.remove_dangling_refs()
 
         # The frames clip used to sit one cover-frame in, from [fps_ticks → seq_dur].
         # With the cover gone it starts at the very beginning: [0 → frames_dur].
-        xml = xml.replace(f"<Start>{fps_ticks}</Start>", "<Start>0</Start>")
-        xml = xml.replace(f"<End>{seq_dur}</End>", f"<End>{frames_dur}</End>")
-
-        return xml
+        xml.xml = xml.xml.replace(f"<Start>{fps_ticks}</Start>", "<Start>0</Start>")
+        xml.xml = xml.xml.replace(f"<End>{seq_dur}</End>", f"<End>{frames_dur}</End>")
 
 
 def generate_prproj(
