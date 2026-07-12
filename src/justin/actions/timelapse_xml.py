@@ -45,6 +45,70 @@ class Xml:
 
         return self
 
+    def remove_dangling_refs(self) -> Self:
+        """
+        Clean up references that now point at nothing.
+
+        When we delete a chunk (say the cover, or a sound), other chunks may still
+        hold a reference to it — a pointer to an id that no longer exists. Premiere
+        won't open a project with such broken pointers. This walks the whole project
+        and removes every chunk left holding a broken pointer, then repeats, because
+        removing one chunk can break another's pointer in turn. It stops once a full
+        pass finds nothing more to remove.
+
+        Two kinds of pointer are followed:
+          * uuid pointers (ObjectURef) from Media / VideoClip / AudioClip / MasterClip;
+          * number pointers (ObjectRef) from SubClip / Source / Content.
+        It also tidies the two lists that name clips by pointer — the project's clip
+        list (``<Items>``) and each track's clip list (``<TrackItems>``).
+        """
+        for _ in range(10):
+            live_uids = set(re.findall(r'ObjectUID="([^"]+)"', self.xml))
+            live_ids = set(re.findall(r'ObjectID="(\d+)"', self.xml))
+
+            def prune_panel_items(items_block: re.Match) -> str:
+                def keep(item: re.Match) -> str:
+                    uref = re.search(r'ObjectURef="([^"]+)"', item.group(0))
+                    if uref and uref.group(1) not in live_uids:
+                        return ''
+                    return item.group(0)
+                return re.sub(r'[^\S\n]*<Item [^/]*/>\n', keep, items_block.group(0))
+
+            self.xml = re.sub(r'<Items Version="\d+">.*?</Items>', prune_panel_items, self.xml, flags=re.DOTALL)
+
+            def prune_track_items(track_items_block: re.Match) -> str:
+                def keep(item: re.Match) -> str:
+                    ref = re.search(r'ObjectRef="(\d+)"', item.group(0))
+                    if ref and ref.group(1) not in live_ids:
+                        return ''
+                    return item.group(0)
+                block = re.sub(r'[^\S\n]*<TrackItem [^/]*/>\n', keep, track_items_block.group(0))
+                surviving = list(re.finditer(r'<TrackItem Index="\d+" ObjectRef="(\d+)"/>', block))
+                for new_index, item in enumerate(surviving):
+                    renumbered = f'<TrackItem Index="{new_index}" ObjectRef="{item.group(1)}"/>'
+                    block = block.replace(item.group(0), renumbered, 1)
+                return block
+
+            self.xml = re.sub(r'<TrackItems Version="\d+">.*?</TrackItems>', prune_track_items, self.xml, flags=re.DOTALL)
+
+            live_uids = set(re.findall(r'ObjectUID="([^"]+)"', self.xml))
+            live_ids = set(re.findall(r'ObjectID="(\d+)"', self.xml))
+            to_delete: list[tuple[int, int]] = []
+            for block in self.toplevel_blocks():
+                uuid_refs = re.findall(r'<(?:Media|VideoClip|AudioClip|MasterClip) ObjectURef="([^"]+)"', block.text)
+                if any(ref not in live_uids for ref in uuid_refs):
+                    to_delete.append((block.start, block.end))
+                    continue
+                numeric_refs = re.findall(r'<(?:SubClip|Source|Content) ObjectRef="(\d+)"', block.text)
+                if any(ref not in live_ids for ref in numeric_refs):
+                    to_delete.append((block.start, block.end))
+
+            if not to_delete:
+                break
+            self.remove_blocks_by_positions(to_delete)
+
+        return self
+
     def toplevel_blocks(self) -> list[Block]:
         """Break the project text into its top-level chunks.
 
@@ -177,66 +241,3 @@ def clone_sound_blocks(blocks: list[Block], old_name: str, new_name: str, id_off
     return clone
 
 
-def remove_dangling_refs(xml: str) -> str:
-    """
-    Clean up references that now point at nothing.
-
-    When we delete a chunk (say the cover, or a sound), other chunks may still
-    hold a reference to it — a pointer to an id that no longer exists. Premiere
-    won't open a project with such broken pointers. This walks the whole project
-    and removes every chunk left holding a broken pointer, then repeats, because
-    removing one chunk can break another's pointer in turn. It stops once a full
-    pass finds nothing more to remove.
-
-    Two kinds of pointer are followed:
-      * uuid pointers (ObjectURef) from Media / VideoClip / AudioClip / MasterClip;
-      * number pointers (ObjectRef) from SubClip / Source / Content.
-    It also tidies the two lists that name clips by pointer — the project's clip
-    list (``<Items>``) and each track's clip list (``<TrackItems>``).
-    """
-    for _ in range(10):
-        live_uids = set(re.findall(r'ObjectUID="([^"]+)"', xml))
-        live_ids = set(re.findall(r'ObjectID="(\d+)"', xml))
-
-        def prune_panel_items(items_block: re.Match) -> str:
-            def keep(item: re.Match) -> str:
-                uref = re.search(r'ObjectURef="([^"]+)"', item.group(0))
-                if uref and uref.group(1) not in live_uids:
-                    return ''
-                return item.group(0)
-            return re.sub(r'[^\S\n]*<Item [^/]*/>\n', keep, items_block.group(0))
-
-        xml = re.sub(r'<Items Version="\d+">.*?</Items>', prune_panel_items, xml, flags=re.DOTALL)
-
-        def prune_track_items(track_items_block: re.Match) -> str:
-            def keep(item: re.Match) -> str:
-                ref = re.search(r'ObjectRef="(\d+)"', item.group(0))
-                if ref and ref.group(1) not in live_ids:
-                    return ''
-                return item.group(0)
-            block = re.sub(r'[^\S\n]*<TrackItem [^/]*/>\n', keep, track_items_block.group(0))
-            surviving = list(re.finditer(r'<TrackItem Index="\d+" ObjectRef="(\d+)"/>', block))
-            for new_index, item in enumerate(surviving):
-                renumbered = f'<TrackItem Index="{new_index}" ObjectRef="{item.group(1)}"/>'
-                block = block.replace(item.group(0), renumbered, 1)
-            return block
-
-        xml = re.sub(r'<TrackItems Version="\d+">.*?</TrackItems>', prune_track_items, xml, flags=re.DOTALL)
-
-        live_uids = set(re.findall(r'ObjectUID="([^"]+)"', xml))
-        live_ids = set(re.findall(r'ObjectID="(\d+)"', xml))
-        to_delete: list[tuple[int, int]] = []
-        for block in Xml(xml).toplevel_blocks():
-            uuid_refs = re.findall(r'<(?:Media|VideoClip|AudioClip|MasterClip) ObjectURef="([^"]+)"', block.text)
-            if any(ref not in live_uids for ref in uuid_refs):
-                to_delete.append((block.start, block.end))
-                continue
-            numeric_refs = re.findall(r'<(?:SubClip|Source|Content) ObjectRef="(\d+)"', block.text)
-            if any(ref not in live_ids for ref in numeric_refs):
-                to_delete.append((block.start, block.end))
-
-        if not to_delete:
-            break
-        xml = Xml(xml).remove_blocks_by_positions(to_delete).xml
-
-    return xml
