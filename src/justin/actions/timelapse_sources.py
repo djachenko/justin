@@ -57,7 +57,7 @@ class TimelapseSources:
         if not frames:
             raise ValueError(f"No frames in {path}")
 
-        return frames
+        return sorted(frames)
 
     @classmethod
     def get_cover(cls, path: Path) -> Path | None:
@@ -70,7 +70,7 @@ class TimelapseSources:
 
     @classmethod
     def get_sounds(cls, path: Path) -> list[Path] | None:
-        sounds_dir = path / "sounds"
+        sounds_dir = path / "sound"
 
         if not sounds_dir.exists():
             return None
@@ -90,4 +90,4 @@ class TimelapseSources:
         if not sounds:
             return None
 
-        return sounds
+        return sorted(sounds)
