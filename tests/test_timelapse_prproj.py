@@ -251,8 +251,8 @@ def test_no_sound_project_is_valid(tmp_path):
 
 def test_generate_numbers_output_instead_of_overwriting(tmp_path):
     timelapse_dir = make_timelapse(tmp_path, photoset="26.05.31.numbered", sounds=("alpha.mp3",))
-    first = generate_prproj(timelapse_dir)
-    second = generate_prproj(timelapse_dir)
+    first = generate_prproj(from_timelapse_dir(timelapse_dir))
+    second = generate_prproj(from_timelapse_dir(timelapse_dir))
 
     assert first.name == "26.05.31.numbered.prproj"
     assert second.name == "26.05.31.numbered_1.prproj"
