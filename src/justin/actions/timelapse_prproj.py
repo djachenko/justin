@@ -44,7 +44,6 @@ from justin.actions.timelapse_xml import (
     Block, Xml,
     collect_sound_closure as _collect_sound_closure,
     clone_sound_blocks as _clone_sound_blocks,
-    remove_dangling_refs,
 )
 
 # Premiere measures time in "ticks". This many ticks make one second.
@@ -225,7 +224,7 @@ class TimelapseSchema:
         if not settings.cover:
             xml = self._remove_cover(xml, fps_ticks, frames_dur, seq_dur)
 
-        xml = remove_dangling_refs(xml)
+        xml = Xml(xml).remove_dangling_refs().xml
 
         xml_obj.xml = xml
         xml_obj.to_prproj(output_path)
@@ -615,7 +614,7 @@ class TimelapseSchema:
         cover_blocks = [b for b in blocks if "cover.jpg" in b.text]
 
         xml = _remove_blocks_by_positions(xml, [(b.start, b.end) for b in cover_blocks])
-        xml = remove_dangling_refs(xml)
+        xml = Xml(xml).remove_dangling_refs().xml
 
         # The frames clip used to sit one cover-frame in, from [fps_ticks → seq_dur].
         # With the cover gone it starts at the very beginning: [0 → frames_dur].
