@@ -145,13 +145,6 @@ def _first_frame(frames_dir: Path) -> str:
     return frames[0].name
 
 
-def parse_toplevel_blocks(xml: str) -> list[Block]:
-    return Xml(xml).toplevel_blocks()
-
-
-def _remove_blocks_by_positions(xml: str, positions: list[tuple[int, int]]) -> str:
-    return Xml(xml).remove_blocks_by_positions(positions).xml
-
 
 def _probe_duration_ticks(path: Path) -> int:
     """Ask ffprobe how long a media file is, and give it back in Premiere ticks."""
@@ -289,7 +282,7 @@ class TimelapseSchema:
         AudioClip. We must never delete a chunk the surviving AudioClip still
         needs, even if it also belonged to the video side.
         """
-        blocks = parse_toplevel_blocks(xml)
+        blocks = Xml(xml).toplevel_blocks()
 
         # The sound's Media chunk is where the video-stream pointer lives.
         sound_media = next(
@@ -306,7 +299,7 @@ class TimelapseSchema:
         # Remove the video-stream pointer from the Media chunk.
         media_without_video = sound_media.text.replace(f'\t\t<VideoStream ObjectRef="{video_stream_id}"/>\n', '')
         xml = xml[:sound_media.start] + media_without_video + xml[sound_media.end:]
-        blocks = parse_toplevel_blocks(xml)
+        blocks = Xml(xml).toplevel_blocks()
 
         # The MasterClip lists its clips: slot 0 is the VideoClip, slot 1 the AudioClip.
         master_clip = next(
@@ -346,12 +339,12 @@ class TimelapseSchema:
             (b.start, b.end) for b in blocks
             if any(f'ObjectID="{block_id}"' in b.text[:80] for block_id in ids_to_remove)
         ]
-        xml = _remove_blocks_by_positions(xml, to_delete)
+        xml = Xml(xml).remove_blocks_by_positions(to_delete).xml
 
         # Fix up the MasterClip's clip list: drop the VideoClip entry (slot 0)
         # and move the AudioClip from slot 1 to slot 0.
         if video_clip_id and master_clip:
-            blocks = parse_toplevel_blocks(xml)
+            blocks = Xml(xml).toplevel_blocks()
             master_clip = next(
                 (b for b in blocks if sound_name in b.text and b.tag == "MasterClip"),
                 None,
@@ -367,10 +360,10 @@ class TimelapseSchema:
     @staticmethod
     def _remove_sound(xml: str) -> str:
         """Remove the template's sound completely (this timelapse has none)."""
-        blocks = parse_toplevel_blocks(xml)
+        blocks = Xml(xml).toplevel_blocks()
         sound_blocks = [b for b in blocks if _WD_SOUND_NAME in b.text]
 
-        return _remove_blocks_by_positions(xml, [(b.start, b.end) for b in sound_blocks])
+        return Xml(xml).remove_blocks_by_positions([(b.start, b.end) for b in sound_blocks]).xml
 
     # В чем прикол именно экстра саундс? Почему нельзя сделать... То есть есть какой-то первый саунд и к нему добавляются остальные, а почему нельзя просто взять и добавить все вместе? Типа убираем исходный и добавляем новые туда же.
     @staticmethod
@@ -387,7 +380,7 @@ class TimelapseSchema:
         copied cluster also includes the timeline slot, so each copy is placed on
         the audio track as well.
         """
-        blocks = parse_toplevel_blocks(xml)
+        blocks = Xml(xml).toplevel_blocks()
         first_name = sounds[0].name
 
         # индексы блоков с именем первого звука?
@@ -466,7 +459,7 @@ class TimelapseSchema:
         cursor = 0
         placed_ids: set[str] = set()
         while True:
-            blocks = parse_toplevel_blocks(xml)
+            blocks = Xml(xml).toplevel_blocks()
             block_text_by_id = {
                 (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
                 for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
@@ -510,7 +503,7 @@ class TimelapseSchema:
                 if audio_clip_text and "<OutPoint>" in audio_clip_text:
                     trimmed = re.sub(r'<OutPoint>\d+</OutPoint>', f'<OutPoint>{duration}</OutPoint>', audio_clip_text, count=1)
                     audio_clip = next(
-                        (b for b in parse_toplevel_blocks(xml)
+                        (b for b in Xml(xml).toplevel_blocks()
                          if b.tag == "AudioClip" and f'ObjectID="{audio_clip_ref.group(1)}"' in b.text[:120]),
                         None,
                     )
@@ -550,7 +543,7 @@ class TimelapseSchema:
         needs — is left alone. Finally the removed slots are struck from the
         track's slot list.
         """
-        blocks = parse_toplevel_blocks(xml)
+        blocks = Xml(xml).toplevel_blocks()
         block_text_by_id = {
             (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
             for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
@@ -570,7 +563,7 @@ class TimelapseSchema:
         to_remove = (dropped_closure - keep_closure) | set(dropped)
 
         dropped_ids = [re.search(r'ObjectID="(\d+)"', blocks[i].text[:120]).group(1) for i in dropped]
-        xml = _remove_blocks_by_positions(xml, [(blocks[i].start, blocks[i].end) for i in to_remove])
+        xml = Xml(xml).remove_blocks_by_positions([(blocks[i].start, blocks[i].end) for i in to_remove]).xml
         for track_item_id in dropped_ids:
             xml = re.sub(rf'[^\S\n]*<TrackItem Index="\d+" ObjectRef="{track_item_id}"/>\n', '', xml)
         return xml
@@ -610,10 +603,10 @@ class TimelapseSchema:
         # rest of the cover's cluster (its VideoClip, its timeline slot, its slot
         # list entry) then has nothing pointing to it, so remove_dangling_refs
         # sweeps it away for us.
-        blocks = parse_toplevel_blocks(xml)
+        blocks = Xml(xml).toplevel_blocks()
         cover_blocks = [b for b in blocks if "cover.jpg" in b.text]
 
-        xml = _remove_blocks_by_positions(xml, [(b.start, b.end) for b in cover_blocks])
+        xml = Xml(xml).remove_blocks_by_positions([(b.start, b.end) for b in cover_blocks]).xml
         xml = Xml(xml).remove_dangling_refs().xml
 
         # The frames clip used to sit one cover-frame in, from [fps_ticks → seq_dur].
