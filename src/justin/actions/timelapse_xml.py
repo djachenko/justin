@@ -35,11 +35,7 @@ class Xml:
             f.write(self.xml.encode('utf-8'))
 
     def remove_blocks_by_positions(self, positions: list[tuple[int, int]]) -> Self:
-        # Тупо вырезать из строки кусок между началом блока и конца блока. Другой вопрос, что тут как бы блок становится невалидным.
-        # Может тут тупо сделать remove blocks и принимать список блоков, а не таплов? 
-
-        # Cut from the end backwards, so cutting one chunk doesn't shift the
-        # positions of the chunks we haven't cut yet.
+        # Cut from the end backwards so earlier positions don't shift after each cut.
         for start, end in sorted(positions, reverse=True):
             self.xml = self.xml[:start] + self.xml[end:]
 
@@ -63,42 +59,55 @@ class Xml:
         list (``<Items>``) and each track's clip list (``<TrackItems>``).
         """
         for _ in range(10):
+            # Collect all ids/uuids that actually exist right now.
             live_uids = set(re.findall(r'ObjectUID="([^"]+)"', self.xml))
             live_ids = set(re.findall(r'ObjectID="(\d+)"', self.xml))
 
             def prune_panel_items(items_block: re.Match) -> str:
                 def keep(item: re.Match) -> str:
+                    # Each <Item .../> line points at a clip by uuid. Drop the line if that clip is gone.
                     uref = re.search(r'ObjectURef="([^"]+)"', item.group(0))
                     if uref and uref.group(1) not in live_uids:
                         return ''
                     return item.group(0)
+                # Match any self-closing <Item .../> line (with optional leading spaces).
+                # The space after "<Item " is intentional — without it the pattern would also
+                # match "<Items " and eat the list's own opening tag.
                 return re.sub(r'[^\S\n]*<Item [^/]*/>\n', keep, items_block.group(0))
 
+            # Find every <Items>…</Items> block (the project panel's clip list) and prune it.
             self.xml = re.sub(r'<Items Version="\d+">.*?</Items>', prune_panel_items, self.xml, flags=re.DOTALL)
 
             def prune_track_items(track_items_block: re.Match) -> str:
                 def keep(item: re.Match) -> str:
+                    # Each <TrackItem .../> line points at a clip by number. Drop if that clip is gone.
                     ref = re.search(r'ObjectRef="(\d+)"', item.group(0))
                     if ref and ref.group(1) not in live_ids:
                         return ''
                     return item.group(0)
+                # Same trap: "<TrackItem " needs the space so it doesn't match "<TrackItems ".
                 block = re.sub(r'[^\S\n]*<TrackItem [^/]*/>\n', keep, track_items_block.group(0))
+                # After dropping entries the Index attributes have gaps; renumber them 0, 1, 2, …
                 surviving = list(re.finditer(r'<TrackItem Index="\d+" ObjectRef="(\d+)"/>', block))
                 for new_index, item in enumerate(surviving):
                     renumbered = f'<TrackItem Index="{new_index}" ObjectRef="{item.group(1)}"/>'
                     block = block.replace(item.group(0), renumbered, 1)
                 return block
 
+            # Find every <TrackItems>…</TrackItems> block (one per track) and prune it.
             self.xml = re.sub(r'<TrackItems Version="\d+">.*?</TrackItems>', prune_track_items, self.xml, flags=re.DOTALL)
 
+            # Re-collect ids after the list cleanup above may have changed things.
             live_uids = set(re.findall(r'ObjectUID="([^"]+)"', self.xml))
             live_ids = set(re.findall(r'ObjectID="(\d+)"', self.xml))
             to_delete: list[tuple[int, int]] = []
             for block in self.toplevel_blocks():
+                # These chunk types point at their media by uuid — drop the chunk if the media is gone.
                 uuid_refs = re.findall(r'<(?:Media|VideoClip|AudioClip|MasterClip) ObjectURef="([^"]+)"', block.text)
                 if any(ref not in live_uids for ref in uuid_refs):
                     to_delete.append((block.start, block.end))
                     continue
+                # These chunk types point at their parent by number — drop if the parent is gone.
                 numeric_refs = re.findall(r'<(?:SubClip|Source|Content) ObjectRef="(\d+)"', block.text)
                 if any(ref not in live_ids for ref in numeric_refs):
                     to_delete.append((block.start, block.end))
@@ -118,7 +127,8 @@ class Xml:
         """
         blocks: list[Block] = []
 
-        # ? what is this regex
+        # Find every line that starts with exactly one tab followed by a tag opening.
+        # The second capture group (space or >) ensures we match a real tag, not a partial word.
         for match in re.finditer(r'(?m)^\t<(\w+)([ >])', self.xml):
             tag = match.group(1)
             start = match.start()
@@ -140,7 +150,7 @@ class Xml:
             closing = f'\n\t</{tag}>'
             closing_pos = self.xml.find(closing, start)
 
-            # ? what is it? Not closed tag and not error?
+            # No closing tag found — malformed or not a real block, skip silently.
             if closing_pos == -1:
                 continue
 
@@ -229,11 +239,16 @@ def clone_sound_blocks(blocks: list[Block], old_name: str, new_name: str, id_off
     numeric_ids = sorted(set(re.findall(r'ObjectID="(\d+)"', combined)), key=int)
     id_remap = {old: str(int(old) + id_offset) for old in numeric_ids}
 
+    # Collect uuids used as identities: ObjectUID/ObjectURef attributes and bare <ID> tags.
+    # These are 36-char hex strings like "a1b2c3d4-…". ClassID looks the same but is NOT
+    # an identity — it names the chunk's type and must not be touched.
     identity_uids = set(re.findall(r'Object(?:UID|URef)="([0-9a-f-]{36})"', combined))
     identity_uids |= set(re.findall(r'<ID>([0-9a-f-]{36})</ID>', combined))
     uid_remap = {old: str(uuid.uuid4()) for old in identity_uids}
 
     clone = combined.replace(old_name, new_name)
+    # Replace numbers only when they appear as ObjectID="N" or ObjectRef="N" —
+    # not as bare numbers that could match something unrelated.
     for old_id, new_id in id_remap.items():
         clone = re.sub(rf'((?:ObjectID|ObjectRef)="){re.escape(old_id)}"', rf'\g<1>{new_id}"', clone)
     for old_uid, new_uid in uid_remap.items():
