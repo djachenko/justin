@@ -86,10 +86,6 @@ class Xml:
         return blocks
 
 
-def blocks_containing(blocks: list[Block], text: str) -> list[Block]:
-    return [block for block in blocks if text in block.text]
-
-
 _CLIP_MEDIA_TYPES = {
     "ClipProjectItem", "MasterClip", "AudioClip", "VideoClip", "SubClip",
     "Media", "AudioStream", "VideoStream", "AudioMediaSource", "VideoMediaSource",
