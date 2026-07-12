@@ -42,7 +42,6 @@ from pathlib import Path
 
 from justin.actions.timelapse_xml import (
     Block, Xml,
-    blocks_containing as _blocks_containing,
     collect_sound_closure as _collect_sound_closure,
     clone_sound_blocks as _clone_sound_blocks,
     remove_dangling_refs,
@@ -295,7 +294,7 @@ class TimelapseSchema:
 
         # The sound's Media chunk is where the video-stream pointer lives.
         sound_media = next(
-            (b for b in _blocks_containing(blocks, sound_name) if b.tag == "Media"),
+            (b for b in blocks if sound_name in b.text and b.tag == "Media"),
             None,
         )
         if sound_media is None:
@@ -312,7 +311,7 @@ class TimelapseSchema:
 
         # The MasterClip lists its clips: slot 0 is the VideoClip, slot 1 the AudioClip.
         master_clip = next(
-            (b for b in _blocks_containing(blocks, sound_name) if b.tag == "MasterClip"),
+            (b for b in blocks if sound_name in b.text and b.tag == "MasterClip"),
             None,
         )
         video_clip_id: str | None = None
@@ -355,7 +354,7 @@ class TimelapseSchema:
         if video_clip_id and master_clip:
             blocks = parse_toplevel_blocks(xml)
             master_clip = next(
-                (b for b in _blocks_containing(blocks, sound_name) if b.tag == "MasterClip"),
+                (b for b in blocks if sound_name in b.text and b.tag == "MasterClip"),
                 None,
             )
             if master_clip:
@@ -370,7 +369,7 @@ class TimelapseSchema:
     def _remove_sound(xml: str) -> str:
         """Remove the template's sound completely (this timelapse has none)."""
         blocks = parse_toplevel_blocks(xml)
-        sound_blocks = _blocks_containing(blocks, _WD_SOUND_NAME)
+        sound_blocks = [b for b in blocks if _WD_SOUND_NAME in b.text]
 
         return _remove_blocks_by_positions(xml, [(b.start, b.end) for b in sound_blocks])
 
@@ -613,7 +612,7 @@ class TimelapseSchema:
         # list entry) then has nothing pointing to it, so remove_dangling_refs
         # sweeps it away for us.
         blocks = parse_toplevel_blocks(xml)
-        cover_blocks = _blocks_containing(blocks, "cover.jpg")
+        cover_blocks = [b for b in blocks if "cover.jpg" in b.text]
 
         xml = _remove_blocks_by_positions(xml, [(b.start, b.end) for b in cover_blocks])
         xml = remove_dangling_refs(xml)
