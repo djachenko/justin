@@ -4,7 +4,8 @@ from typing import Annotated, Iterable, List
 import typer
 from typer import Typer, Argument, Option
 
-from justin.actions.timelapse_prproj import generate_prproj
+from justin.actions.timelapse_prproj import TimelapseSettings, generate_prproj
+from justin.actions.timelapse_sources import TimelapseSources
 from justin.shared.context import Context
 from justin.typer.base_commands.pattern_command import Extra
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
@@ -26,8 +27,10 @@ class TimelapseCommand(DestinationsAwareCommand):
 
     def handle_timelapse(self, timelapse_folder: Folder, extra: Extra) -> None:
         name = extra[TimelapseCommand.SET_NAME]
+        sources = TimelapseSources.from_folder(name, timelapse_folder.path)
+        settings = TimelapseSettings(sources=sources, fps=self.__fps, timeline_sounds=self.__timeline_sounds)
 
-        output = generate_prproj(timelapse_folder.path, self.__fps, self.__timeline_sounds)
+        output = generate_prproj(settings)
 
         typer.echo(f"Created: {output}")
 
