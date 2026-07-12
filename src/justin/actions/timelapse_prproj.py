@@ -40,6 +40,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from justin.actions.timelapse_sources import AUDIO_ONLY_EXTENSIONS, TimelapseSources
 from justin.actions.timelapse_xml import (
     Block, Xml,
     collect_sound_closure as _collect_sound_closure,
@@ -68,11 +69,10 @@ _TEMPLATE_PATH = (
     / "step_12_sound_in_timeline.prproj"
 )
 
-_AUDIO_EXTS =      {".mp3", ".mp4", ".wav", ".aac", ".m4a", ".flac", ".ogg"}
 # Formats that carry sound only, no picture. The template's sound is an mp4
 # (which has a video part), so for these we have to remove that video part —
 # see _adapt_sound_to_audio_only.
-_AUDIO_ONLY_EXTS = {".mp3",         ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
+_AUDIO_ONLY_EXTS = AUDIO_ONLY_EXTENSIONS
 
 
 @dataclass
@@ -103,30 +103,13 @@ def from_timelapse_dir(
     timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] | None = None,
 ) -> TimelapseSettings:
     timelapse_dir = timelapse_dir.resolve()
-    frames_dir = timelapse_dir / "frames"
-
-    if not frames_dir.exists() or not any(frames_dir.glob("*.jpg")):
-        raise ValueError(f"No frames in {frames_dir}")
-
-    cover_path = timelapse_dir / "cover.jpg"
-
-    cover: Path | None = None
-    if cover_path.exists():
-        cover = cover_path
-
-    sound_dir = timelapse_dir / "sound"
-    sounds: list[Path] = []
-    if sound_dir.exists():
-        sounds = sorted(
-            f for f in sound_dir.iterdir()
-            if f.is_file() and f.suffix.lower() in _AUDIO_EXTS
-        )
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
 
     return TimelapseSettings(
-        name=timelapse_dir.parent.name,
+        name=sources.name,
         timelapse_dir=timelapse_dir,
-        cover=cover,
-        sounds=sounds,
+        cover=sources.cover,
+        sounds=sources.sounds or [],
         fps=fps,
         timeline_sounds=list(timeline_sounds or []),
     )
@@ -170,7 +153,9 @@ class TimelapseSchema:
 
         # The cover, if there is one, is shown as one extra frame before the
         # sequence proper, so it adds one frame's worth of length.
-        n_seq_frames = n_frames + (1 if settings.cover else 0)
+        n_seq_frames = n_frames
+        if settings.cover:
+            n_seq_frames += 1
         seq_dur = n_seq_frames * fps_ticks
 
         xml = Xml.from_prproj(_TEMPLATE_PATH)
