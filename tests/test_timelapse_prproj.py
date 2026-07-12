@@ -24,10 +24,9 @@ from justin.actions.timelapse_prproj import (
     TimelapseSchema,
     from_timelapse_dir,
     generate_prproj,
-    parse_toplevel_blocks,
     _TEMPLATE_PATH,
-    _clone_sound_blocks,
 )
+from justin.actions.timelapse_xml import Block, Xml, clone_sound_blocks as _clone_sound_blocks
 
 
 # --------------------------------------------------------------------------- #
@@ -45,15 +44,20 @@ def make_timelapse(
     timelapse_dir = root / photoset / "timelapse"
     frames_dir = timelapse_dir / "frames"
     frames_dir.mkdir(parents=True)
+
     for i in range(1, n_frames + 1):
         (frames_dir / f"shot_{i:04}.jpg").write_bytes(b"")
+
     if cover:
         (timelapse_dir / "cover.jpg").write_bytes(b"")
+
     if sounds:
         sound_dir = timelapse_dir / "sound"
         sound_dir.mkdir()
+
         for name in sounds:
             (sound_dir / name).write_bytes(b"")
+
     return timelapse_dir
 
 
@@ -146,7 +150,7 @@ def test_partial_timeline_selection_keeps_only_chosen_sound(tmp_path):
     assert track_item_count(xml) == 1
     assert {"alpha.mp3", "beta.mp3"} <= panel_item_names(xml)
     # The single track item must be beta, not alpha.
-    blocks = parse_toplevel_blocks(xml)
+    blocks = Xml(xml).toplevel_blocks()
     text_by_id = {
         (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
         for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
@@ -176,7 +180,7 @@ def test_timeline_sounds_are_laid_out_sequentially(tmp_path):
 def _audio_track_items_region(xml: str) -> str:
     """Concatenated AudioClipTrackItem blocks (where timeline Start/End live)."""
     return "".join(
-        b.text for b in parse_toplevel_blocks(xml) if b.tag == "AudioClipTrackItem"
+        b.text for b in Xml(xml).toplevel_blocks() if b.tag == "AudioClipTrackItem"
     )
 
 
@@ -198,7 +202,7 @@ def test_reproduces_wolfday_template_structure(tmp_path):
         template = f.read().decode("utf-8")
 
     def tag_counts(project: str) -> Counter:
-        return Counter(b.tag for b in parse_toplevel_blocks(project))
+        return Counter(b.tag for b in Xml(project).toplevel_blocks())
 
     assert tag_counts(xml) == tag_counts(template)
     assert_structurally_sound(xml)
@@ -269,7 +273,7 @@ def test_selector_matches_by_name_or_stem(tmp_path):
 
 def test_parse_toplevel_blocks_roundtrip():
     xml = "<Project>\n\t<Foo ObjectID=\"1\">\n\t\t<Bar/>\n\t</Foo>\n\t<Baz ObjectID=\"2\"/>\n</Project>\n"
-    blocks = parse_toplevel_blocks(xml)
+    blocks = Xml(xml).toplevel_blocks()
     assert [b.tag for b in blocks] == ["Foo", "Baz"]
     # Offsets slice the exact block text back out.
     for b in blocks:
