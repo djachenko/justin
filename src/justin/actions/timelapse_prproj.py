@@ -77,14 +77,27 @@ _AUDIO_ONLY_EXTS = AUDIO_ONLY_EXTENSIONS
 
 @dataclass
 class TimelapseSettings:
-    name: str
-    timelapse_dir: Path
-    cover: Path | None
-    sounds: list[Path]
+    sources: TimelapseSources
     fps: float = 10.0
     # Which sounds should sit on the timeline. Anything not listed here stays
     # only in the project's clip list. Empty means: nothing on the timeline.
     timeline_sounds: list[str] = field(default_factory=list)
+
+    @property
+    def name(self) -> str:
+        return self.sources.name
+
+    @property
+    def timelapse_dir(self) -> Path:
+        return self.sources.folder
+
+    @property
+    def cover(self) -> Path | None:
+        return self.sources.cover
+
+    @property
+    def sounds(self) -> list[Path]:
+        return self.sources.sounds or []
 
     @property
     def timeline_sound_paths(self) -> list[Path]:
@@ -104,28 +117,7 @@ def from_timelapse_dir(
 ) -> TimelapseSettings:
     timelapse_dir = timelapse_dir.resolve()
     sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
-
-    return TimelapseSettings(
-        name=sources.name,
-        timelapse_dir=timelapse_dir,
-        cover=sources.cover,
-        sounds=sources.sounds or [],
-        fps=fps,
-        timeline_sounds=list(timeline_sounds or []),
-    )
-
-
-def _count_frames(frames_dir: Path) -> int:
-    return len(list(frames_dir.glob("*.jpg")) + list(frames_dir.glob("*.jpeg")))
-
-
-def _first_frame(frames_dir: Path) -> str:
-    frames = sorted(frames_dir.glob("*.jpg")) + sorted(frames_dir.glob("*.jpeg"))
-
-    if not frames:
-        raise ValueError(f"No JPG files in {frames_dir}")
-
-    return frames[0].name
+    return TimelapseSettings(sources=sources, fps=fps, timeline_sounds=list(timeline_sounds or []))
 
 
 
@@ -144,9 +136,8 @@ class TimelapseSchema:
     def __call__(self, output_path: Path, settings: TimelapseSettings) -> Path:
         timeline_sounds = settings.timeline_sound_paths
 
-        frames_dir = settings.timelapse_dir / "frames"
-        n_frames = _count_frames(frames_dir)
-        first_frame = _first_frame(frames_dir)
+        n_frames = settings.sources.frames_count
+        first_frame = settings.sources.first_frame.name
 
         fps_ticks = int(PREMIERE_TIMEBASE / settings.fps)
         frames_dur = n_frames * fps_ticks
@@ -562,23 +553,18 @@ class TimelapseSchema:
         xml.xml = xml.xml.replace(f"<End>{seq_dur}</End>", f"<End>{frames_dur}</End>")
 
 
-def generate_prproj(
-    timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] | None = None,
-) -> Path:
-    timelapse_dir = timelapse_dir.resolve()
-    settings = from_timelapse_dir(timelapse_dir, fps, timeline_sounds)
-    output_path = timelapse_dir / f"{settings.name}.prproj"
+def generate_prproj(settings: TimelapseSettings) -> Path:
+    output_path = settings.timelapse_dir / f"{settings.name}.prproj"
 
     # Don't clobber an existing project (it may have been edited by hand) — pick
     # the next free numbered name instead.
     if output_path.exists():
         i = 1
-        while (candidate := timelapse_dir / f"{settings.name}_{i}.prproj").exists():
+        while (candidate := settings.timelapse_dir / f"{settings.name}_{i}.prproj").exists():
             i += 1
         output_path = candidate
 
-    n_frames = _count_frames(timelapse_dir / "frames")
-    frames_line = str(n_frames)
+    frames_line = str(settings.sources.frames_count)
     if settings.cover:
         frames_line += " + cover"
     timeline_line = [s.name for s in settings.timeline_sound_paths] or "panel only"
@@ -586,7 +572,7 @@ def generate_prproj(
     print(f"Photoset:  {settings.name}")
     print(f"Frames:    {frames_line}")
     print(f"Sounds:    {[s.name for s in settings.sounds]}")
-    print(f"FPS:       {fps}")
+    print(f"FPS:       {settings.fps}")
     print(f"Timeline:  {timeline_line}")
 
     return TimelapseSchema()(output_path, settings)
