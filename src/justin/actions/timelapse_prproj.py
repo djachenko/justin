@@ -50,23 +50,41 @@ from justin.actions.timelapse_xml import (
 # Premiere measures time in "ticks". This many ticks make one second.
 PREMIERE_TIMEBASE = 254_016_000_000
 
-# The exact values that appear in the wolfday template, so we can find them and
-# replace them with the target's values. The template is: an image sequence +
-# a cover frame + one mp4 sound, 106 frames at 10 fps.
-_WD_FIRST_FRAME   = "26.04.17.wolfday_0001.jpg"
-_WD_SOUND_NAME    = "snejnye_volki.mp4"
-_WD_PHOTOSET      = "26.04.17.wolfday"
-_WD_FPS_TICKS     = 25401600000    # length of one frame at 10 fps = one second / 10
-_WD_N_FRAMES      = 106
-_WD_FRAMES_DUR    = _WD_N_FRAMES * _WD_FPS_TICKS          # total length of the frames
-_WD_SEQ_DUR       = (_WD_N_FRAMES + 1) * _WD_FPS_TICKS    # frames plus the extra cover frame
-
 _TEMPLATE_PATH = (
     Path(__file__).parent.parent
     / "resources"
     / "timelapse_templates"
     / "step_12_sound_in_timeline.prproj"
 )
+
+
+@dataclass(frozen=True)
+class _TemplateConstants:
+    first_frame: str  # first frame filename as it appears in the template
+    photoset: str     # photoset name (prefix of first_frame before the counter)
+    sound_name: str   # sound filename as it appears in the template
+    fps_ticks: int    # one frame's duration in ticks
+    frames_dur: int   # total image-sequence duration in ticks
+    seq_dur: int      # full sequence duration (frames + one cover frame) in ticks
+
+    @classmethod
+    def load(cls, path: Path) -> "_TemplateConstants":
+        xml = Xml.from_prproj(path).xml
+        first_frame = re.search(r'\./frames/([^<\s"]+\.jpe?g)', xml).group(1)
+        sound_name  = re.search(r'\./sound/([^<\s"]+)', xml).group(1)
+        fps_ticks   = int(re.search(r'<FrameRate>(\d+)</FrameRate>', xml).group(1))
+        frames_dur  = int(re.search(r'<OriginalDuration>(\d+)</OriginalDuration>', xml).group(1))
+        return cls(
+            first_frame=first_frame,
+            photoset=re.sub(r'_\d+\.jpe?g$', '', first_frame),
+            sound_name=sound_name,
+            fps_ticks=fps_ticks,
+            frames_dur=frames_dur,
+            seq_dur=frames_dur + fps_ticks,
+        )
+
+
+_TMPL = _TemplateConstants.load(_TEMPLATE_PATH)
 
 # Formats that carry sound only, no picture. The template's sound is an mp4
 # (which has a video part), so for these we have to remove that video part —
@@ -162,9 +180,9 @@ class TimelapseSchema:
         else:
             first_sound_name = settings.sounds[0].name
 
-            if first_sound_name != _WD_SOUND_NAME:
-                xml.xml = xml.xml.replace(f"./sound/{_WD_SOUND_NAME}", f"./sound/{first_sound_name}")
-                xml.xml = xml.xml.replace(_WD_SOUND_NAME, first_sound_name)
+            if first_sound_name != _TMPL.sound_name:
+                xml.xml = xml.xml.replace(f"./sound/{_TMPL.sound_name}", f"./sound/{first_sound_name}")
+                xml.xml = xml.xml.replace(_TMPL.sound_name, first_sound_name)
 
             if Path(first_sound_name).suffix.lower() in _AUDIO_ONLY_EXTS:
                 self._adapt_sound_to_audio_only(xml, first_sound_name)
@@ -190,24 +208,24 @@ class TimelapseSchema:
     def _substitute_paths(xml: Xml, settings: TimelapseSettings, first_frame: str) -> None:
         # Swap every mention of the template's folders/names for the target's.
         # Both photosets live in the same stage dir, so derive the wolfday path from that.
-        wolfday_dir = settings.timelapse_dir.parent.parent / _WD_PHOTOSET / "timelapse"
+        wolfday_dir = settings.timelapse_dir.parent.parent / _TMPL.photoset / "timelapse"
         xml.xml = xml.xml.replace(str(wolfday_dir), str(settings.timelapse_dir))
-        xml.xml = xml.xml.replace(f"./frames/{_WD_FIRST_FRAME}", f"./frames/{first_frame}")
-        xml.xml = xml.xml.replace(_WD_FIRST_FRAME, first_frame)
-        xml.xml = xml.xml.replace(_WD_PHOTOSET, settings.name)
+        xml.xml = xml.xml.replace(f"./frames/{_TMPL.first_frame}", f"./frames/{first_frame}")
+        xml.xml = xml.xml.replace(_TMPL.first_frame, first_frame)
+        xml.xml = xml.xml.replace(_TMPL.photoset, settings.name)
 
     @staticmethod
     def _substitute_ticks(xml: Xml, fps_ticks: int, frames_dur: int, seq_dur: int) -> None:
         # Frame rate: how long one frame lasts.
         for tag in ("OveriddenFrameRate", "FrameRate"):
-            xml.xml = xml.xml.replace(f"<{tag}>{_WD_FPS_TICKS}</{tag}>", f"<{tag}>{fps_ticks}</{tag}>")
+            xml.xml = xml.xml.replace(f"<{tag}>{_TMPL.fps_ticks}</{tag}>", f"<{tag}>{fps_ticks}</{tag}>")
 
-        xml.xml = xml.xml.replace(f"<End>{_WD_FPS_TICKS}</End>", f"<End>{fps_ticks}</End>")          # where the cover frame ends
-        xml.xml = xml.xml.replace(f"<Start>{_WD_FPS_TICKS}</Start>", f"<Start>{fps_ticks}</Start>")  # where the frames clip starts
-        xml.xml = xml.xml.replace(f"<End>{_WD_SEQ_DUR}</End>", f"<End>{seq_dur}</End>")              # where the frames clip ends (after the cover)
+        xml.xml = xml.xml.replace(f"<End>{_TMPL.fps_ticks}</End>", f"<End>{fps_ticks}</End>")          # where the cover frame ends
+        xml.xml = xml.xml.replace(f"<Start>{_TMPL.fps_ticks}</Start>", f"<Start>{fps_ticks}</Start>")  # where the frames clip starts
+        xml.xml = xml.xml.replace(f"<End>{_TMPL.seq_dur}</End>", f"<End>{seq_dur}</End>")              # where the frames clip ends (after the cover)
 
         for tag in ("OriginalDuration", "OutPoint", "MZ.WorkOutPoint"):
-            xml.xml = xml.xml.replace(f"<{tag}>{_WD_FRAMES_DUR}</{tag}>", f"<{tag}>{frames_dur}</{tag}>")
+            xml.xml = xml.xml.replace(f"<{tag}>{_TMPL.frames_dur}</{tag}>", f"<{tag}>{frames_dur}</{tag}>")
 
     @staticmethod
     def _clear_audio_caches(xml: Xml) -> None:
@@ -313,7 +331,7 @@ class TimelapseSchema:
     @staticmethod
     def _remove_sound(xml: Xml) -> None:
         """Remove the template's sound completely (this timelapse has none)."""
-        sound_blocks = [b for b in xml.toplevel_blocks() if _WD_SOUND_NAME in b.text]
+        sound_blocks = [b for b in xml.toplevel_blocks() if _TMPL.sound_name in b.text]
         xml.remove_blocks_by_positions([(b.start, b.end) for b in sound_blocks])
 
     # В чем прикол именно экстра саундс? Почему нельзя сделать... То есть есть какой-то первый саунд и к нему добавляются остальные, а почему нельзя просто взять и добавить все вместе? Типа убираем исходный и добавляем новые туда же.
