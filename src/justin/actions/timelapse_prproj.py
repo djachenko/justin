@@ -60,23 +60,27 @@ _TEMPLATE_PATH = (
 
 @dataclass(frozen=True)
 class _TemplateConstants:
-    first_frame: str  # first frame filename as it appears in the template
-    photoset: str     # photoset name (prefix of first_frame before the counter)
-    sound_name: str   # sound filename as it appears in the template
-    fps_ticks: int    # one frame's duration in ticks
-    frames_dur: int   # total image-sequence duration in ticks
-    seq_dur: int      # full sequence duration (frames + one cover frame) in ticks
+    timelapse_dir: str  # absolute path to the template's timelapse folder
+    first_frame: str    # first frame filename as it appears in the template
+    photoset: str       # photoset name (prefix of first_frame before the counter)
+    sound_name: str     # sound filename as it appears in the template
+    fps_ticks: int      # one frame's duration in ticks
+    frames_dur: int     # total image-sequence duration in ticks
+    seq_dur: int        # full sequence duration (frames + one cover frame) in ticks
 
     @classmethod
     def load(cls, path: Path) -> "_TemplateConstants":
         xml = Xml.from_prproj(path).xml
-        first_frame = re.search(r'\./frames/([^<\s"]+\.jpe?g)', xml).group(1)
-        sound_name  = re.search(r'\./sound/([^<\s"]+)', xml).group(1)
-        fps_ticks   = int(re.search(r'<FrameRate>(\d+)</FrameRate>', xml).group(1))
-        frames_dur  = int(re.search(r'<OriginalDuration>(\d+)</OriginalDuration>', xml).group(1))
+        first_frame   = re.search(r'\./frames/([^<\s"]+\.jpe?g)', xml).group(1)
+        photoset      = re.sub(r'_\d+\.jpe?g$', '', first_frame)
+        sound_name    = re.search(r'\./sound/([^<\s"]+)', xml).group(1)
+        fps_ticks     = int(re.search(r'<FrameRate>(\d+)</FrameRate>', xml).group(1))
+        frames_dur    = int(re.search(r'<OriginalDuration>(\d+)</OriginalDuration>', xml).group(1))
+        timelapse_dir = re.search(r'([^\s<>"]+/' + re.escape(photoset) + r'/timelapse)', xml).group(1)
         return cls(
+            timelapse_dir=timelapse_dir,
             first_frame=first_frame,
-            photoset=re.sub(r'_\d+\.jpe?g$', '', first_frame),
+            photoset=photoset,
             sound_name=sound_name,
             fps_ticks=fps_ticks,
             frames_dur=frames_dur,
@@ -207,9 +211,7 @@ class TimelapseSchema:
     @staticmethod
     def _substitute_paths(xml: Xml, settings: TimelapseSettings, first_frame: str) -> None:
         # Swap every mention of the template's folders/names for the target's.
-        # Both photosets live in the same stage dir, so derive the wolfday path from that.
-        wolfday_dir = settings.timelapse_dir.parent.parent / _TMPL.photoset / "timelapse"
-        xml.xml = xml.xml.replace(str(wolfday_dir), str(settings.timelapse_dir))
+        xml.xml = xml.xml.replace(_TMPL.timelapse_dir, str(settings.timelapse_dir))
         xml.xml = xml.xml.replace(f"./frames/{_TMPL.first_frame}", f"./frames/{first_frame}")
         xml.xml = xml.xml.replace(_TMPL.first_frame, first_frame)
         xml.xml = xml.xml.replace(_TMPL.photoset, settings.name)
