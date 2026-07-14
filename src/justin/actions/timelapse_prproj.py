@@ -42,7 +42,7 @@ from pathlib import Path
 
 from justin.actions.timelapse_sources import AUDIO_ONLY_EXTENSIONS, TimelapseSources
 from justin.actions.timelapse_xml import (
-    Block, Xml,
+    Xml,
     collect_sound_closure as _collect_sound_closure,
     clone_sound_blocks as _clone_sound_blocks,
 )
@@ -53,7 +53,6 @@ PREMIERE_TIMEBASE = 254_016_000_000
 # The exact values that appear in the wolfday template, so we can find them and
 # replace them with the target's values. The template is: an image sequence +
 # a cover frame + one mp4 sound, 106 frames at 10 fps.
-_WD_TIMELAPSE_DIR = "/Users/justin/photos/stages/stage1.filter/26.04.17.wolfday/timelapse"
 _WD_FIRST_FRAME   = "26.04.17.wolfday_0001.jpg"
 _WD_SOUND_NAME    = "snejnye_volki.mp4"
 _WD_PHOTOSET      = "26.04.17.wolfday"
@@ -125,8 +124,11 @@ def _probe_duration_ticks(path: Path) -> int:
     """Ask ffprobe how long a media file is, and give it back in Premiere ticks."""
     probe = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
+
     return int(float(probe.stdout.strip()) * PREMIERE_TIMEBASE)
 
 
@@ -187,7 +189,9 @@ class TimelapseSchema:
     @staticmethod
     def _substitute_paths(xml: Xml, settings: TimelapseSettings, first_frame: str) -> None:
         # Swap every mention of the template's folders/names for the target's.
-        xml.xml = xml.xml.replace(_WD_TIMELAPSE_DIR, str(settings.timelapse_dir))
+        # Both photosets live in the same stage dir, so derive the wolfday path from that.
+        wolfday_dir = settings.timelapse_dir.parent.parent / _WD_PHOTOSET / "timelapse"
+        xml.xml = xml.xml.replace(str(wolfday_dir), str(settings.timelapse_dir))
         xml.xml = xml.xml.replace(f"./frames/{_WD_FIRST_FRAME}", f"./frames/{first_frame}")
         xml.xml = xml.xml.replace(_WD_FIRST_FRAME, first_frame)
         xml.xml = xml.xml.replace(_WD_PHOTOSET, settings.name)

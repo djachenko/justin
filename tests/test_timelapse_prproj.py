@@ -281,7 +281,7 @@ def test_parse_toplevel_blocks_roundtrip():
 
 
 def test_clone_shifts_ids_and_renames():
-    block = tlp.Block(
+    block = Block(
         0, 0, "Media",
         '\t<Media ObjectID="5" ClassID="cccccccc-cccc-cccc-cccc-cccccccccccc">'
         '<Name>old.mp3</Name><Sub ObjectRef="5"/></Media>\n',
