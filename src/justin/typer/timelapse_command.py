@@ -4,7 +4,8 @@ from typing import Annotated, Iterable, List
 import typer
 from typer import Typer, Argument, Option
 
-from justin.actions.timelapse_prproj import TimelapseSettings, generate_prproj
+from justin.actions.timelapse_prproj import generate_prproj
+from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.shared.context import Context
 from justin.typer.base_commands.pattern_command import Extra
@@ -17,20 +18,15 @@ class TimelapseCommand(DestinationsAwareCommand):
         self,
         context: Context,
         patterns: Iterable[Path],
-        fps: float,
-        timeline_sounds: list[str],
+        settings: TimelapseSettings,
     ) -> None:
         super().__init__(context, patterns)
 
-        self.__fps = fps
-        self.__timeline_sounds = timeline_sounds
+        self.__settings = settings
 
     def handle_timelapse(self, timelapse_folder: Folder, extra: Extra) -> None:
-        name = extra[TimelapseCommand.SET_NAME]
-        sources = TimelapseSources.from_folder(name, timelapse_folder.path)
-        settings = TimelapseSettings(sources=sources, fps=self.__fps, timeline_sounds=self.__timeline_sounds)
-
-        output = generate_prproj(settings)
+        sources = TimelapseSources.from_folder(extra[self.SET_NAME], timelapse_folder.path)
+        output = generate_prproj(sources, self.__settings)
 
         typer.echo(f"Created: {output}")
 
@@ -48,4 +44,10 @@ def timelapse(
         fps: Annotated[float, Option(help="Image sequence FPS")] = 10.0,
         timeline_sound: Annotated[list[str], Option(help="Sound (filename or stem) to lay on the timeline; repeatable. Default: all sounds panel-only")] = [],
 ) -> None:
-    TimelapseCommand(context.obj, pattern, fps, timeline_sound).run()
+    settings = TimelapseSettings(fps=fps, timeline_sounds=timeline_sound)
+
+    TimelapseCommand(
+        context.obj,
+        pattern,
+        settings
+    ).run()
