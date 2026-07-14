@@ -22,10 +22,12 @@ from justin.actions import timelapse_prproj as tlp
 from justin.actions.timelapse_prproj import (
     PREMIERE_TIMEBASE,
     TimelapseSchema,
-    from_timelapse_dir,
+    _resolve_timeline_sounds,
     generate_prproj,
     _TEMPLATE_PATH,
 )
+from justin.actions.timelapse_settings import TimelapseSettings
+from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_xml import Block, Xml, clone_sound_blocks as _clone_sound_blocks
 
 
@@ -107,10 +109,11 @@ def assert_structurally_sound(xml: str) -> None:
     assert not duplicate_uuids(xml)
 
 
-def generate(timelapse_dir: Path, **kwargs) -> str:
-    settings = from_timelapse_dir(timelapse_dir, **kwargs)
+def generate(timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] | None = None) -> str:
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    settings = TimelapseSettings(fps=fps, timeline_sounds=timeline_sounds or [])
     out = timelapse_dir / "out.prproj"
-    TimelapseSchema()(out, settings)
+    TimelapseSchema()(out, sources, settings)
     return read_project(out)
 
 
@@ -251,8 +254,9 @@ def test_no_sound_project_is_valid(tmp_path):
 
 def test_generate_numbers_output_instead_of_overwriting(tmp_path):
     timelapse_dir = make_timelapse(tmp_path, photoset="26.05.31.numbered", sounds=("alpha.mp3",))
-    first = generate_prproj(from_timelapse_dir(timelapse_dir))
-    second = generate_prproj(from_timelapse_dir(timelapse_dir))
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    first = generate_prproj(sources)
+    second = generate_prproj(sources)
 
     assert first.name == "26.05.31.numbered.prproj"
     assert second.name == "26.05.31.numbered_1.prproj"
@@ -261,10 +265,11 @@ def test_generate_numbers_output_instead_of_overwriting(tmp_path):
 
 def test_selector_matches_by_name_or_stem(tmp_path):
     timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
-    by_stem = from_timelapse_dir(timelapse_dir, timeline_sounds=["alpha"])
-    by_name = from_timelapse_dir(timelapse_dir, timeline_sounds=["alpha.mp3"])
-    assert [p.name for p in by_stem.timeline_sound_paths] == ["alpha.mp3"]
-    assert [p.name for p in by_name.timeline_sound_paths] == ["alpha.mp3"]
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    by_stem = _resolve_timeline_sounds(sources.sounds, ["alpha"])
+    by_name = _resolve_timeline_sounds(sources.sounds, ["alpha.mp3"])
+    assert [p.name for p in by_stem] == ["alpha.mp3"]
+    assert [p.name for p in by_name] == ["alpha.mp3"]
 
 
 # --------------------------------------------------------------------------- #
