@@ -22,7 +22,7 @@ to describe the timelapse we actually want:
     list (``_layout_sounds_in_timeline`` / ``_remove_sounds_from_timeline``);
   * throw away the cover frame or the sound entirely if the timelapse has none.
 
-Every block carries ids so other blocks can refer to it. There are two flavours
+Every block carries ids so other blocks can refer to it. There are two flavors
 of id, and the difference bites you if you ignore it:
 
   * ``ObjectID`` / ``ObjectRef`` — plain small numbers. A number is unique only
@@ -37,9 +37,10 @@ splice them back in with ordinary string slicing.
 
 import re
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
+from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sources import AUDIO_ONLY_EXTENSIONS, TimelapseSources
 from justin.actions.timelapse_xml import (
     Xml,
@@ -75,49 +76,9 @@ _TMPL_SEQ_DUR    = (_TMPL_N_FRAMES + 1) * _TMPL_FPS_TICKS
 _AUDIO_ONLY_EXTS = AUDIO_ONLY_EXTENSIONS
 
 
-@dataclass
-class TimelapseSettings:
-    sources: TimelapseSources
-    fps: float = 10.0
-    # Which sounds should sit on the timeline. Anything not listed here stays
-    # only in the project's clip list. Empty means: nothing on the timeline.
-    timeline_sounds: list[str] = field(default_factory=list)
 
-    @property
-    def name(self) -> str:
-        return self.sources.name
-
-    @property
-    def timelapse_dir(self) -> Path:
-        return self.sources.folder
-
-    @property
-    def cover(self) -> Path | None:
-        return self.sources.cover
-
-    @property
-    def sounds(self) -> list[Path]:
-        return self.sources.sounds or []
-
-    @property
-    def timeline_sound_paths(self) -> list[Path]:
-        """The chosen timeline sounds, in the same order as ``sounds``.
-
-        You can name a sound by its full filename or just its stem, so both
-        "teoretiki.mp3" and "teoretiki" pick the same file.
-        """
-        return [
-            s for s in self.sounds
-            if s.name in self.timeline_sounds or s.stem in self.timeline_sounds
-        ]
-
-
-def from_timelapse_dir(
-    timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] | None = None,
-) -> TimelapseSettings:
-    timelapse_dir = timelapse_dir.resolve()
-    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
-    return TimelapseSettings(sources=sources, fps=fps, timeline_sounds=list(timeline_sounds or []))
+def _resolve_timeline_sounds(sounds: list[Path], timeline_sounds: list[str]) -> list[Path]:
+    return [s for s in sounds if s.name in timeline_sounds or s.stem in timeline_sounds]
 
 
 
@@ -136,32 +97,33 @@ def _probe_duration_ticks(path: Path) -> int:
 @dataclass(frozen=True)
 class TimelapseSchema:
 
-    def __call__(self, output_path: Path, settings: TimelapseSettings) -> Path:
-        timeline_sounds = settings.timeline_sound_paths
+    def __call__(
+        self,
+        output_path: Path,
+        sources: TimelapseSources,
+        settings: TimelapseSettings = TimelapseSettings(),
+    ) -> Path:
+        sounds = sources.sounds or []
+        timeline_sound_paths = _resolve_timeline_sounds(sounds, settings.timeline_sounds)
 
-        n_frames = settings.sources.frames_count
-        first_frame = settings.sources.first_frame.name
+        frame_count = sources.frames_count
+        first_frame = sources.first_frame.name
 
-        fps_ticks = int(PREMIERE_TIMEBASE / settings.fps)
-        frames_dur = n_frames * fps_ticks
-
-        # The cover, if there is one, is shown as one extra frame before the
-        # sequence proper, so it adds one frame's worth of length.
-        n_seq_frames = n_frames
-        if settings.cover:
-            n_seq_frames += 1
-        seq_dur = n_seq_frames * fps_ticks
+        ticks_per_frame = int(PREMIERE_TIMEBASE / settings.fps)
+        image_sequence_duration = frame_count * ticks_per_frame
+        # The cover occupies one extra frame at the start of the sequence.
+        sequence_duration = (frame_count + (1 if sources.cover else 0)) * ticks_per_frame
 
         xml = Xml.from_prproj(_TEMPLATE_PATH)
 
-        self._substitute_paths(xml, settings, first_frame)
-        self._substitute_ticks(xml, fps_ticks, frames_dur, seq_dur)
+        self._substitute_paths(xml, sources.name, first_frame)
+        self._substitute_ticks(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
         self._clear_audio_caches(xml)
 
-        if not settings.sounds:
+        if not sounds:
             self._remove_sound(xml)
         else:
-            first_sound_name = settings.sounds[0].name
+            first_sound_name = sounds[0].name
 
             if first_sound_name != _TMPL_SOUND_NAME:
                 xml.xml = xml.xml.replace(f"./sound/{_TMPL_SOUND_NAME}", f"./sound/{first_sound_name}")
@@ -170,17 +132,17 @@ class TimelapseSchema:
             if Path(first_sound_name).suffix.lower() in _AUDIO_ONLY_EXTS:
                 self._adapt_sound_to_audio_only(xml, first_sound_name)
 
-            if len(settings.sounds) > 1:
-                self._add_extra_sounds(xml, settings.sounds, bool(timeline_sounds))
+            if len(sounds) > 1:
+                self._add_extra_sounds(xml, sounds, bool(timeline_sound_paths))
 
-            keep_on_timeline = {sound.name for sound in timeline_sounds}
+            keep_on_timeline = {sound.name for sound in timeline_sound_paths}
             self._remove_sounds_from_timeline(xml, keep_on_timeline)
 
-            if timeline_sounds:
-                self._layout_sounds_in_timeline(xml, timeline_sounds)
+            if timeline_sound_paths:
+                self._layout_sounds_in_timeline(xml, timeline_sound_paths)
 
-        if not settings.cover:
-            self._remove_cover(xml, fps_ticks, frames_dur, seq_dur)
+        if not sources.cover:
+            self._remove_cover(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
 
         xml.remove_dangling_refs()
         xml.to_prproj(output_path)
@@ -188,25 +150,25 @@ class TimelapseSchema:
         return output_path
 
     @staticmethod
-    def _substitute_paths(xml: Xml, settings: TimelapseSettings, first_frame: str) -> None:
+    def _substitute_paths(xml: Xml, name: str, first_frame: str) -> None:
         # Premiere uses relative paths (./frames/, ./sound/) to locate media,
         # so we only need to swap the per-filename placeholders and the project name.
         xml.xml = xml.xml.replace(f"./frames/{_TMPL_FIRST_FRAME}", f"./frames/{first_frame}")
         xml.xml = xml.xml.replace(_TMPL_FIRST_FRAME, first_frame)
-        xml.xml = xml.xml.replace(_TMPL_PHOTOSET, settings.name)
+        xml.xml = xml.xml.replace(_TMPL_PHOTOSET, name)
 
     @staticmethod
-    def _substitute_ticks(xml: Xml, fps_ticks: int, frames_dur: int, seq_dur: int) -> None:
+    def _substitute_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
         # Frame rate: how long one frame lasts.
         for tag in ("OveriddenFrameRate", "FrameRate"):
-            xml.xml = xml.xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{fps_ticks}</{tag}>")
+            xml.xml = xml.xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
 
-        xml.xml = xml.xml.replace(f"<End>{_TMPL_FPS_TICKS}</End>", f"<End>{fps_ticks}</End>")          # where the cover frame ends
-        xml.xml = xml.xml.replace(f"<Start>{_TMPL_FPS_TICKS}</Start>", f"<Start>{fps_ticks}</Start>")  # where the frames clip starts
-        xml.xml = xml.xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{seq_dur}</End>")              # where the frames clip ends (after the cover)
+        xml.xml = xml.xml.replace(f"<End>{_TMPL_FPS_TICKS}</End>", f"<End>{ticks_per_frame}</End>")          # where the cover frame ends
+        xml.xml = xml.xml.replace(f"<Start>{_TMPL_FPS_TICKS}</Start>", f"<Start>{ticks_per_frame}</Start>")  # where the frames clip starts
+        xml.xml = xml.xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{sequence_duration}</End>")          # where the frames clip ends (after the cover)
 
         for tag in ("OriginalDuration", "OutPoint", "MZ.WorkOutPoint"):
-            xml.xml = xml.xml.replace(f"<{tag}>{_TMPL_FRAMES_DUR}</{tag}>", f"<{tag}>{frames_dur}</{tag}>")
+            xml.xml = xml.xml.replace(f"<{tag}>{_TMPL_FRAMES_DUR}</{tag}>", f"<{tag}>{image_sequence_duration}</{tag}>")
 
     @staticmethod
     def _clear_audio_caches(xml: Xml) -> None:
@@ -540,7 +502,7 @@ class TimelapseSchema:
     # Здесь нужно еще обработать кейс, когда кавер на таймлайне, но мы его удаляем и соответственно надо весь таймлайн сдвинуть влево.
     # Или это здесь уже обрабатывается что ли?
     @staticmethod
-    def _remove_cover(xml: Xml, fps_ticks: int, frames_dur: int, seq_dur: int) -> None:
+    def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
         """Remove the cover frame and slide the image sequence back to the start."""
         # Cut the cover's own media chunks (the ones that name cover.jpg). The
         # rest of the cover's cluster (its VideoClip, its timeline slot, its slot
@@ -550,32 +512,35 @@ class TimelapseSchema:
         xml.remove_blocks_by_positions([(b.start, b.end) for b in cover_blocks])
         xml.remove_dangling_refs()
 
-        # The frames clip used to sit one cover-frame in, from [fps_ticks → seq_dur].
-        # With the cover gone it starts at the very beginning: [0 → frames_dur].
-        xml.xml = xml.xml.replace(f"<Start>{fps_ticks}</Start>", "<Start>0</Start>")
-        xml.xml = xml.xml.replace(f"<End>{seq_dur}</End>", f"<End>{frames_dur}</End>")
+        # The frames clip used to sit one cover-frame in, from [ticks_per_frame → sequence_duration].
+        # With the cover gone it starts at the very beginning: [0 → image_sequence_duration].
+        xml.xml = xml.xml.replace(f"<Start>{ticks_per_frame}</Start>", "<Start>0</Start>")
+        xml.xml = xml.xml.replace(f"<End>{sequence_duration}</End>", f"<End>{image_sequence_duration}</End>")
 
 
-def generate_prproj(settings: TimelapseSettings) -> Path:
-    output_path = settings.timelapse_dir / f"{settings.name}.prproj"
+def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = TimelapseSettings()) -> Path:
+    output_path = sources.folder / f"{sources.name}.prproj"
 
     # Don't clobber an existing project (it may have been edited by hand) — pick
     # the next free numbered name instead.
     if output_path.exists():
         i = 1
-        while (candidate := settings.timelapse_dir / f"{settings.name}_{i}.prproj").exists():
+        while (candidate := sources.folder / f"{sources.name}_{i}.prproj").exists():
             i += 1
         output_path = candidate
 
-    frames_line = str(settings.sources.frames_count)
-    if settings.cover:
-        frames_line += " + cover"
-    timeline_line = [s.name for s in settings.timeline_sound_paths] or "panel only"
+    sounds = sources.sounds or []
+    timeline_sound_paths = _resolve_timeline_sounds(sounds, settings.timeline_sounds)
 
-    print(f"Photoset:  {settings.name}")
+    frames_line = str(sources.frames_count)
+    if sources.cover:
+        frames_line += " + cover"
+    timeline_line = [s.name for s in timeline_sound_paths] or "panel only"
+
+    print(f"Photoset:  {sources.name}")
     print(f"Frames:    {frames_line}")
-    print(f"Sounds:    {[s.name for s in settings.sounds]}")
+    print(f"Sounds:    {[s.name for s in sounds]}")
     print(f"FPS:       {settings.fps}")
     print(f"Timeline:  {timeline_line}")
 
-    return TimelapseSchema()(output_path, settings)
+    return TimelapseSchema()(output_path, sources, settings)
