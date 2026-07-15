@@ -68,6 +68,9 @@ ClassID и `ESP.PresetGuid` оставлять как есть. Если пер�
 - Всё в **тиках**: `PREMIERE_TIMEBASE = 254_016_000_000` тик/сек.
 - Кадр при 10 fps = `254_016_000_000 / 10 = 25_401_600_000` тик.
 - Длительность аудио в тиках = `секунды_ffprobe * PREMIERE_TIMEBASE`.
+- **fps хранится в двух местах** (оба нужно менять):
+  - `VideoStream <OveriddenFrameRate>` — интерпретированный fps image sequence («Interpret Footage»); рядом `<IsFrameRateOverridden>true</IsFrameRateOverridden>`.
+  - `TrackGroup <FrameRate>` — fps секвенции/таймлайна (встречается дважды).
 - Длительность клипа хранится в НЕСКОЛЬКИХ местах, должны быть согласованы:
   `TrackItem <End>` (позиция конца на дорожке), `AudioClip <OutPoint>` (длина клипа),
   `MasterClip <OriginalDuration>`, `Media`, `AudioStream`.

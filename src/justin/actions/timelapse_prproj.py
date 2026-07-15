@@ -83,9 +83,18 @@ _TMPL_N_FRAMES   = 106
 _TMPL_FRAMES_DUR = _TMPL_N_FRAMES * _TMPL_FPS_TICKS
 _TMPL_SEQ_DUR    = (_TMPL_N_FRAMES + 1) * _TMPL_FPS_TICKS
 
-# Formats that carry sound only, no picture. The template's sound is an mp4
-# (which has a video part), so for these we have to remove that video part —
-# see _adapt_sound_to_audio_only.
+_FPS_TICKS_TAGS = (
+    "OveriddenFrameRate",  # VideoStream: interpreted fps of the image sequence, ticks per frame
+    "FrameRate",           # TrackGroup: sequence (timeline) fps, ticks per frame
+    "End",                 # where the cover frame ends, ticks
+    "Start",               # where the frames clip starts, ticks
+)
+
+_FRAMES_DUR_TAGS = (
+    "OriginalDuration",    # native clip length, ticks
+    "OutPoint",            # where the clip ends in the viewer, ticks
+    "MZ.WorkOutPoint",     # work area end (render range), ticks
+)
 
 
 
@@ -166,15 +175,12 @@ class TimelapseSchema:
 
     @staticmethod
     def _substitute_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
-        # Frame rate: how long one frame lasts.
-        for tag in ("OveriddenFrameRate", "FrameRate"):
+        for tag in _FPS_TICKS_TAGS:
             xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
 
-        xml.replace(f"<End>{_TMPL_FPS_TICKS}</End>", f"<End>{ticks_per_frame}</End>")          # where the cover frame ends
-        xml.replace(f"<Start>{_TMPL_FPS_TICKS}</Start>", f"<Start>{ticks_per_frame}</Start>")  # where the frames clip starts
         xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{sequence_duration}</End>")          # where the frames clip ends (after the cover)
 
-        for tag in ("OriginalDuration", "OutPoint", "MZ.WorkOutPoint"):
+        for tag in _FRAMES_DUR_TAGS:
             xml.replace(f"<{tag}>{_TMPL_FRAMES_DUR}</{tag}>", f"<{tag}>{image_sequence_duration}</{tag}>")
 
     @staticmethod
