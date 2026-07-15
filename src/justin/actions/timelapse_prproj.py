@@ -35,14 +35,12 @@ finds where each block starts and ends in the raw text, and we cut blocks out or
 splice them back in with ordinary string slicing.
 """
 
-import re
 import subprocess
 from dataclasses import dataclass
 from importlib.resources import files as _resource_files
 from pathlib import Path
 from typing import TypeVar, Iterable, Callable
 
-from justin.actions.timelapse_re import _OBJECT_ID_RE, _OBJECT_UID_RE
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
@@ -51,6 +49,21 @@ from justin.actions.timelapse_xml import (
     Xml,
     collect_sound_closure as _collect_sound_closure,
     clone_sound_blocks as _clone_sound_blocks,
+)
+from justin.actions.timelapse_xml_ops import (
+    append_track_items_after,
+    audio_clip_track_item_id,
+    block_name,
+    block_uid,
+    clear_audio_cache_paths,
+    clip_project_item_uid,
+    clip_ref,
+    find_panel_item_index,
+    max_object_id,
+    remove_track_item_lines,
+    set_out_point,
+    set_slot_position,
+    subclip_ref,
 )
 
 # Premiere measures time in "ticks". This many ticks make one second.
@@ -170,11 +183,7 @@ class TimelapseSchema:
 
     @staticmethod
     def _clear_audio_caches(xml: Xml) -> None:
-        # The template remembers where it cached the waveform/peaks for its own
-        # sound, on the machine it was made on. Blank those paths so Premiere
-        # rebuilds the cache for our sound instead of trusting stale files.
-        xml.sub(r'<ConformedAudioPath>[^<]+</ConformedAudioPath>', '<ConformedAudioPath></ConformedAudioPath>')
-        xml.sub(r'<PeakFilePath>[^<]+</PeakFilePath>', '<PeakFilePath></PeakFilePath>')
+        clear_audio_cache_paths(xml)
 
     @staticmethod
     def _remove_sound(xml: Xml) -> None:
@@ -208,13 +217,13 @@ class TimelapseSchema:
 
         # Grab registration anchors before the template disappears.
         tmpl_panel = next((b for b in tmpl_blocks if b.tag == Tag.ClipProjectItem), None)
-        tmpl_panel_uid = re.search(_OBJECT_UID_RE, tmpl_panel.text).group(1) if tmpl_panel else None
+        tmpl_panel_uid = block_uid(tmpl_panel.text) if tmpl_panel else None
 
         tmpl_track = next((b for b in tmpl_blocks if b.tag == Tag.AudioClipTrackItem), None)
         tmpl_track_id = tmpl_track.id if tmpl_track else None
 
         insert_pos = max(b.end for b in tmpl_blocks)
-        max_id = max(int(i) for i in re.findall(_OBJECT_ID_RE, xml._xml))
+        max_id = max_object_id(xml)
 
         all_clones = ""
         new_panel_uids: list[str] = []
@@ -224,11 +233,11 @@ class TimelapseSchema:
             clone = _clone_sound_blocks(tmpl_blocks, _SOUND_NAME_MARKER, sound.name, (max_id + 1) * rank)
             all_clones += clone
 
-            if match := re.search(r'<ClipProjectItem ' + _OBJECT_UID_RE, clone):
-                new_panel_uids.append(match.group(1))
+            if uid := clip_project_item_uid(clone):
+                new_panel_uids.append(uid)
 
-            if match := re.search(r'<AudioClipTrackItem ' + _OBJECT_ID_RE, clone):
-                new_track_ids.append(match.group(1))
+            if tid := audio_clip_track_item_id(clone):
+                new_track_ids.append(tid)
 
         # Insert clones first (template positions still valid), then remove the template.
         # The stale panel/timeline entries are swept by remove_dangling_refs at the end.
@@ -240,10 +249,9 @@ class TimelapseSchema:
 
         # Register new clips in the project panel, anchored after the stale template entry.
         if tmpl_panel_uid and new_panel_uids:
-            anchor = re.search(rf'<Item Index="(\d+)" ObjectURef="{re.escape(tmpl_panel_uid)}"', xml._xml)
+            base = find_panel_item_index(xml, tmpl_panel_uid)
 
-            if anchor:
-                base = int(anchor.group(1))
+            if base is not None:
 
                 added = "".join(
                     f'\n\t\t\t\t<Item Index="{base + offset}" ObjectURef="{uid}"/>'
@@ -257,7 +265,7 @@ class TimelapseSchema:
 
         # Register clone timeline slots on the audio track.
         if timeline and new_track_ids and tmpl_track_id:
-            TimelapseSchema._append_track_items(xml, tmpl_track_id, new_track_ids)
+            append_track_items_after(xml, tmpl_track_id, new_track_ids)
 
     @staticmethod
     def _layout_sounds_in_timeline(xml: Xml, sounds: list[Sound]) -> None:
@@ -302,34 +310,26 @@ class TimelapseSchema:
             # Set where the clip sits on the track. It always has an end; it only
             # gets a start once we're past 0 (the very first clip has no start
             # written out, matching how the template stores it).
-            new_position = f'<End>{end}</End>'
-
-            if cursor:
-                new_position = f'<Start>{cursor}</Start>\n\t\t\t\t<End>{end}</End>'
-
-            positioned = re.sub(
-                r'(?:<Start>\d+</Start>\n\t+)?<End>\d+</End>', new_position, track_item.text, count=1,
-            )
-
+            positioned = set_slot_position(track_item.text, cursor or None, end)
             xml.replace_range(*track_item.span, positioned)
 
             # Set how much of the clip plays, via the AudioClip's end point. We
             # reach the AudioClip by following the slot's SubClip pointer. (Re-scan
             # the text first — the edit just above moved everything after it.)
-            subclip_ref = re.search(r'<SubClip ObjectRef="(\d+)"', track_item.text)
-            audio_clip_ref = None
+            subclip_id = subclip_ref(track_item.text)
+            audio_clip_id = None
 
-            if subclip_ref:
-                subclip_text = block_text_by_id[(Tag.SubClip, subclip_ref.group(1))]
-                audio_clip_ref = re.search(r'<Clip ObjectRef="(\d+)"', subclip_text)
+            if subclip_id:
+                subclip_text = block_text_by_id[(Tag.SubClip, subclip_id)]
+                audio_clip_id = clip_ref(subclip_text)
 
-            if audio_clip_ref:
-                audio_clip_text = block_text_by_id.get((Tag.AudioClip, audio_clip_ref.group(1)))
+            if audio_clip_id:
+                audio_clip_text = block_text_by_id.get((Tag.AudioClip, audio_clip_id))
                 if audio_clip_text and "<OutPoint>" in audio_clip_text:
-                    trimmed = re.sub(r'<OutPoint>\d+</OutPoint>', f'<OutPoint>{duration}</OutPoint>', audio_clip_text, count=1)
+                    trimmed = set_out_point(audio_clip_text, duration)
                     audio_clip = next(
                         (b for b in xml.toplevel_blocks()
-                         if b.tag == Tag.AudioClip and b.id == audio_clip_ref.group(1)),
+                         if b.tag == Tag.AudioClip and b.id == audio_clip_id),
                         None,
                     )
                     if audio_clip:
@@ -341,22 +341,17 @@ class TimelapseSchema:
     @staticmethod
     def _track_item_sound_name(track_item_text: str, block_text_by_id: dict) -> str | None:
         """Which sound file a timeline slot plays (read off its SubClip's Name)."""
-        subclip_ref = re.search(r'<SubClip ObjectRef="(\d+)"', track_item_text)
+        subclip_id = subclip_ref(track_item_text)
 
-        if not subclip_ref:
+        if not subclip_id:
             return None
 
-        subclip = block_text_by_id.get((Tag.SubClip, subclip_ref.group(1)))
+        subclip = block_text_by_id.get((Tag.SubClip, subclip_id))
 
         if not subclip:
             return None
 
-        name = re.search(r'<Name>([^<]+)</Name>', subclip)
-
-        if not name:
-            return None
-
-        return name.group(1)
+        return block_name(subclip)
 
     @staticmethod
     def _remove_sounds_from_timeline(xml: Xml, keep_names: set[str] = frozenset()) -> None:
@@ -397,34 +392,7 @@ class TimelapseSchema:
 
         dropped_ids = [blocks[i].id for i in dropped]
         xml.remove_blocks_by_positions([blocks[i].span for i in to_remove])
-        for track_item_id in dropped_ids:
-            xml.sub(rf'[^\S\n]*<TrackItem Index="\d+" ObjectRef="{track_item_id}"/>\n', '')
-
-    @staticmethod
-    def _append_track_items(xml: Xml, anchor_id: str, track_item_ids: list[str]) -> None:
-        """
-        Add the given timeline slots to the audio track's slot list.
-
-        There are several slot lists (one per track). We find the right one — the
-        audio track's — by locating the list that already contains the first
-        sound's slot (``anchor_id``), so we don't accidentally add to the video
-        track's list.
-        """
-        def append_after_last(track_items_block: re.Match) -> str:
-            listing = track_items_block.group(0)
-            existing = list(re.finditer(r'<TrackItem Index="(\d+)" ObjectRef="\d+"/>', listing))
-            last_index = int(existing[-1].group(1))
-            added = "".join(
-                f'\n\t\t\t\t\t<TrackItem Index="{last_index + offset}" ObjectRef="{track_item_id}"/>'
-                for offset, track_item_id in enumerate(track_item_ids, start=1)
-            )
-            return listing.replace(existing[-1].group(0), existing[-1].group(0) + added, 1)
-
-        xml.sub(
-            rf'<TrackItems Version="\d+">(?:(?!</TrackItems>).)*?'
-            rf'<TrackItem Index="\d+" ObjectRef="{anchor_id}"/>.*?</TrackItems>',
-            append_after_last, count=1, flags=re.DOTALL,
-        )
+        remove_track_item_lines(xml, dropped_ids)
 
     @staticmethod
     def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:

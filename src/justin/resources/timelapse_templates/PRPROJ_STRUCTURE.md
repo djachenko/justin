@@ -216,6 +216,7 @@ timelapse_re.py        — regex-константы (ObjectID/UID/URef/Ref, uuid
 timelapse_tags.py      — Tag (StrEnum): имена top-level тегов Premiere Pro
 timelapse_block.py     — Block (NamedTuple): один top-level блок + свойства .header/.id/.span
 timelapse_xml.py       — Xml: работа с сырым XML; collect_sound_closure; clone_sound_blocks
+timelapse_xml_ops.py   — именованные regex-операции над Premiere XML (запросы + правки)
 timelapse_sound.py     — Sound (ABC) → AudioSound / VideoSound: адаптация mp3/mp4-структуры
 timelapse_settings.py  — TimelapseSettings: параметры генерации (fps, timeline_sounds и др.)
 timelapse_sources.py   — TimelapseSources: пути к исходникам (кадры, cover, звуки)
@@ -226,27 +227,32 @@ timelapse_prproj.py    — TimelapseSchema: основная логика; gener
 
 ```
 timelapse_re
-    └─ timelapse_block   (импортирует _OBJECT_ID_RE)
-    └─ timelapse_xml     (импортирует все регекспы)
+    └─ timelapse_block    (импортирует _OBJECT_ID_RE)
+    └─ timelapse_xml      (импортирует все регекспы)
+    └─ timelapse_xml_ops  (импортирует _OBJECT_ID_RE, _OBJECT_UID_RE)
 
 timelapse_tags
-    └─ timelapse_xml     (Tag используется в _CLIP_MEDIA_TYPES)
-    └─ timelapse_sound   (Tag.Media / MasterClip / VideoClip / AudioClip)
-    └─ timelapse_prproj  (Tag.AudioClipTrackItem / ClipProjectItem / SubClip / AudioClip)
+    └─ timelapse_xml      (Tag используется в _CLIP_MEDIA_TYPES)
+    └─ timelapse_sound    (Tag.Media / MasterClip / VideoClip / AudioClip)
+    └─ timelapse_prproj   (Tag.AudioClipTrackItem / ClipProjectItem / SubClip / AudioClip)
 
 timelapse_block
-    └─ timelapse_xml     (Block — результат Xml.toplevel_blocks())
-    └─ timelapse_prproj  (через timelapse_xml)
+    └─ timelapse_xml      (Block — результат Xml.toplevel_blocks())
+    └─ timelapse_prproj   (через timelapse_xml)
 
 timelapse_xml
-    └─ timelapse_sound   (Xml передаётся в Sound.adapt())
-    └─ timelapse_prproj  (Xml — центральный объект TimelapseSchema)
+    └─ timelapse_xml_ops  (Xml — все операции мутируют или читают его)
+    └─ timelapse_sound    (Xml передаётся в Sound.adapt())
+    └─ timelapse_prproj   (Xml — центральный объект TimelapseSchema)
+
+timelapse_xml_ops
+    └─ timelapse_prproj   (все именованные операции; import re убран из prproj)
 
 timelapse_sound
-    └─ timelapse_prproj  (Sound.adapt() вызывается при клонировании)
+    └─ timelapse_prproj   (Sound.adapt() вызывается при клонировании)
 
 timelapse_settings + timelapse_sources
-    └─ timelapse_prproj  (аргументы generate_prproj)
+    └─ timelapse_prproj   (аргументы generate_prproj)
 ```
 
 ### Ключевые типы
