@@ -22,6 +22,11 @@ class Block(NamedTuple):
     ``end`` are where that snippet begins and ends in the whole file, so we can
     cut it out or drop it back in by slicing the string at those positions.
     """
+    # ObjectID / ObjectUID always sit in the opening tag — the very first line.
+    # ~110 chars; 120 comfortably covers the longest opening tags we've seen.
+    # Example: \t<MasterClip ObjectID="42" ObjectUID="a1b2c3d4-…" ClassID="be4a3c7e-…">
+    _HEADER_LEN = 120
+
     start: int
     end: int
     tag: str
@@ -29,10 +34,7 @@ class Block(NamedTuple):
 
     @property
     def header(self) -> str:
-        # ObjectID / ObjectUID always sit in the opening tag — the very first line.
-        # ~110 chars; 120 comfortably covers the longest opening tags we've seen.
-        # Example: \t<MasterClip ObjectID="42" ObjectUID="a1b2c3d4-…" ClassID="be4a3c7e-…">
-        return self.text[:120]
+        return self.text[:self._HEADER_LEN]
 
 
 def block_id(block: Block) -> str | None:
