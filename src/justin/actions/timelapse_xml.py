@@ -2,45 +2,18 @@ import gzip
 import re
 import uuid
 from pathlib import Path
-from typing import Self, NamedTuple
+from typing import Self
 
-# Attribute patterns used throughout Premiere Pro XML blocks.
-_OBJECT_ID_RE = r'ObjectID="(\d+)"'        # numeric id, unique within ClassID
-_OBJECT_UID_RE = r'ObjectUID="([^"]+)"'    # instance uuid, globally unique
-_OBJECT_UREF_RE = r'ObjectURef="([^"]+)"'  # pointer to another block's uuid
-_OBJECT_REF_RE = r'ObjectRef="(\d+)"'      # pointer to another block's numeric id
-
-# UUID patterns used when cloning blocks to a fresh identity.
-_IDENTITY_UUID_RE = r'Object(?:UID|URef)="([0-9a-f-]{36})"'  # instance uuid in any ObjectUID/URef attr
-_BARE_ID_TAG_RE = r'<ID>([0-9a-f-]{36})</ID>'                 # uuid in a bare <ID> element
-
-
-class Block(NamedTuple):
-    """One chunk of the project, and where it sits in the raw text.
-
-    ``text`` is the chunk's full ``<Tag ...>...</Tag>`` snippet. ``start`` and
-    ``end`` are where that snippet begins and ends in the whole file, so we can
-    cut it out or drop it back in by slicing the string at those positions.
-    """
-    # ObjectID / ObjectUID always sit in the opening tag — the very first line.
-    # ~110 chars; 120 comfortably covers the longest opening tags we've seen.
-    # Example: \t<MasterClip ObjectID="42" ObjectUID="a1b2c3d4-…" ClassID="be4a3c7e-…">
-    _HEADER_LEN = 120
-
-    start: int
-    end: int
-    tag: str
-    text: str
-
-    @property
-    def header(self) -> str:
-        return self.text[:self._HEADER_LEN]
-
-
-def block_id(block: Block) -> str | None:
-    """Numeric ObjectID from the block's opening tag, or None if it has none."""
-    m = re.search(_OBJECT_ID_RE, block.header)
-    return m.group(1) if m else None
+from justin.actions.timelapse_block import Block
+from justin.actions.timelapse_re import (
+    _OBJECT_ID_RE,
+    _OBJECT_UID_RE,
+    _OBJECT_UREF_RE,
+    _OBJECT_REF_RE,
+    _IDENTITY_UUID_RE,
+    _BARE_ID_TAG_RE,
+)
+from justin.actions.timelapse_tags import Tag
 
 
 class Xml:
@@ -156,14 +129,14 @@ class Xml:
                 uuid_refs = re.findall(r'<(?:Media|VideoClip|AudioClip|MasterClip) ObjectURef="([^"]+)"', block.text)
 
                 if any(ref not in live_uids for ref in uuid_refs):
-                    to_delete.append((block.start, block.end))
+                    to_delete.append(block.span)
                     continue
 
                 # These chunk types point at their parent by number — drop if the parent is gone.
                 numeric_refs = re.findall(r'<(?:SubClip|Source|Content) ObjectRef="(\d+)"', block.text)
 
                 if any(ref not in live_ids for ref in numeric_refs):
-                    to_delete.append((block.start, block.end))
+                    to_delete.append(block.span)
 
             if not to_delete:
                 break
@@ -215,23 +188,23 @@ class Xml:
 
 
 _CLIP_MEDIA_TYPES = {
-    "ClipProjectItem",                 # the clip's entry in the project panel
-    "MasterClip",                      # container grouping the video and audio sides of one file
-    "AudioClip",                       # audio half of a master clip
-    "VideoClip",                       # video half of a master clip
-    "SubClip",                         # a timeline slot that plays a portion of a master clip
-    "Media",                           # the file reference — path, streams, codec info
-    "AudioStream",                     # an audio stream within the media file
-    "VideoStream",                     # a video stream within the media file
-    "AudioMediaSource",                # raw audio data source for an audio stream
-    "VideoMediaSource",                # raw video data source for a video stream
-    "Markers",                         # in/out markers attached to a clip
-    "AudioComponentChain",             # chain of audio effects on a clip
-    "ClipLoggingInfo",                 # logging metadata (scene, shot, description)
-    "SecondaryContent",                # supplementary clip data (waveform cache path, etc.)
-    "ClipChannelSerializer",           # per-channel clip data serializer
-    "ClipChannelGroupVectorSerializer",# a group of per-channel serializers
-    "ClipChannelVectorSerializer",     # a list of per-channel serializers
+    Tag.ClipProjectItem,
+    Tag.MasterClip,
+    Tag.AudioClip,
+    Tag.VideoClip,
+    Tag.SubClip,
+    Tag.Media,
+    Tag.AudioStream,
+    Tag.VideoStream,
+    Tag.AudioMediaSource,
+    Tag.VideoMediaSource,
+    Tag.Markers,
+    Tag.AudioComponentChain,
+    Tag.ClipLoggingInfo,
+    Tag.SecondaryContent,
+    Tag.ClipChannelSerializer,
+    Tag.ClipChannelGroupVectorSerializer,
+    Tag.ClipChannelVectorSerializer,
 }
 
 
