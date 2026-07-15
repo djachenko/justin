@@ -29,7 +29,8 @@ from justin.actions.timelapse_prproj import (
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_block import Block
-from justin.actions.timelapse_xml import Xml, clone_sound_blocks as _clone_sound_blocks
+from justin.actions.timelapse_xml import Xml
+from justin.actions.timelapse_xml_ops import clone_sound_blocks as _clone_sound_blocks
 
 
 # --------------------------------------------------------------------------- #
@@ -269,6 +270,18 @@ def test_selector_matches_by_name_or_stem(tmp_path):
     by_name = _resolve_timeline_sounds(sources.sounds, ["alpha.mp3"])
     assert [p.name for p in by_stem] == ["alpha.mp3"]
     assert [p.name for p in by_name] == ["alpha.mp3"]
+
+
+# --------------------------------------------------------------------------- #
+# packaging — template must be bundled as a readable resource
+# --------------------------------------------------------------------------- #
+
+def test_template_resource_is_packaged():
+    from importlib.resources import files as resource_files
+    data = resource_files("justin.resources.timelapse_templates").joinpath("template.prproj").read_bytes()
+    assert len(data) > 0
+    xml = gzip.decompress(data).decode("utf-8")
+    ET.fromstring(xml)
 
 
 # --------------------------------------------------------------------------- #
