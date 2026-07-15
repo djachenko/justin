@@ -25,7 +25,6 @@ from justin.actions.timelapse_xml_ops import (
     clear_audio_cache_paths,
     remove_track_item_lines,
     append_track_items_after,
-    collect_sound_closure,
     clone_sound_blocks,
 )
 
@@ -204,54 +203,6 @@ class TestAppendTrackItemsAfter:
 
 def _block(idx: int, tag: str, body: str) -> Block:
     return Block(idx, idx, tag, body)
-
-
-class TestCollectSoundClosure:
-    def test_follows_numeric_ref_to_media_block(self):
-        blocks = [
-            _block(0, "SubClip", '<SubClip ObjectID="1"><Clip ObjectRef="2"/></SubClip>'),
-            _block(1, "AudioClip", '<AudioClip ObjectID="2"><Name>a.mp3</Name></AudioClip>'),
-            _block(2, "AudioClip", '<AudioClip ObjectID="3"><Name>other.mp3</Name></AudioClip>'),
-        ]
-        # SubClip is not a media type here — start from its index and reach the AudioClip.
-        reached = collect_sound_closure(blocks, entry_idxs=[0])
-        assert reached == [0, 1]
-
-    def test_follows_uuid_ref_only_to_media_types(self):
-        blocks = [
-            _block(0, "Media", '<Media ObjectUID="uid-a"><X ObjectURef="uid-b"/></Media>'),
-            _block(1, "AudioClip", '<AudioClip ObjectUID="uid-b"/>'),
-        ]
-        reached = collect_sound_closure(blocks, entry_idxs=[0])
-        assert reached == [0, 1]
-
-    def test_uuid_ref_to_nonmedia_is_ignored(self):
-        blocks = [
-            _block(0, "Media", '<Media ObjectUID="uid-a"><X ObjectURef="uid-b"/></Media>'),
-            _block(1, "Sequence", '<Sequence ObjectUID="uid-b"/>'),
-        ]
-        reached = collect_sound_closure(blocks, entry_idxs=[0])
-        assert reached == [0]
-
-    def test_numeric_ref_matches_any_clip_kind_with_that_id(self):
-        # Ambiguous number pointer: both a Video and Audio clip share id 5.
-        blocks = [
-            _block(0, "SubClip", '<SubClip ObjectID="1"><Clip ObjectRef="5"/></SubClip>'),
-            _block(1, "VideoClip", '<VideoClip ObjectID="5"/>'),
-            _block(2, "AudioClip", '<AudioClip ObjectID="5"/>'),
-        ]
-        reached = collect_sound_closure(blocks, entry_idxs=[0])
-        assert reached == [0, 1, 2]
-
-    def test_transitive_closure(self):
-        blocks = [
-            _block(0, "MasterClip", '<MasterClip ObjectID="1"><Clip ObjectRef="2"/></MasterClip>'),
-            _block(1, "AudioClip", '<AudioClip ObjectID="2"><Media ObjectRef="3"/></AudioClip>'),
-            _block(2, "Media", '<Media ObjectID="3"/>'),
-            _block(3, "AudioClip", '<AudioClip ObjectID="9"/>'),
-        ]
-        reached = collect_sound_closure(blocks, entry_idxs=[0])
-        assert reached == [0, 1, 2]
 
 
 class TestCloneSoundBlocks:

@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import Self
 
-from justin.actions.timelapse_block import Block
+from justin.actions.timelapse_block import Block, Blocks
 from justin.actions.timelapse_re import (
     _OBJECT_ID_RE,
     _OBJECT_UID_RE,
@@ -161,14 +161,14 @@ class Xml:
 
         return self
 
-    def toplevel_blocks(self) -> list[Block]:
+    def toplevel_blocks(self) -> Blocks:
         """Break the project text into its top-level chunks.
 
         Top-level chunks are the ones indented by exactly one tab — the direct
         children of the project root. (Chunks nested deeper are left alone; we only
         ever move whole top-level chunks around.)
         """
-        blocks: list[Block] = []
+        blocks: Blocks = Blocks()
 
         # Find every line that starts with exactly one tab followed by a tag opening.
         # The second capture group (space or >) ensures we match a real tag, not a partial word.

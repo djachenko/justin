@@ -8,8 +8,8 @@ each method on small hand-written snippets.
 
 import gzip
 
-from justin.actions.timelapse_block import Block
-from justin.actions.timelapse_xml import Xml
+from justin.actions.timelapse_block import Block, Blocks
+from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
 
 
 def _dump(xml: Xml) -> str:
@@ -200,3 +200,59 @@ def test_block_id_none_when_absent():
 def test_block_span():
     block = Block(10, 25, "Tag", "text")
     assert block.span == (10, 25)
+
+
+# --------------------------------------------------------------------------- #
+# Blocks.reachable_cluster — walk the reference graph from seed blocks
+# --------------------------------------------------------------------------- #
+
+def _blocks(*rows: tuple[str, str]) -> Blocks:
+    # Each row is (tag, body); block.start = position, used as the unique key.
+    return Blocks(Block(i, i, tag, body) for i, (tag, body) in enumerate(rows))
+
+
+def _cluster_starts(blocks: Blocks, *seed_starts: int) -> list[int]:
+    seeds = [b for b in blocks if b.start in seed_starts]
+    return [b.start for b in blocks.reachable_cluster(seeds, _CLIP_MEDIA_TYPES)]
+
+
+class TestReachableCluster:
+    def test_follows_numeric_ref_to_member_block(self):
+        blocks = _blocks(
+            ("SubClip", '<SubClip ObjectID="1"><Clip ObjectRef="2"/></SubClip>'),
+            ("AudioClip", '<AudioClip ObjectID="2"><Name>a.mp3</Name></AudioClip>'),
+            ("AudioClip", '<AudioClip ObjectID="3"><Name>other.mp3</Name></AudioClip>'),
+        )
+        assert _cluster_starts(blocks, 0) == [0, 1]
+
+    def test_follows_uuid_ref_only_to_member_tags(self):
+        blocks = _blocks(
+            ("Media", '<Media ObjectUID="uid-a"><X ObjectURef="uid-b"/></Media>'),
+            ("AudioClip", '<AudioClip ObjectUID="uid-b"/>'),
+        )
+        assert _cluster_starts(blocks, 0) == [0, 1]
+
+    def test_uuid_ref_to_nonmember_is_ignored(self):
+        blocks = _blocks(
+            ("Media", '<Media ObjectUID="uid-a"><X ObjectURef="uid-b"/></Media>'),
+            ("Sequence", '<Sequence ObjectUID="uid-b"/>'),
+        )
+        assert _cluster_starts(blocks, 0) == [0]
+
+    def test_numeric_ref_matches_any_member_kind_with_that_id(self):
+        # Ambiguous number pointer: both a Video and Audio clip share id 5.
+        blocks = _blocks(
+            ("SubClip", '<SubClip ObjectID="1"><Clip ObjectRef="5"/></SubClip>'),
+            ("VideoClip", '<VideoClip ObjectID="5"/>'),
+            ("AudioClip", '<AudioClip ObjectID="5"/>'),
+        )
+        assert _cluster_starts(blocks, 0) == [0, 1, 2]
+
+    def test_transitive_closure(self):
+        blocks = _blocks(
+            ("MasterClip", '<MasterClip ObjectID="1"><Clip ObjectRef="2"/></MasterClip>'),
+            ("AudioClip", '<AudioClip ObjectID="2"><Media ObjectRef="3"/></AudioClip>'),
+            ("Media", '<Media ObjectID="3"/>'),
+            ("AudioClip", '<AudioClip ObjectID="9"/>'),
+        )
+        assert _cluster_starts(blocks, 0) == [0, 1, 2]

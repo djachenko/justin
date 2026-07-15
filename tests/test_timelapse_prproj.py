@@ -156,13 +156,9 @@ def test_partial_timeline_selection_keeps_only_chosen_sound(tmp_path):
     assert {"alpha.mp3", "beta.mp3"} <= panel_item_names(xml)
     # The single track item must be beta, not alpha.
     blocks = Xml(xml).toplevel_blocks()
-    text_by_id = {
-        (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
-        for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
-    }
     names = [
-        TimelapseSchema._track_item_sound_name(b.text, text_by_id)
-        for b in blocks if b.tag == "AudioClipTrackItem"
+        TimelapseSchema._track_item_sound_name(b, blocks)
+        for b in blocks.by_tag("AudioClipTrackItem")
     ]
     assert names == ["beta.mp3"]
 
