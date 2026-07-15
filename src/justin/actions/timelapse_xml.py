@@ -10,11 +10,6 @@ _OBJECT_UID_RE = r'ObjectUID="([^"]+)"'    # instance uuid, globally unique
 _OBJECT_UREF_RE = r'ObjectURef="([^"]+)"'  # pointer to another block's uuid
 _OBJECT_REF_RE = r'ObjectRef="(\d+)"'      # pointer to another block's numeric id
 
-# ObjectID / ObjectUID always sit in a block's opening tag. Reading this many
-# chars from the start of block text is enough for id lookups without scanning
-# the entire (potentially large) block body.
-_TAG_HEADER_LEN = 120
-
 # UUID patterns used when cloning blocks to a fresh identity.
 _IDENTITY_UUID_RE = r'Object(?:UID|URef)="([0-9a-f-]{36})"'  # instance uuid in any ObjectUID/URef attr
 _BARE_ID_TAG_RE = r'<ID>([0-9a-f-]{36})</ID>'                 # uuid in a bare <ID> element
@@ -32,10 +27,17 @@ class Block(NamedTuple):
     tag: str
     text: str
 
+    @property
+    def header(self) -> str:
+        # ObjectID / ObjectUID always sit in the opening tag — the very first line.
+        # ~110 chars; 120 comfortably covers the longest opening tags we've seen.
+        # Example: \t<MasterClip ObjectID="42" ObjectUID="a1b2c3d4-…" ClassID="be4a3c7e-…">
+        return self.text[:120]
+
 
 def block_id(block: Block) -> str | None:
     """Numeric ObjectID from the block's opening tag, or None if it has none."""
-    m = re.search(_OBJECT_ID_RE, block.text[:_TAG_HEADER_LEN])
+    m = re.search(_OBJECT_ID_RE, block.header)
     return m.group(1) if m else None
 
 
@@ -247,12 +249,12 @@ def collect_sound_closure(blocks: list[Block], entry_idxs: list[int]) -> list[in
     idx_by_uid: dict[str, int] = {}
 
     for idx, block in enumerate(blocks):
-        own_id = re.search(_OBJECT_ID_RE, block.text[:_TAG_HEADER_LEN])
+        own_id = re.search(_OBJECT_ID_RE, block.header)
 
         if own_id and block.tag in _CLIP_MEDIA_TYPES:
             media_idxs_by_id.setdefault(own_id.group(1), []).append(idx)
 
-        own_uid = re.search(_OBJECT_UID_RE, block.text[:_TAG_HEADER_LEN])
+        own_uid = re.search(_OBJECT_UID_RE, block.header)
 
         if own_uid:
             idx_by_uid[own_uid.group(1)] = idx
