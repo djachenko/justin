@@ -1,7 +1,12 @@
 import re
-from typing import NamedTuple
+from typing import Iterable, NamedTuple
 
-from justin.actions.timelapse_re import _OBJECT_ID_RE
+from justin.actions.timelapse_re import (
+    _OBJECT_ID_RE,
+    _OBJECT_REF_RE,
+    _OBJECT_UID_RE,
+    _OBJECT_UREF_RE,
+)
 
 
 class Block(NamedTuple):
@@ -34,3 +39,80 @@ class Block(NamedTuple):
     @property
     def span(self) -> tuple[int, int]:
         return self.start, self.end
+
+
+class Blocks(list[Block]):
+    """A snapshot of the document's top-level blocks, with structural lookups.
+
+    Just a ``list[Block]`` with query helpers, so it stays iterable/indexable
+    everywhere a plain list is expected. Purely structural: it knows about tags,
+    ids and pointers — nothing about what any given Premiere tag *means*.
+
+    A snapshot is valid only until the next mutation of the ``Xml`` it came from:
+    every edit shifts byte offsets, so re-take it (``xml.toplevel_blocks()``)
+    after mutating.
+    """
+
+    def by_tag(self, tag: str) -> "Blocks":
+        return Blocks(block for block in self if block.tag == tag)
+
+    def containing(self, marker: str) -> "Blocks":
+        return Blocks(block for block in self if marker in block.text)
+
+    def by_id(self, tag: str, block_id: str | None) -> Block | None:
+        if block_id is None:
+            return None
+
+        return next((block for block in self if block.tag == tag and block.id == block_id), None)
+
+    def first(self) -> Block | None:
+        return self[0] if self else None
+
+    def reachable_cluster(self, seeds: Iterable[Block], member_tags: set[str]) -> "Blocks":
+        """Every block reachable from ``seeds`` by following id/uuid pointers.
+
+        A clip isn't one block — it's a cluster wired together by pointers, and
+        only a few blocks in it name the file; the rest are reached by walking
+        references. ``member_tags`` says which tags count as cluster members: a
+        numeric pointer's tag doesn't reveal its target's kind (``<Clip
+        ObjectRef="56"/>`` may be a Video- or AudioClip), so we accept any
+        member-tag block carrying that id; uuid pointers are unambiguous.
+
+        Returns the cluster as a ``Blocks``, ordered by position in the document.
+        """
+        members_by_id: dict[str, list[Block]] = {}
+        block_by_uid: dict[str, Block] = {}
+
+        for block in self:
+            own_id = re.search(_OBJECT_ID_RE, block.header)
+
+            if own_id and block.tag in member_tags:
+                members_by_id.setdefault(own_id.group(1), []).append(block)
+
+            own_uid = re.search(_OBJECT_UID_RE, block.header)
+
+            if own_uid:
+                block_by_uid[own_uid.group(1)] = block
+
+        reached: dict[int, Block] = {block.start: block for block in seeds}
+        frontier = list(reached.values())
+
+        while frontier:
+            block = frontier.pop()
+
+            for ref in re.finditer(_OBJECT_REF_RE, block.text):
+                for target in members_by_id.get(ref.group(1), []):
+                    if target.start not in reached:
+                        reached[target.start] = target
+                        frontier.append(target)
+
+            for uref in re.finditer(_OBJECT_UREF_RE, block.text):
+                target = block_by_uid.get(uref.group(1))
+
+                if target is None or target.tag not in member_tags or target.start in reached:
+                    continue
+
+                reached[target.start] = target
+                frontier.append(target)
+
+        return Blocks(sorted(reached.values(), key=lambda block: block.start))
