@@ -37,6 +37,10 @@ class Xml:
         with gzip.open(path, 'wb') as f:
             f.write(self._xml.encode('utf-8'))
 
+    @property
+    def raw(self) -> str:
+        return self._xml
+
     def replace(self, old: str, new: str) -> None:
         self._xml = self._xml.replace(old, new)
 
