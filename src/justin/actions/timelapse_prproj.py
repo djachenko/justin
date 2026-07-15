@@ -42,16 +42,15 @@ from importlib.resources import files as _resource_files
 from pathlib import Path
 from typing import TypeVar, Iterable, Callable
 
+from justin.actions.timelapse_re import _OBJECT_ID_RE, _OBJECT_UID_RE
 from justin.actions.timelapse_settings import TimelapseSettings
-from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_sound import Sound
+from justin.actions.timelapse_sources import TimelapseSources
+from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_xml import (
     Xml,
-    block_id,
     collect_sound_closure as _collect_sound_closure,
     clone_sound_blocks as _clone_sound_blocks,
-    _OBJECT_ID_RE,
-    _OBJECT_UID_RE,
 )
 
 # Premiere measures time in "ticks". This many ticks make one second.
@@ -82,7 +81,7 @@ _TMPL_SEQ_DUR    = (_TMPL_N_FRAMES + 1) * _TMPL_FPS_TICKS
 
 
 def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) -> list[Sound]:
-    return [s for s in sounds if s.name in timeline_sounds or s.stem in timeline_sounds]
+    return [sound for sound in sounds if sound.name in timeline_sounds or sound.stem in timeline_sounds]
 
 
 
@@ -182,7 +181,7 @@ class TimelapseSchema:
         """Remove the template's sound completely (this timelapse has none)."""
         sound_blocks = [b for b in xml.toplevel_blocks() if _SOUND_NAME_MARKER in b.text]
 
-        xml.remove_blocks_by_positions([(b.start, b.end) for b in sound_blocks])
+        xml.remove_blocks_by_positions([b.span for b in sound_blocks])
 
     @staticmethod
     def _apply_sounds(xml: Xml, sounds: list[Sound], timeline: bool = False) -> None:
@@ -200,21 +199,19 @@ class TimelapseSchema:
         """
         blocks = xml.toplevel_blocks()
 
-        # Seed the closure with blocks that name the template sound. Include the
-        # timeline slot only when clones should carry one too.
-        seed = indices_of_matching(blocks, lambda block: _SOUND_NAME_MARKER in block.text)
+        entry_idxs = indices_of_matching(blocks, lambda block: _SOUND_NAME_MARKER in block.text)
 
         if timeline:
-            seed += indices_of_matching(blocks, lambda block: block.tag == "AudioClipTrackItem")
+            entry_idxs += indices_of_matching(blocks, lambda block: block.tag == Tag.AudioClipTrackItem)
 
-        tmpl_blocks = [blocks[i] for i in _collect_sound_closure(blocks, seed)]
+        tmpl_blocks = [blocks[i] for i in _collect_sound_closure(blocks, entry_idxs)]
 
         # Grab registration anchors before the template disappears.
-        tmpl_panel = next((b for b in tmpl_blocks if b.tag == "ClipProjectItem"), None)
+        tmpl_panel = next((b for b in tmpl_blocks if b.tag == Tag.ClipProjectItem), None)
         tmpl_panel_uid = re.search(_OBJECT_UID_RE, tmpl_panel.text).group(1) if tmpl_panel else None
 
-        tmpl_track = next((b for b in tmpl_blocks if b.tag == "AudioClipTrackItem"), None)
-        tmpl_track_id = block_id(tmpl_track) if tmpl_track else None
+        tmpl_track = next((b for b in tmpl_blocks if b.tag == Tag.AudioClipTrackItem), None)
+        tmpl_track_id = tmpl_track.id if tmpl_track else None
 
         insert_pos = max(b.end for b in tmpl_blocks)
         max_id = max(int(i) for i in re.findall(_OBJECT_ID_RE, xml._xml))
@@ -223,8 +220,8 @@ class TimelapseSchema:
         new_panel_uids: list[str] = []
         new_track_ids: list[str] = []
 
-        for i, sound in enumerate(sounds, start=1):
-            clone = _clone_sound_blocks(tmpl_blocks, _SOUND_NAME_MARKER, sound.name, (max_id + 1) * i)
+        for rank, sound in enumerate(sounds, start=1):
+            clone = _clone_sound_blocks(tmpl_blocks, _SOUND_NAME_MARKER, sound.name, (max_id + 1) * rank)
             all_clones += clone
 
             if match := re.search(r'<ClipProjectItem ' + _OBJECT_UID_RE, clone):
@@ -236,7 +233,7 @@ class TimelapseSchema:
         # Insert clones first (template positions still valid), then remove the template.
         # The stale panel/timeline entries are swept by remove_dangling_refs at the end.
         xml.insert(insert_pos, all_clones)
-        xml.remove_blocks_by_positions([(b.start, b.end) for b in tmpl_blocks])
+        xml.remove_blocks_by_positions([b.span for b in tmpl_blocks])
 
         for sound in sounds:
             sound.adapt(xml)
@@ -249,8 +246,8 @@ class TimelapseSchema:
                 base = int(anchor.group(1))
 
                 added = "".join(
-                    f'\n\t\t\t\t<Item Index="{base + j}" ObjectURef="{uid}"/>'
-                    for j, uid in enumerate(new_panel_uids, start=1)
+                    f'\n\t\t\t\t<Item Index="{base + offset}" ObjectURef="{uid}"/>'
+                    for offset, uid in enumerate(new_panel_uids, start=1)
                 )
 
                 xml.replace(
@@ -281,15 +278,15 @@ class TimelapseSchema:
             blocks = xml.toplevel_blocks()
 
             block_text_by_id = {
-                (b.tag, block_id(b)): b.text
-                for b in blocks if block_id(b)
+                (b.tag, b.id): b.text
+                for b in blocks if b.id
             }
 
             # Find the next timeline slot we haven't placed yet whose sound we know.
             track_item = next(
                 (b for b in blocks
-                 if b.tag == "AudioClipTrackItem"
-                 and block_id(b) not in placed_ids
+                 if b.tag == Tag.AudioClipTrackItem
+                 and b.id not in placed_ids
                  and TimelapseSchema._track_item_sound_name(b.text, block_text_by_id) in durations),
                 None,
             )
@@ -297,7 +294,7 @@ class TimelapseSchema:
             if track_item is None:
                 break
 
-            track_item_id = block_id(track_item)
+            track_item_id = track_item.id
             sound_name = TimelapseSchema._track_item_sound_name(track_item.text, block_text_by_id)
             duration = durations[sound_name]
             end = cursor + duration
@@ -314,7 +311,7 @@ class TimelapseSchema:
                 r'(?:<Start>\d+</Start>\n\t+)?<End>\d+</End>', new_position, track_item.text, count=1,
             )
 
-            xml.replace_range(track_item.start, track_item.end, positioned)
+            xml.replace_range(*track_item.span, positioned)
 
             # Set how much of the clip plays, via the AudioClip's end point. We
             # reach the AudioClip by following the slot's SubClip pointer. (Re-scan
@@ -323,20 +320,20 @@ class TimelapseSchema:
             audio_clip_ref = None
 
             if subclip_ref:
-                subclip_text = block_text_by_id[("SubClip", subclip_ref.group(1))]
+                subclip_text = block_text_by_id[(Tag.SubClip, subclip_ref.group(1))]
                 audio_clip_ref = re.search(r'<Clip ObjectRef="(\d+)"', subclip_text)
 
             if audio_clip_ref:
-                audio_clip_text = block_text_by_id.get(("AudioClip", audio_clip_ref.group(1)))
+                audio_clip_text = block_text_by_id.get((Tag.AudioClip, audio_clip_ref.group(1)))
                 if audio_clip_text and "<OutPoint>" in audio_clip_text:
                     trimmed = re.sub(r'<OutPoint>\d+</OutPoint>', f'<OutPoint>{duration}</OutPoint>', audio_clip_text, count=1)
                     audio_clip = next(
                         (b for b in xml.toplevel_blocks()
-                         if b.tag == "AudioClip" and block_id(b) == audio_clip_ref.group(1)),
+                         if b.tag == Tag.AudioClip and b.id == audio_clip_ref.group(1)),
                         None,
                     )
                     if audio_clip:
-                        xml.replace_range(audio_clip.start, audio_clip.end, trimmed)
+                        xml.replace_range(*audio_clip.span, trimmed)
 
             placed_ids.add(track_item_id)
             cursor = end
@@ -349,7 +346,7 @@ class TimelapseSchema:
         if not subclip_ref:
             return None
 
-        subclip = block_text_by_id.get(("SubClip", subclip_ref.group(1)))
+        subclip = block_text_by_id.get((Tag.SubClip, subclip_ref.group(1)))
 
         if not subclip:
             return None
@@ -379,11 +376,11 @@ class TimelapseSchema:
         blocks = xml.toplevel_blocks()
 
         block_text_by_id = {
-            (b.tag, block_id(b)): b.text
-            for b in blocks if block_id(b)
+            (b.tag, b.id): b.text
+            for b in blocks if b.id
         }
 
-        all_track_items = [i for i, b in enumerate(blocks) if b.tag == "AudioClipTrackItem"]
+        all_track_items = indices_of_matching(blocks, lambda block: block.tag == Tag.AudioClipTrackItem)
 
         dropped = [
             i for i in all_track_items
@@ -393,13 +390,13 @@ class TimelapseSchema:
         if not dropped:
             return
 
-        keep_entry = [i for i, b in enumerate(blocks) if b.tag == "ClipProjectItem"] + kept
+        keep_entry = indices_of_matching(blocks, lambda block: block.tag == Tag.ClipProjectItem) + kept
         keep_closure = set(_collect_sound_closure(blocks, keep_entry))
         dropped_closure = set(_collect_sound_closure(blocks, dropped))
         to_remove = (dropped_closure - keep_closure) | set(dropped)
 
-        dropped_ids = [block_id(blocks[i]) for i in dropped]
-        xml.remove_blocks_by_positions([(blocks[i].start, blocks[i].end) for i in to_remove])
+        dropped_ids = [blocks[i].id for i in dropped]
+        xml.remove_blocks_by_positions([blocks[i].span for i in to_remove])
         for track_item_id in dropped_ids:
             xml.sub(rf'[^\S\n]*<TrackItem Index="\d+" ObjectRef="{track_item_id}"/>\n', '')
 
@@ -438,7 +435,7 @@ class TimelapseSchema:
         # sweeps it away for us.
         cover_blocks = [b for b in xml.toplevel_blocks() if "cover.jpg" in b.text]
 
-        xml.remove_blocks_by_positions([(b.start, b.end) for b in cover_blocks])
+        xml.remove_blocks_by_positions([b.span for b in cover_blocks])
         xml.remove_dangling_refs()
 
         # The frames clip used to sit one cover-frame in, from [ticks_per_frame → sequence_duration].
@@ -453,9 +450,9 @@ def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = Tim
     # Don't clobber an existing project (it may have been edited by hand) — pick
     # the next free numbered name instead.
     if output_path.exists():
-        i = 1
-        while (candidate := sources.folder / f"{sources.name}_{i}.prproj").exists():
-            i += 1
+        suffix = 1
+        while (candidate := sources.folder / f"{sources.name}_{suffix}.prproj").exists():
+            suffix += 1
         output_path = candidate
 
     sounds = sources.sounds or []
