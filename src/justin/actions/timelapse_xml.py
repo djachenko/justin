@@ -4,6 +4,21 @@ import uuid
 from pathlib import Path
 from typing import Self, NamedTuple
 
+# Attribute patterns used throughout Premiere Pro XML blocks.
+_OBJECT_ID_RE = r'ObjectID="(\d+)"'        # numeric id, unique within ClassID
+_OBJECT_UID_RE = r'ObjectUID="([^"]+)"'    # instance uuid, globally unique
+_OBJECT_UREF_RE = r'ObjectURef="([^"]+)"'  # pointer to another block's uuid
+_OBJECT_REF_RE = r'ObjectRef="(\d+)"'      # pointer to another block's numeric id
+
+# ObjectID / ObjectUID always sit in a block's opening tag. Reading this many
+# chars from the start of block text is enough for id lookups without scanning
+# the entire (potentially large) block body.
+_TAG_HEADER_LEN = 120
+
+# UUID patterns used when cloning blocks to a fresh identity.
+_IDENTITY_UUID_RE = r'Object(?:UID|URef)="([0-9a-f-]{36})"'  # instance uuid in any ObjectUID/URef attr
+_BARE_ID_TAG_RE = r'<ID>([0-9a-f-]{36})</ID>'                 # uuid in a bare <ID> element
+
 
 class Block(NamedTuple):
     """One chunk of the project, and where it sits in the raw text.
@@ -16,6 +31,12 @@ class Block(NamedTuple):
     end: int
     tag: str
     text: str
+
+
+def block_id(block: Block) -> str | None:
+    """Numeric ObjectID from the block's opening tag, or None if it has none."""
+    m = re.search(_OBJECT_ID_RE, block.text[:_TAG_HEADER_LEN])
+    return m.group(1) if m else None
 
 
 class Xml:
@@ -73,13 +94,13 @@ class Xml:
         """
         for _ in range(10):
             # Collect all ids/uuids that actually exist right now.
-            live_uids = set(re.findall(r'ObjectUID="([^"]+)"', self._xml))
-            live_ids = set(re.findall(r'ObjectID="(\d+)"', self._xml))
+            live_uids = set(re.findall(_OBJECT_UID_RE, self._xml))
+            live_ids = set(re.findall(_OBJECT_ID_RE, self._xml))
 
             def prune_panel_items(items_block: re.Match) -> str:
                 def keep(item: re.Match) -> str:
                     # Each <Item .../> line points at a clip by uuid. Drop the line if that clip is gone.
-                    uref = re.search(r'ObjectURef="([^"]+)"', item.group(0))
+                    uref = re.search(_OBJECT_UREF_RE, item.group(0))
 
                     if uref and uref.group(1) not in live_uids:
                         return ''
@@ -97,7 +118,7 @@ class Xml:
             def prune_track_items(track_items_block: re.Match) -> str:
                 def keep(item: re.Match) -> str:
                     # Each <TrackItem .../> line points at a clip by number. Drop if that clip is gone.
-                    ref = re.search(r'ObjectRef="(\d+)"', item.group(0))
+                    ref = re.search(_OBJECT_REF_RE, item.group(0))
                     if ref and ref.group(1) not in live_ids:
                         return ''
                     return item.group(0)
@@ -118,8 +139,8 @@ class Xml:
                                flags=re.DOTALL)
 
             # Re-collect ids after the list cleanup above may have changed things.
-            live_uids = set(re.findall(r'ObjectUID="([^"]+)"', self._xml))
-            live_ids = set(re.findall(r'ObjectID="(\d+)"', self._xml))
+            live_uids = set(re.findall(_OBJECT_UID_RE, self._xml))
+            live_ids = set(re.findall(_OBJECT_ID_RE, self._xml))
             to_delete: list[tuple[int, int]] = []
 
             for block in self.toplevel_blocks():
@@ -185,25 +206,24 @@ class Xml:
         return blocks
 
 
-# Здесь к каждому из типов блоков надо подписать, что это за блок, ну, простым человеческим языком. Потому что ни хрена не понятно, что это за какой-нибудь условный видеомедиасорс. ClipChannelVectorSerializer, что, блять, за VectorSerializer? Надо русским, просто нормальным человеческим языком описать, что это за тип.
 _CLIP_MEDIA_TYPES = {
-    "ClipProjectItem",
-    "MasterClip",
-    "AudioClip",
-    "VideoClip",
-    "SubClip",
-    "Media",
-    "AudioStream",
-    "VideoStream",
-    "AudioMediaSource",
-    "VideoMediaSource",
-    "Markers",
-    "AudioComponentChain",
-    "ClipLoggingInfo",
-    "SecondaryContent",
-    "ClipChannelSerializer",
-    "ClipChannelGroupVectorSerializer",
-    "ClipChannelVectorSerializer",
+    "ClipProjectItem",                 # the clip's entry in the project panel
+    "MasterClip",                      # container grouping the video and audio sides of one file
+    "AudioClip",                       # audio half of a master clip
+    "VideoClip",                       # video half of a master clip
+    "SubClip",                         # a timeline slot that plays a portion of a master clip
+    "Media",                           # the file reference — path, streams, codec info
+    "AudioStream",                     # an audio stream within the media file
+    "VideoStream",                     # a video stream within the media file
+    "AudioMediaSource",                # raw audio data source for an audio stream
+    "VideoMediaSource",                # raw video data source for a video stream
+    "Markers",                         # in/out markers attached to a clip
+    "AudioComponentChain",             # chain of audio effects on a clip
+    "ClipLoggingInfo",                 # logging metadata (scene, shot, description)
+    "SecondaryContent",                # supplementary clip data (waveform cache path, etc.)
+    "ClipChannelSerializer",           # per-channel clip data serializer
+    "ClipChannelGroupVectorSerializer",# a group of per-channel serializers
+    "ClipChannelVectorSerializer",     # a list of per-channel serializers
 }
 
 
@@ -227,12 +247,12 @@ def collect_sound_closure(blocks: list[Block], entry_idxs: list[int]) -> list[in
     idx_by_uid: dict[str, int] = {}
 
     for idx, block in enumerate(blocks):
-        own_id = re.search(r'ObjectID="(\d+)"', block.text[:120]) # Че за 120?
+        own_id = re.search(_OBJECT_ID_RE, block.text[:_TAG_HEADER_LEN])
 
         if own_id and block.tag in _CLIP_MEDIA_TYPES:
             media_idxs_by_id.setdefault(own_id.group(1), []).append(idx)
 
-        own_uid = re.search(r'ObjectUID="([^"]+)"', block.text[:120])
+        own_uid = re.search(_OBJECT_UID_RE, block.text[:_TAG_HEADER_LEN])
 
         if own_uid:
             idx_by_uid[own_uid.group(1)] = idx
@@ -243,18 +263,24 @@ def collect_sound_closure(blocks: list[Block], entry_idxs: list[int]) -> list[in
     while frontier:
         block = blocks[frontier.pop()]
 
-        for ref in re.finditer(r'ObjectRef="(\d+)"', block.text):
+        for ref in re.finditer(_OBJECT_REF_RE, block.text):
             for target in media_idxs_by_id.get(ref.group(1), []):
                 if target not in reached:
                     reached.add(target)
                     frontier.append(target)
 
-        for uref in re.finditer(r'ObjectURef="([^"]+)"', block.text):
+        for uref in re.finditer(_OBJECT_UREF_RE, block.text):
             target = idx_by_uid.get(uref.group(1))
 
-            if target is not None and blocks[target].tag in _CLIP_MEDIA_TYPES and target not in reached: # Чё за такое, нахрен, длинные условия? Может просто разбить его на несколько ифов и в каждом из них делать континью? Ну просто читать невозможно.
-                reached.add(target)
-                frontier.append(target)
+            if target is None:
+                continue
+            if blocks[target].tag not in _CLIP_MEDIA_TYPES:
+                continue
+            if target in reached:
+                continue
+
+            reached.add(target)
+            frontier.append(target)
 
     return sorted(reached)
 
@@ -279,14 +305,14 @@ def clone_sound_blocks(blocks: list[Block], old_name: str, new_name: str, id_off
     """
     combined = ''.join(block.text for block in blocks)
 
-    numeric_ids = sorted(set(re.findall(r'ObjectID="(\d+)"', combined)), key=int)
+    numeric_ids = sorted(set(re.findall(_OBJECT_ID_RE, combined)), key=int)
     id_remap = {old: str(int(old) + id_offset) for old in numeric_ids}
 
     # Collect uuids used as identities: ObjectUID/ObjectURef attributes and bare <ID> tags.
     # These are 36-char hex strings like "a1b2c3d4-…". ClassID looks the same but is NOT
     # an identity — it names the chunk's type and must not be touched.
-    identity_uids = set(re.findall(r'Object(?:UID|URef)="([0-9a-f-]{36})"', combined))
-    identity_uids |= set(re.findall(r'<ID>([0-9a-f-]{36})</ID>', combined))
+    identity_uids = set(re.findall(_IDENTITY_UUID_RE, combined))
+    identity_uids |= set(re.findall(_BARE_ID_TAG_RE, combined))
     uid_remap = {old: str(uuid.uuid4()) for old in identity_uids}
 
     clone = combined.replace(old_name, new_name)
