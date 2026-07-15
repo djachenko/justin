@@ -45,11 +45,7 @@ from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_tags import Tag
-from justin.actions.timelapse_xml import (
-    Xml,
-    collect_sound_closure as _collect_sound_closure,
-    clone_sound_blocks as _clone_sound_blocks,
-)
+from justin.actions.timelapse_xml import Xml
 from justin.actions.timelapse_xml_ops import (
     append_track_items_after,
     audio_clip_track_item_id,
@@ -58,6 +54,8 @@ from justin.actions.timelapse_xml_ops import (
     clear_audio_cache_paths,
     clip_project_item_uid,
     clip_ref,
+    collect_sound_closure as _collect_sound_closure,
+    clone_sound_blocks as _clone_sound_blocks,
     remove_track_item_lines,
     set_out_point,
     set_slot_position,
