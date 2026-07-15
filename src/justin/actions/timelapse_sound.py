@@ -5,6 +5,8 @@ from pathlib import Path
 from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_xml import Xml
 
+# Formats that carry audio only — no picture. The template's sound is an mp4
+# (which has a video part), so clones of these need that video part stripped.
 AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
 VIDEO_AS_AUDIO_EXTENSIONS = {".mp4"}
 
