@@ -28,7 +28,8 @@ from justin.actions.timelapse_prproj import (
 )
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sources import TimelapseSources
-from justin.actions.timelapse_xml import Block, Xml, clone_sound_blocks as _clone_sound_blocks
+from justin.actions.timelapse_block import Block
+from justin.actions.timelapse_xml import Xml, clone_sound_blocks as _clone_sound_blocks
 
 
 # --------------------------------------------------------------------------- #

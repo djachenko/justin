@@ -2,6 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_xml import Xml
 
 AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
@@ -66,7 +67,7 @@ class AudioSound(Sound):
         blocks = xml.toplevel_blocks()
 
         sound_media = next(
-            (b for b in blocks if self.name in b.text and b.tag == "Media"),
+            (b for b in blocks if self.name in b.text and b.tag == Tag.Media),
             None,
         )
         if sound_media is None:
@@ -84,7 +85,7 @@ class AudioSound(Sound):
 
         # Collect which sub-ids belong to the video side vs. the audio side of MasterClip.
         master_clip = next(
-            (b for b in blocks if self.name in b.text and b.tag == "MasterClip"),
+            (b for b in blocks if self.name in b.text and b.tag == Tag.MasterClip),
             None,
         )
         video_clip_id: str | None = None
@@ -94,14 +95,14 @@ class AudioSound(Sound):
             if video_clip_ref := re.search(r'<Clip Index="0" ObjectRef="(\d+)"/>', master_clip.text):
                 video_clip_id = video_clip_ref.group(1)
                 video_clip = next(
-                    (b for b in blocks if b.tag == "VideoClip" and f'ObjectID="{video_clip_id}"' in b.header),
+                    (b for b in blocks if b.tag == Tag.VideoClip and f'ObjectID="{video_clip_id}"' in b.header),
                     None,
                 )
                 if video_clip:
                     video_clip_sub_ids = set(re.findall(r'ObjectRef="(\d+)"', video_clip.text))
             if audio_clip_ref := re.search(r'<Clip Index="1" ObjectRef="(\d+)"/>', master_clip.text):
                 audio_clip = next(
-                    (b for b in blocks if b.tag == "AudioClip" and f'ObjectID="{audio_clip_ref.group(1)}"' in b.header),
+                    (b for b in blocks if b.tag == Tag.AudioClip and f'ObjectID="{audio_clip_ref.group(1)}"' in b.header),
                     None,
                 )
                 if audio_clip:
@@ -112,7 +113,7 @@ class AudioSound(Sound):
             video_side_ids.add(video_clip_id)
         ids_to_remove = video_side_ids - audio_clip_sub_ids
         to_delete = [
-            (b.start, b.end) for b in blocks
+            b.span for b in blocks
             if any(f'ObjectID="{bid}"' in b.header for bid in ids_to_remove)
         ]
         xml.remove_blocks_by_positions(to_delete)
@@ -121,7 +122,7 @@ class AudioSound(Sound):
         if video_clip_id and master_clip:
             blocks = xml.toplevel_blocks()
             master_clip = next(
-                (b for b in blocks if self.name in b.text and b.tag == "MasterClip"),
+                (b for b in blocks if self.name in b.text and b.tag == Tag.MasterClip),
                 None,
             )
             if master_clip:
