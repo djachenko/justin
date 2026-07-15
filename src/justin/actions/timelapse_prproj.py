@@ -58,8 +58,6 @@ from justin.actions.timelapse_xml_ops import (
     clear_audio_cache_paths,
     clip_project_item_uid,
     clip_ref,
-    find_panel_item_index,
-    max_object_id,
     remove_track_item_lines,
     set_out_point,
     set_slot_position,
@@ -223,7 +221,7 @@ class TimelapseSchema:
         tmpl_track_id = tmpl_track.id if tmpl_track else None
 
         insert_pos = max(b.end for b in tmpl_blocks)
-        max_id = max_object_id(xml)
+        max_id = xml.max_object_id()
 
         all_clones = ""
         new_panel_uids: list[str] = []
@@ -249,7 +247,7 @@ class TimelapseSchema:
 
         # Register new clips in the project panel, anchored after the stale template entry.
         if tmpl_panel_uid and new_panel_uids:
-            base = find_panel_item_index(xml, tmpl_panel_uid)
+            base = xml.find_panel_item_index(tmpl_panel_uid)
 
             if base is not None:
 

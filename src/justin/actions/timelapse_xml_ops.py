@@ -117,25 +117,6 @@ _TRACK_ITEM_LINE_RE = r'<TrackItem Index="(\d+)" ObjectRef="\d+"/>'
 # runtime value; returned as strings for use with re.search / re.sub / xml.sub.
 # ---------------------------------------------------------------------------
 
-def _panel_item_re(uid: str) -> str:
-    """
-    Pattern matching the panel entry for a specific clip UUID.
-    → Panel
-
-    The Project panel's <Items> list looks like:
-        <Item Index="3" ObjectURef="a1b2-…"/>
-        <Item Index="4" ObjectURef="c3d4-…"/>
-
-    Pattern breakdown:
-      <Item Index="    — tag opening + index attribute
-      (\\d+)           — capture: position in the list; used to anchor new entries after this one
-      " ObjectURef="   — separator before the UUID attribute
-      {uid}            — the specific clip UUID (re.escape handles the hyphens)
-      "                — closing quote
-    """
-    return rf'<Item Index="(\d+)" ObjectURef="{re.escape(uid)}"'
-
-
 def _track_item_slot_re(track_item_id: str) -> str:
     """
     Pattern matching a specific slot line in a track's slot list, including its
@@ -249,33 +230,6 @@ def block_name(text: str) -> str | None:
     if m := re.search(_BLOCK_NAME_RE, text):
         return m.group(1)
     return None
-
-
-# ---------------------------------------------------------------------------
-# Queries on the whole project XML
-# ---------------------------------------------------------------------------
-
-def max_object_id(xml: Xml) -> int:
-    """
-    The highest numeric ObjectID currently in the project.
-    When cloning a block cluster, new IDs must all be above this number so they
-    can't accidentally collide with anything already in the file.
-    """
-    return max(int(i) for i in re.findall(_OBJECT_ID_RE, xml.raw))
-
-
-def find_panel_item_index(xml: Xml, uid: str) -> int | None:
-    """
-    The Index of the panel entry that points at the given UUID.
-    The Project panel's <Items> list contains self-closing lines like
-    <Item Index="3" ObjectURef="some-uuid"/>. We locate the entry by UUID so we
-    know which Index to anchor new entries after when registering cloned clips.
-    """
-    if m := re.search(_panel_item_re(uid), xml.raw):
-        return int(m.group(1))
-
-    return None
-
 
 # ---------------------------------------------------------------------------
 # Block text edits — return modified text, do not touch Xml
