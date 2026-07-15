@@ -10,14 +10,14 @@ plays clip #56"). We call each chunk a *block*.
 Writing such a file correctly from scratch is hopeless — there are hundreds of
 interlocking chunks. So instead we cheat: someone built one good timelapse
 project by hand in Premiere and saved it (the "wolfday" template,
-``step_12_sound_in_timeline.prproj`` — an image sequence + a cover frame + one
-sound on the timeline, 10 fps). We open that file's text and carefully edit it
-to describe the timelapse we actually want:
+``template.prproj`` — an image sequence + a cover frame + one sound on the
+timeline, 10 fps, with abstract placeholder strings). We open that file's text
+and carefully edit it to describe the timelapse we actually want:
 
   * swap in the right folder paths, frame count, and durations (``_substitute_*``);
-  * make the template's sound match the real sound — including stripping the
-    video part for audio-only files like mp3 (``_adapt_sound_to_audio_only``);
-  * copy the sound's chunks once per extra sound (``_add_extra_sounds``);
+  * replace the template's placeholder sound with the real sounds — including
+    stripping the video part for audio-only files like mp3 (``Sound.adapt``);
+  * copy the sound's block cluster once per real sound (``_apply_sounds``);
   * put chosen sounds on the timeline, or leave them only in the project's clip
     list (``_layout_sounds_in_timeline`` / ``_remove_sounds_from_timeline``);
   * throw away the cover frame or the sound entirely if the timelapse has none.
@@ -30,7 +30,7 @@ of id, and the difference bites you if you ignore it:
     blocks of different kinds. Don't assume a number is globally unique.
   * ``ObjectUID`` / ``ObjectURef`` — long random codes (uuids), unique everywhere.
 
-We do almost all the editing one block at a time: ``parse_toplevel_blocks``
+We do almost all the editing one block at a time: ``toplevel_blocks``
 finds where each block starts and ends in the raw text, and we cut blocks out or
 splice them back in with ordinary string slicing.
 """
@@ -46,8 +46,11 @@ from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_xml import (
     Xml,
+    block_id,
     collect_sound_closure as _collect_sound_closure,
     clone_sound_blocks as _clone_sound_blocks,
+    _OBJECT_ID_RE,
+    _OBJECT_UID_RE,
 )
 
 # Premiere measures time in "ticks". This many ticks make one second.
@@ -208,13 +211,13 @@ class TimelapseSchema:
 
         # Grab registration anchors before the template disappears.
         tmpl_panel = next((b for b in tmpl_blocks if b.tag == "ClipProjectItem"), None)
-        tmpl_panel_uid = re.search(r'ObjectUID="([^"]+)"', tmpl_panel.text).group(1) if tmpl_panel else None
+        tmpl_panel_uid = re.search(_OBJECT_UID_RE, tmpl_panel.text).group(1) if tmpl_panel else None
 
         tmpl_track = next((b for b in tmpl_blocks if b.tag == "AudioClipTrackItem"), None)
-        tmpl_track_id = re.search(r'ObjectID="(\d+)"', tmpl_track.text).group(1) if tmpl_track else None
+        tmpl_track_id = block_id(tmpl_track) if tmpl_track else None
 
         insert_pos = max(b.end for b in tmpl_blocks)
-        max_id = max(int(i) for i in re.findall(r'ObjectID="(\d+)"', xml._xml))
+        max_id = max(int(i) for i in re.findall(_OBJECT_ID_RE, xml._xml))
 
         all_clones = ""
         new_panel_uids: list[str] = []
@@ -224,10 +227,10 @@ class TimelapseSchema:
             clone = _clone_sound_blocks(tmpl_blocks, _SOUND_NAME_MARKER, sound.name, (max_id + 1) * i)
             all_clones += clone
 
-            if match := re.search(r'<ClipProjectItem ObjectUID="([^"]+)"', clone):
+            if match := re.search(r'<ClipProjectItem ' + _OBJECT_UID_RE, clone):
                 new_panel_uids.append(match.group(1))
 
-            if match := re.search(r'<AudioClipTrackItem ObjectID="(\d+)"', clone):
+            if match := re.search(r'<AudioClipTrackItem ' + _OBJECT_ID_RE, clone):
                 new_track_ids.append(match.group(1))
 
         # Insert clones first (template positions still valid), then remove the template.
@@ -278,15 +281,15 @@ class TimelapseSchema:
             blocks = xml.toplevel_blocks()
 
             block_text_by_id = {
-                (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
-                for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
+                (b.tag, block_id(b)): b.text
+                for b in blocks if block_id(b)
             }
 
             # Find the next timeline slot we haven't placed yet whose sound we know.
             track_item = next(
                 (b for b in blocks
                  if b.tag == "AudioClipTrackItem"
-                 and re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1) not in placed_ids
+                 and block_id(b) not in placed_ids
                  and TimelapseSchema._track_item_sound_name(b.text, block_text_by_id) in durations),
                 None,
             )
@@ -294,7 +297,7 @@ class TimelapseSchema:
             if track_item is None:
                 break
 
-            track_item_id = re.search(r'ObjectID="(\d+)"', track_item.text[:120]).group(1)
+            track_item_id = block_id(track_item)
             sound_name = TimelapseSchema._track_item_sound_name(track_item.text, block_text_by_id)
             duration = durations[sound_name]
             end = cursor + duration
@@ -329,7 +332,7 @@ class TimelapseSchema:
                     trimmed = re.sub(r'<OutPoint>\d+</OutPoint>', f'<OutPoint>{duration}</OutPoint>', audio_clip_text, count=1)
                     audio_clip = next(
                         (b for b in xml.toplevel_blocks()
-                         if b.tag == "AudioClip" and f'ObjectID="{audio_clip_ref.group(1)}"' in b.text[:120]),
+                         if b.tag == "AudioClip" and block_id(b) == audio_clip_ref.group(1)),
                         None,
                     )
                     if audio_clip:
@@ -376,8 +379,8 @@ class TimelapseSchema:
         blocks = xml.toplevel_blocks()
 
         block_text_by_id = {
-            (b.tag, re.search(r'ObjectID="(\d+)"', b.text[:120]).group(1)): b.text
-            for b in blocks if re.search(r'ObjectID="(\d+)"', b.text[:120])
+            (b.tag, block_id(b)): b.text
+            for b in blocks if block_id(b)
         }
 
         all_track_items = [i for i, b in enumerate(blocks) if b.tag == "AudioClipTrackItem"]
@@ -395,7 +398,7 @@ class TimelapseSchema:
         dropped_closure = set(_collect_sound_closure(blocks, dropped))
         to_remove = (dropped_closure - keep_closure) | set(dropped)
 
-        dropped_ids = [re.search(r'ObjectID="(\d+)"', blocks[i].text[:120]).group(1) for i in dropped]
+        dropped_ids = [block_id(blocks[i]) for i in dropped]
         xml.remove_blocks_by_positions([(blocks[i].start, blocks[i].end) for i in to_remove])
         for track_item_id in dropped_ids:
             xml.sub(rf'[^\S\n]*<TrackItem Index="\d+" ObjectRef="{track_item_id}"/>\n', '')
@@ -426,8 +429,6 @@ class TimelapseSchema:
             append_after_last, count=1, flags=re.DOTALL,
         )
 
-    # Здесь нужно еще обработать кейс, когда кавер на таймлайне, но мы его удаляем и соответственно надо весь таймлайн сдвинуть влево.
-    # Или это здесь уже обрабатывается что ли?
     @staticmethod
     def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
         """Remove the cover frame and slide the image sequence back to the start."""

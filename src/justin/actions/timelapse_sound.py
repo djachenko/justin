@@ -94,14 +94,14 @@ class AudioSound(Sound):
             if video_clip_ref := re.search(r'<Clip Index="0" ObjectRef="(\d+)"/>', master_clip.text):
                 video_clip_id = video_clip_ref.group(1)
                 video_clip = next(
-                    (b for b in blocks if b.tag == "VideoClip" and f'ObjectID="{video_clip_id}"' in b.text[:80]),
+                    (b for b in blocks if b.tag == "VideoClip" and f'ObjectID="{video_clip_id}"' in b.header),
                     None,
                 )
                 if video_clip:
                     video_clip_sub_ids = set(re.findall(r'ObjectRef="(\d+)"', video_clip.text))
             if audio_clip_ref := re.search(r'<Clip Index="1" ObjectRef="(\d+)"/>', master_clip.text):
                 audio_clip = next(
-                    (b for b in blocks if b.tag == "AudioClip" and f'ObjectID="{audio_clip_ref.group(1)}"' in b.text[:80]),
+                    (b for b in blocks if b.tag == "AudioClip" and f'ObjectID="{audio_clip_ref.group(1)}"' in b.header),
                     None,
                 )
                 if audio_clip:
@@ -113,7 +113,7 @@ class AudioSound(Sound):
         ids_to_remove = video_side_ids - audio_clip_sub_ids
         to_delete = [
             (b.start, b.end) for b in blocks
-            if any(f'ObjectID="{bid}"' in b.text[:80] for bid in ids_to_remove)
+            if any(f'ObjectID="{bid}"' in b.header for bid in ids_to_remove)
         ]
         xml.remove_blocks_by_positions(to_delete)
 
