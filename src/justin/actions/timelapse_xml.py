@@ -56,6 +56,10 @@ class Xml:
 
         return cls(xml)
 
+    @classmethod
+    def from_gzip_bytes(cls, data: bytes) -> Self:
+        return cls(gzip.decompress(data).decode('utf-8'))
+
     def to_prproj(self, path: Path) -> None:
         with gzip.open(path, 'wb') as f:
             f.write(self._xml.encode('utf-8'))
