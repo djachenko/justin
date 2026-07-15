@@ -24,7 +24,7 @@ from justin.actions.timelapse_prproj import (
     TimelapseSchema,
     _resolve_timeline_sounds,
     generate_prproj,
-    _TEMPLATE_PATH,
+    _TEMPLATE_DATA,
 )
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sources import TimelapseSources
@@ -201,8 +201,7 @@ def test_reproduces_wolfday_template_structure(tmp_path):
     )
     xml = generate(timelapse_dir, timeline_sounds=["snejnye_volki"])
 
-    with gzip.open(_TEMPLATE_PATH, "rb") as f:
-        template = f.read().decode("utf-8")
+    template = gzip.decompress(_TEMPLATE_DATA).decode("utf-8")
 
     def tag_counts(project: str) -> Counter:
         return Counter(b.tag for b in Xml(project).toplevel_blocks())
@@ -222,8 +221,7 @@ def test_clone_introduces_no_new_classids(tmp_path):
     timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
     xml = generate(timelapse_dir, timeline_sounds=["alpha", "beta"])
 
-    with gzip.open(_TEMPLATE_PATH, "rb") as f:
-        template = f.read().decode("utf-8")
+    template = gzip.decompress(_TEMPLATE_DATA).decode("utf-8")
     template_classids = set(re.findall(r'ClassID="([^"]+)"', template))
     output_classids = set(re.findall(r'ClassID="([^"]+)"', xml))
 

@@ -38,6 +38,7 @@ splice them back in with ordinary string slicing.
 import re
 import subprocess
 from dataclasses import dataclass
+from importlib.resources import files as _resource_files
 from pathlib import Path
 from typing import TypeVar, Iterable, Callable
 
@@ -56,11 +57,10 @@ from justin.actions.timelapse_xml import (
 # Premiere measures time in "ticks". This many ticks make one second.
 PREMIERE_TIMEBASE = 254_016_000_000
 
-_TEMPLATE_PATH = ( # А нельзя ли тут какую-нибудь библиотеку для ресурсов заюзать? Потому что у меня есть сомнения, что PR-proj будет зашито в сборку, когда я буду делать релиз в Pypi.
-    Path(__file__).parent.parent
-    / "resources"
-    / "timelapse_templates"
-    / "template.prproj"
+_TEMPLATE_DATA: bytes = (
+    _resource_files("justin.resources.timelapse_templates")
+    .joinpath("template.prproj")
+    .read_bytes()
 )
 
 # Placeholder strings baked into the template. Each substitute_* method swaps
@@ -123,7 +123,7 @@ class TimelapseSchema:
         # The cover occupies one extra frame at the start of the sequence.
         sequence_duration = (frame_count + (1 if sources.cover else 0)) * ticks_per_frame
 
-        xml = Xml.from_prproj(_TEMPLATE_PATH)
+        xml = Xml.from_gzip_bytes(_TEMPLATE_DATA)
 
         self._substitute_paths(xml, sources.name, first_frame)
         self._substitute_ticks(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
