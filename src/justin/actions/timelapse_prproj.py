@@ -42,7 +42,8 @@ from pathlib import Path
 from typing import TypeVar, Iterable, Callable
 
 from justin.actions.timelapse_settings import TimelapseSettings
-from justin.actions.timelapse_sources import AUDIO_ONLY_EXTENSIONS, TimelapseSources
+from justin.actions.timelapse_sources import TimelapseSources
+from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_xml import (
     Xml,
     collect_sound_closure as _collect_sound_closure,
@@ -77,7 +78,7 @@ _TMPL_SEQ_DUR    = (_TMPL_N_FRAMES + 1) * _TMPL_FPS_TICKS
 
 
 
-def _resolve_timeline_sounds(sounds: list[Path], timeline_sounds: list[str]) -> list[Path]:
+def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) -> list[Sound]:
     return [s for s in sounds if s.name in timeline_sounds or s.stem in timeline_sounds]
 
 
@@ -174,120 +175,6 @@ class TimelapseSchema:
         xml.sub(r'<PeakFilePath>[^<]+</PeakFilePath>', '<PeakFilePath></PeakFilePath>')
 
     @staticmethod
-    def _adapt_sound_to_audio_only(xml: Xml, sound_name: str) -> None:
-        """
-        Turn the template's mp4 sound into a plain audio-only sound (mp3, wav...).
-
-        The template's sound is an mp4, so it carries a video part as well as an
-        audio part. A plain audio file has no video, so we have to remove that
-        video half of the cluster:
-
-          * take the video-stream pointer out of the Media chunk, and delete the
-            top-level video-stream chunk;
-          * delete the VideoClip and the little chunks that hang off it (its
-            markers, its video source);
-          * fix the MasterClip's clip list — remove the VideoClip entry and move
-            the AudioClip up to slot 0.
-
-        Careful bit: a markers chunk can be *shared* by the VideoClip and the
-        AudioClip. We must never delete a chunk the surviving AudioClip still
-        needs, even if it also belonged to the video side.
-        """
-        blocks = xml.toplevel_blocks()
-
-        # The sound's Media chunk is where the video-stream pointer lives.
-        sound_media = next(
-            (b for b in blocks if sound_name in b.text and b.tag == "Media"),
-            None,
-        )
-
-        if sound_media is None:
-            return
-
-        video_stream_ref = re.search(r'<VideoStream ObjectRef="(\d+)"/>', sound_media.text)
-
-        if video_stream_ref is None:
-            return  # no video part — already an audio-only sound, nothing to do
-
-        video_stream_id = video_stream_ref.group(1) # Мы его здесь далее вообще нигде не используем. Может реплейсить его чисто через regex? Типа как нашли так и убрали?
-
-        # Remove the video-stream pointer from the Media chunk.
-        media_without_video = sound_media.text.replace(f'\t\t<VideoStream ObjectRef="{video_stream_id}"/>\n', '')
-
-        xml.replace_range(sound_media.start, sound_media.end, media_without_video)
-
-        # Здесь мы уже заменили, то есть мы здесь мы вырезали из блока медиа видео часть. Интересно, что будет дальше.
-
-        blocks = xml.toplevel_blocks()
-
-        # The MasterClip lists its clips: slot 0 is the VideoClip, slot 1 the AudioClip.
-        # Что такое мастер клип?
-        # Типа каждый звук состоит из мастер клипа
-        master_clip = next(
-            (b for b in blocks if sound_name in b.text and b.tag == "MasterClip"),
-            None,
-        )
-
-        video_clip_id: str | None = None
-        video_clip_sub_ids: set[str] = set()
-        audio_clip_sub_ids: set[str] = set()
-
-        if master_clip:
-            if video_clip_ref := re.search(r'<Clip Index="0" ObjectRef="(\d+)"/>', master_clip.text):
-                video_clip_id = video_clip_ref.group(1)
-
-                video_clip = next(
-                    (b for b in blocks if b.tag == "VideoClip" and f'ObjectID="{video_clip_id}"' in b.text[:80]),
-                    None,
-                )
-
-                if video_clip:
-                    video_clip_sub_ids = set(re.findall(r'ObjectRef="(\d+)"', video_clip.text))
-
-            # Note which chunks the AudioClip still points at, so we keep them —
-            # the markers chunk may be shared between the video and audio sides.
-            if audio_clip_ref := re.search(r'<Clip Index="1" ObjectRef="(\d+)"/>', master_clip.text):
-                audio_clip = next(
-                    (b for b in blocks if b.tag == "AudioClip" and f'ObjectID="{audio_clip_ref.group(1)}"' in b.text[:80]),
-                    None,
-                )
-
-                if audio_clip:
-                    audio_clip_sub_ids = set(re.findall(r'ObjectRef="(\d+)"', audio_clip.text))
-
-        # Delete the video-side chunks — but not any the audio side still needs.
-        video_side_ids = {video_stream_id} | video_clip_sub_ids
-
-        if video_clip_id:
-            video_side_ids.add(video_clip_id)
-
-        ids_to_remove = video_side_ids - audio_clip_sub_ids
-
-        to_delete = [
-            (b.start, b.end) for b in blocks
-            if any(f'ObjectID="{block_id}"' in b.text[:80] for block_id in ids_to_remove) # Что за волшебная константа 80?
-        ]
-
-        xml.remove_blocks_by_positions(to_delete)
-
-        # Fix up the MasterClip's clip list: drop the VideoClip entry (slot 0)
-        # and move the AudioClip from slot 1 to slot 0.
-        if video_clip_id and master_clip:
-            blocks = xml.toplevel_blocks()
-
-            master_clip = next(
-                (b for b in blocks if sound_name in b.text and b.tag == "MasterClip"),
-                None,
-            )
-
-            if master_clip:
-                clips_list = master_clip.text
-                clips_list = clips_list.replace(f'\t\t<Clip Index="0" ObjectRef="{video_clip_id}"/>\n', '')
-                clips_list = re.sub(r'<Clip Index="1" ObjectRef=', '<Clip Index="0" ObjectRef=', clips_list, count=1)
-
-                xml.replace_range(master_clip.start, master_clip.end, clips_list)
-
-    @staticmethod
     def _remove_sound(xml: Xml) -> None:
         """Remove the template's sound completely (this timelapse has none)."""
         sound_blocks = [b for b in xml.toplevel_blocks() if _SOUND_NAME_MARKER in b.text]
@@ -295,7 +182,7 @@ class TimelapseSchema:
         xml.remove_blocks_by_positions([(b.start, b.end) for b in sound_blocks])
 
     @staticmethod
-    def _apply_sounds(xml: Xml, sounds: list[Path], timeline: bool = False) -> None:
+    def _apply_sounds(xml: Xml, sounds: list[Sound], timeline: bool = False) -> None:
         """
         Replace the template's placeholder sound with all the real sounds.
 
@@ -348,10 +235,8 @@ class TimelapseSchema:
         xml.insert(insert_pos, all_clones)
         xml.remove_blocks_by_positions([(b.start, b.end) for b in tmpl_blocks])
 
-        # Strip the video half for audio-only sounds (mp3, wav, …).
         for sound in sounds:
-            if sound.suffix.lower() in AUDIO_ONLY_EXTENSIONS:
-                TimelapseSchema._adapt_sound_to_audio_only(xml, sound.name)
+            sound.adapt(xml)
 
         # Register new clips in the project panel, anchored after the stale template entry.
         if tmpl_panel_uid and new_panel_uids:
@@ -375,7 +260,7 @@ class TimelapseSchema:
             TimelapseSchema._append_track_items(xml, tmpl_track_id, new_track_ids)
 
     @staticmethod
-    def _layout_sounds_in_timeline(xml: Xml, sounds: list[Path]) -> None:
+    def _layout_sounds_in_timeline(xml: Xml, sounds: list[Sound]) -> None:
         """
         Line the timeline sounds up back-to-back at their real lengths.
 
@@ -385,7 +270,7 @@ class TimelapseSchema:
         and the clip's own end point (how much of the clip plays). Slots are
         matched to sounds by filename and handled in the order they appear.
         """
-        durations = {sound.name: _probe_duration_ticks(sound) for sound in sounds}
+        durations = {sound.name: _probe_duration_ticks(sound.path) for sound in sounds}
         cursor = 0
         placed_ids: set[str] = set()
 

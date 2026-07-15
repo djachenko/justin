@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
+from justin.actions.timelapse_sound import Sound, AUDIO_ONLY_EXTENSIONS, VIDEO_AS_AUDIO_EXTENSIONS
+
 JPEG_EXTENSIONS = {".jpg", ".jpeg"}
-AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
-VIDEO_AS_AUDIO_EXTENSIONS = {".mp4"}
 
 
 @dataclass(frozen=True)
@@ -15,7 +15,7 @@ class TimelapseSources:
     frames: list[Path]
     cover: Path | None
 
-    sounds: list[Path] | None
+    sounds: list[Sound] | None
 
     @property
     def frames_count(self) -> int:
@@ -69,7 +69,7 @@ class TimelapseSources:
             return None
 
     @classmethod
-    def get_sounds(cls, path: Path) -> list[Path] | None:
+    def get_sounds(cls, path: Path) -> list[Sound] | None:
         sounds_dir = path / "sound"
 
         if not sounds_dir.exists():
@@ -77,17 +77,16 @@ class TimelapseSources:
 
         sounds = []
 
-        for sound in sounds_dir.iterdir():
-            if not sound.is_file():
-                continue
-                # raise
-
-            if sound.suffix.lower() not in AUDIO_ONLY_EXTENSIONS and sound.suffix.lower() not in VIDEO_AS_AUDIO_EXTENSIONS:
+        for sound_path in sounds_dir.iterdir():
+            if not sound_path.is_file():
                 continue
 
-            sounds.append(sound)
+            if sound_path.suffix.lower() not in AUDIO_ONLY_EXTENSIONS and sound_path.suffix.lower() not in VIDEO_AS_AUDIO_EXTENSIONS:
+                continue
+
+            sounds.append(Sound.from_path(sound_path))
 
         if not sounds:
             return None
 
-        return sorted(sounds)
+        return sorted(sounds, key=lambda s: s.path)
