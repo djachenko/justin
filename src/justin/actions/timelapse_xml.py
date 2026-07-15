@@ -37,9 +37,16 @@ class Xml:
         with gzip.open(path, 'wb') as f:
             f.write(self._xml.encode('utf-8'))
 
-    @property
-    def raw(self) -> str:
-        return self._xml
+    def max_object_id(self) -> int:
+        """The highest numeric ObjectID in the project — used to pick a safe id_offset when cloning."""
+        return max(int(i) for i in re.findall(_OBJECT_ID_RE, self._xml))
+
+    def find_panel_item_index(self, uid: str) -> int | None:
+        """Index of the <Item ObjectURef="uid"/> entry in the project panel's clip list, or None."""
+        if m := re.search(rf'<Item Index="(\d+)" ObjectURef="{re.escape(uid)}"', self._xml):
+            return int(m.group(1))
+
+        return None
 
     def replace(self, old: str, new: str) -> None:
         self._xml = self._xml.replace(old, new)
