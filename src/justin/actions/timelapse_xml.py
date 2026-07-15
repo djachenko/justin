@@ -16,6 +16,17 @@ from justin.actions.timelapse_re import (
 from justin.actions.timelapse_tags import Tag
 
 
+# Panel item entry: <Item Index="N" ObjectURef="uuid"/>
+# Captures the Index so we know where to anchor new entries after this one.
+#   <Item Index="   — tag + index attribute
+#   (\d+)           — capture: position in the panel list
+#   " ObjectURef="  — separator before the clip UUID
+#   {uid}           — the specific clip UUID (escaped — UUIDs contain hyphens)
+#   "               — closing quote
+def _panel_item_re(uid: str) -> str:
+    return rf'<Item Index="(\d+)" ObjectURef="{re.escape(uid)}"'
+
+
 class Xml:
     def __init__(self, xml: str):
         super().__init__()
@@ -43,7 +54,7 @@ class Xml:
 
     def find_panel_item_index(self, uid: str) -> int | None:
         """Index of the <Item ObjectURef="uid"/> entry in the project panel's clip list, or None."""
-        if m := re.search(rf'<Item Index="(\d+)" ObjectURef="{re.escape(uid)}"', self._xml):
+        if m := re.search(_panel_item_re(uid), self._xml):
             return int(m.group(1))
 
         return None
