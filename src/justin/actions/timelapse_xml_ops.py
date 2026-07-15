@@ -5,8 +5,6 @@ from justin.actions.timelapse_block import Block
 from justin.actions.timelapse_re import (
     _OBJECT_ID_RE,
     _OBJECT_UID_RE,
-    _OBJECT_UREF_RE,
-    _OBJECT_REF_RE,
     _IDENTITY_UUID_RE,
     _BARE_ID_TAG_RE,
     _CLIP_PROJECT_ITEM_UID_RE,
@@ -23,7 +21,7 @@ from justin.actions.timelapse_re import (
     _track_items_block_re,
     _id_remap_re,
 )
-from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
+from justin.actions.timelapse_xml import Xml
 
 
 # ---------------------------------------------------------------------------
@@ -239,64 +237,6 @@ def append_track_items_after(xml: Xml, anchor_id: str, new_ids: list[str]) -> No
 # ---------------------------------------------------------------------------
 # Block cluster operations — work on lists of Block, not on Xml
 # ---------------------------------------------------------------------------
-
-def collect_sound_closure(blocks: list[Block], entry_idxs: list[int]) -> list[int]:
-    """
-    Gather every chunk that belongs to a clip, starting from a few known chunks.
-
-    A clip is not one chunk — it's a little cluster of them (the audio data, its
-    markers, its channel info, ...) wired together by pointers. Only a couple of
-    those chunks actually mention the filename; the rest you can only reach by
-    following the pointers. So we start from the chunks that name the file
-    (``entry_idxs``) and keep hopping along pointers until we've collected the
-    whole cluster.
-
-    One wrinkle: a pointer's tag doesn't always tell you the kind of chunk it
-    points at (e.g. ``<Clip ObjectRef="56"/>`` might mean a VideoClip or an
-    AudioClip). So for number pointers we accept any clip-kind chunk carrying
-    that number; uuid pointers are unambiguous and looked up directly.
-    """
-    media_idxs_by_id: dict[str, list[int]] = {}
-    idx_by_uid: dict[str, int] = {}
-
-    for idx, block in enumerate(blocks):
-        own_id = re.search(_OBJECT_ID_RE, block.header)
-
-        if own_id and block.tag in _CLIP_MEDIA_TYPES:
-            media_idxs_by_id.setdefault(own_id.group(1), []).append(idx)
-
-        own_uid = re.search(_OBJECT_UID_RE, block.header)
-
-        if own_uid:
-            idx_by_uid[own_uid.group(1)] = idx
-
-    reached = set(entry_idxs)
-    frontier = list(entry_idxs)
-
-    while frontier:
-        block = blocks[frontier.pop()]
-
-        for ref in re.finditer(_OBJECT_REF_RE, block.text):
-            for target in media_idxs_by_id.get(ref.group(1), []):
-                if target not in reached:
-                    reached.add(target)
-                    frontier.append(target)
-
-        for uref in re.finditer(_OBJECT_UREF_RE, block.text):
-            target = idx_by_uid.get(uref.group(1))
-
-            if target is None:
-                continue
-            if blocks[target].tag not in _CLIP_MEDIA_TYPES:
-                continue
-            if target in reached:
-                continue
-
-            reached.add(target)
-            frontier.append(target)
-
-    return sorted(reached)
-
 
 def clone_sound_blocks(blocks: list[Block], old_name: str, new_name: str, id_offset: int) -> str:
     """
