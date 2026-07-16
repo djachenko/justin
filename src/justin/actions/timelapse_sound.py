@@ -3,13 +3,7 @@ from pathlib import Path
 
 from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_xml import Xml
-from justin.actions.timelapse_xml_ops import (
-    drop_video_stream,
-    master_clip_slot_ref,
-    promote_audio_to_first_slot,
-    reference_ids,
-    video_stream_ref,
-)
+from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 # Formats that carry audio only — no picture. The template's sound is an mp4
 # (which has a video part), so clones of these need that video part stripped.
@@ -81,20 +75,20 @@ class AudioSound(Sound):
         if media is None:
             return
 
-        video_stream_id = video_stream_ref(media.text)
+        video_stream_id = TimelapseXmlOps.video_stream_ref(media.text)
 
         if video_stream_id is None:
             return  # no video part — already audio-only, nothing to do
 
-        xml.replace_range(*media.span, drop_video_stream(media.text, video_stream_id))
+        xml.replace_range(*media.span, TimelapseXmlOps.drop_video_stream(media.text, video_stream_id))
 
         # Work out which blocks belong to the video side but not the surviving audio
         # side (a shared Markers block is reachable from both, so it must stay).
         blocks = xml.toplevel_blocks()
         master = blocks.containing(self.name).by_tag(Tag.MasterClip).first()
 
-        video_clip_id = master_clip_slot_ref(master.text, _VIDEO_SLOT) if master else None
-        audio_clip_id = master_clip_slot_ref(master.text, _AUDIO_SLOT) if master else None
+        video_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _VIDEO_SLOT) if master else None
+        audio_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _AUDIO_SLOT) if master else None
         video_clip = blocks.by_id(Tag.VideoClip, video_clip_id)
         audio_clip = blocks.by_id(Tag.AudioClip, audio_clip_id)
 
@@ -102,9 +96,9 @@ class AudioSound(Sound):
         if video_clip_id:
             video_side.add(video_clip_id)
         if video_clip:
-            video_side |= reference_ids(video_clip.text)
+            video_side |= TimelapseXmlOps.reference_ids(video_clip.text)
 
-        audio_side = reference_ids(audio_clip.text) if audio_clip else set()
+        audio_side = TimelapseXmlOps.reference_ids(audio_clip.text) if audio_clip else set()
         removed = video_side - audio_side
 
         xml.remove_blocks_by_positions([block.span for block in blocks if block.id in removed])
@@ -114,7 +108,7 @@ class AudioSound(Sound):
             master = xml.toplevel_blocks().containing(self.name).by_tag(Tag.MasterClip).first()
 
             if master:
-                xml.replace_range(*master.span, promote_audio_to_first_slot(master.text, video_clip_id, audio_clip_id))
+                xml.replace_range(*master.span, TimelapseXmlOps.promote_audio_to_first_slot(master.text, video_clip_id, audio_clip_id))
 
 
 class VideoSound(Sound):

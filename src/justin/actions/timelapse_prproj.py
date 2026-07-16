@@ -47,19 +47,7 @@ from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
-from justin.actions.timelapse_xml_ops import (
-    append_track_items_after,
-    audio_clip_track_item_id,
-    block_name,
-    block_uid,
-    clear_audio_cache_paths,
-    clip_project_item_uid,
-    clip_ref,
-    clone_sound_blocks as _clone_sound_blocks,
-    set_out_point,
-    set_slot_position,
-    subclip_ref,
-)
+from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 # Premiere measures time in "ticks". This many ticks make one second.
 PREMIERE_TIMEBASE = 254_016_000_000
@@ -179,7 +167,7 @@ class TimelapseSchema:
 
     @staticmethod
     def _clear_audio_caches(xml: Xml) -> None:
-        clear_audio_cache_paths(xml)
+        TimelapseXmlOps.clear_audio_cache_paths(xml)
 
     @staticmethod
     def _remove_sound(xml: Xml) -> None:
@@ -208,7 +196,7 @@ class TimelapseSchema:
 
         # Anchors in the template's panel/track lists, read before it disappears.
         template_panel = template.by_tag(Tag.ClipProjectItem).first()
-        template_panel_uid = block_uid(template_panel.text) if template_panel else None
+        template_panel_uid = TimelapseXmlOps.block_uid(template_panel.text) if template_panel else None
         template_slot = template.by_tag(Tag.AudioClipTrackItem).first()
         template_slot_id = template_slot.id if template_slot else None
 
@@ -220,7 +208,7 @@ class TimelapseSchema:
         slot_ids: list[str] = []
 
         for n, sound in enumerate(sounds, start=1):
-            clone = _clone_sound_blocks(template, _SOUND_NAME_MARKER, sound.name, (max_id + 1) * n)
+            clone = TimelapseXmlOps.clone_sound_blocks(template, _SOUND_NAME_MARKER, sound.name, (max_id + 1) * n)
             on_timeline = sound.name in timeline_names
 
             if not on_timeline:
@@ -228,10 +216,10 @@ class TimelapseSchema:
 
             clones += clone
 
-            if uid := clip_project_item_uid(clone):
+            if uid := TimelapseXmlOps.clip_project_item_uid(clone):
                 panel_uids.append(uid)
 
-            if on_timeline and (slot_id := audio_clip_track_item_id(clone)):
+            if on_timeline and (slot_id := TimelapseXmlOps.audio_clip_track_item_id(clone)):
                 slot_ids.append(slot_id)
 
         xml.insert(insert_at, clones)
@@ -243,7 +231,7 @@ class TimelapseSchema:
         TimelapseSchema._register_in_panel(xml, template_panel_uid, panel_uids)
 
         if template_slot_id and slot_ids:
-            append_track_items_after(xml, template_slot_id, slot_ids)
+            TimelapseXmlOps.append_track_items_after(xml, template_slot_id, slot_ids)
 
     @staticmethod
     def _strip_timeline_slot(clone: str) -> str:
@@ -321,14 +309,14 @@ class TimelapseSchema:
             # Where the clip sits on the track. It always has an end; it gets a
             # start only once we're past 0 (the first clip has none, matching how
             # the template stores it).
-            edits.append((*slot.span, set_slot_position(slot.text, cursor or None, end)))
+            edits.append((*slot.span, TimelapseXmlOps.set_slot_position(slot.text, cursor or None, end)))
 
             # How much of the clip plays — the AudioClip reached through the slot's SubClip.
-            subclip = blocks.by_id(Tag.SubClip, subclip_ref(slot.text))
-            audio_clip = blocks.by_id(Tag.AudioClip, clip_ref(subclip.text)) if subclip else None
+            subclip = blocks.by_id(Tag.SubClip, TimelapseXmlOps.subclip_ref(slot.text))
+            audio_clip = blocks.by_id(Tag.AudioClip, TimelapseXmlOps.clip_ref(subclip.text)) if subclip else None
 
             if audio_clip and "<OutPoint>" in audio_clip.text:
-                edits.append((*audio_clip.span, set_out_point(audio_clip.text, duration)))
+                edits.append((*audio_clip.span, TimelapseXmlOps.set_out_point(audio_clip.text, duration)))
 
             cursor = end
 
@@ -337,9 +325,9 @@ class TimelapseSchema:
     @staticmethod
     def _track_item_sound_name(track_item: Block, blocks: Blocks) -> str | None:
         """Which sound file a timeline slot plays (read off its SubClip's Name)."""
-        subclip = blocks.by_id(Tag.SubClip, subclip_ref(track_item.text))
+        subclip = blocks.by_id(Tag.SubClip, TimelapseXmlOps.subclip_ref(track_item.text))
 
-        return block_name(subclip.text) if subclip else None
+        return TimelapseXmlOps.block_name(subclip.text) if subclip else None
 
     @staticmethod
     def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
