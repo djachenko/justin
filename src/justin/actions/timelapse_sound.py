@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from justin.actions.timelapse_tags import Tag
+from justin.actions.timelapse_template import TimelapseTemplate
 from justin.actions.timelapse_xml import Xml
 from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
@@ -30,9 +31,16 @@ class Sound(ABC):
         return self.path.stem
 
     @abstractmethod
-    def adapt(self, xml: Xml) -> None:
-        """Adapt the XML to match this sound's structure."""
+    def adapt(self, section: str) -> str:
+        """Realize a template section as this sound's own — rename the placeholder to
+        this sound's file and adapt structure (video stripped for audio-only) — and
+        return it (still on template ids; integration assigns fresh ones later).
+        Subclasses build this out of ``rename``."""
         ...
+
+    def rename(self, section: str) -> str:
+        """Swap the template's placeholder sound name for this sound's real filename."""
+        return section.replace(TimelapseTemplate.SOUND_NAME, self.name)
 
     @classmethod
     def from_path(cls, path: Path) -> "Sound":
@@ -49,7 +57,7 @@ class AudioSound(Sound):
     """A sound file that carries audio only (mp3, wav, flac, …).
 
     The template's sound is an mp4, so every clone starts with a video part
-    attached. ``adapt`` strips that video half out of the XML.
+    attached. ``adapt`` strips that video half out and returns an audio-only section.
     """
 
     def __init__(self, path: Path) -> None:
@@ -59,32 +67,37 @@ class AudioSound(Sound):
     def path(self) -> Path:
         return self.__path
 
-    def adapt(self, xml: Xml) -> None:
-        """Strip the video half that the template's mp4 sound carries.
+    def adapt(self, section: str) -> str:
+        """Rename to this sound's file, then strip the video half the mp4 template carries.
 
-        The template's sound is an mp4, so it has both a video part and an
-        audio part. A plain audio file has no video, so we remove:
+        The template's sound is an mp4, so a section has both a video part and an
+        audio part. A plain audio file has no video, so after renaming we remove:
           * the video-stream pointer from the Media block and the stream itself;
           * the VideoClip and the blocks hanging off it (its markers, its video
             source) — but only the ones the surviving AudioClip doesn't also use
             (a Markers block can be shared);
           * the VideoClip entry in the MasterClip, promoting the AudioClip to slot 0.
+
+        Works on this sound's own section only (nothing outside its cluster) and
+        returns the renamed, audio-only section.
         """
-        media = xml.toplevel_blocks().containing(self.name).by_tag(Tag.Media).first()
+        section = self.rename(section)
+        fragment = Xml(section)
+        media = fragment.toplevel_blocks().containing(self.name).by_tag(Tag.Media).first()
 
         if media is None:
-            return
+            return section
 
         video_stream_id = TimelapseXmlOps.video_stream_ref(media.text)
 
         if video_stream_id is None:
-            return  # no video part — already audio-only, nothing to do
+            return section  # no video part — already audio-only, nothing to do
 
-        xml.replace_range(*media.span, TimelapseXmlOps.drop_video_stream(media.text, video_stream_id))
+        fragment.replace_range(*media.span, TimelapseXmlOps.drop_video_stream(media.text, video_stream_id))
 
         # Work out which blocks belong to the video side but not the surviving audio
         # side (a shared Markers block is reachable from both, so it must stay).
-        blocks = xml.toplevel_blocks()
+        blocks = fragment.toplevel_blocks()
 
         if master := blocks.containing(self.name).by_tag(Tag.MasterClip).first():
             video_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _VIDEO_SLOT)
@@ -109,14 +122,14 @@ class AudioSound(Sound):
 
         removed = video_side - audio_side
 
-        xml.remove_blocks_by_positions([block.span for block in blocks if block.id in removed])
+        fragment.remove_blocks_by_positions([block.span for block in blocks if block.id in removed])
 
         # Drop the emptied video slot from the MasterClip and promote the audio to slot 0.
         if video_clip_id and audio_clip_id:
-            master = xml.toplevel_blocks().containing(self.name).by_tag(Tag.MasterClip).first()
+            if master := fragment.toplevel_blocks().containing(self.name).by_tag(Tag.MasterClip).first():
+                fragment.replace_range(*master.span, TimelapseXmlOps.promote_audio_to_first_slot(master.text, video_clip_id, audio_clip_id))
 
-            if master:
-                xml.replace_range(*master.span, TimelapseXmlOps.promote_audio_to_first_slot(master.text, video_clip_id, audio_clip_id))
+        return fragment.text
 
 
 class VideoSound(Sound):
@@ -132,5 +145,5 @@ class VideoSound(Sound):
     def path(self) -> Path:
         return self.__path
 
-    def adapt(self, xml: Xml) -> None:
-        pass
+    def adapt(self, section: str) -> str:
+        return self.rename(section)

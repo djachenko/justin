@@ -307,3 +307,15 @@ class TestBlocksQueries:
 
     def test_queries_return_blocks_and_chain(self):
         assert self._sample().containing("a.mp3").by_tag("SubClip").first().id == "2"
+
+    def test_str_joins_block_text_in_order(self):
+        blocks = _blocks(("Media", "\t<Media ObjectID=\"1\"/>\n"),
+                         ("SubClip", "\t<SubClip ObjectID=\"2\"/>\n"))
+        assert str(blocks) == "\t<Media ObjectID=\"1\"/>\n\t<SubClip ObjectID=\"2\"/>\n"
+
+    def test_str_of_subset_is_a_spliceable_section(self):
+        # A filtered Blocks stringifies to just those blocks — a section to realize/insert.
+        assert str(self._sample().by_tag("SubClip")) == (
+            '<SubClip ObjectID="2"><Name>a.mp3</Name></SubClip>'
+            '<SubClip ObjectID="3"><Name>b.mp3</Name></SubClip>'
+        )
