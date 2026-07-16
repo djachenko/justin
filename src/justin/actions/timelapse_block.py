@@ -28,8 +28,10 @@ class Block(NamedTuple):
 
     @property
     def id(self) -> str | None:
-        m = re.search(TimelapseRe.OBJECT_ID, self.header)
-        return m.group(1) if m else None
+        if m := re.search(TimelapseRe.OBJECT_ID, self.header):
+            return m.group(1)
+        else:
+            return None
 
     @property
     def span(self) -> tuple[int, int]:
@@ -61,7 +63,10 @@ class Blocks(list[Block]):
         return next((block for block in self if block.tag == tag and block.id == block_id), None)
 
     def first(self) -> Block | None:
-        return self[0] if self else None
+        if self:
+            return self[0]
+        else:
+            return None
 
     def reachable_cluster(self, seeds: Iterable[Block], member_tags: set[str]) -> "Blocks":
         """Every block reachable from ``seeds`` by following id/uuid pointers.
