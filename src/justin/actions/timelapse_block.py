@@ -1,12 +1,7 @@
 import re
 from typing import Iterable, NamedTuple
 
-from justin.actions.timelapse_re import (
-    _OBJECT_ID_RE,
-    _OBJECT_REF_RE,
-    _OBJECT_UID_RE,
-    _OBJECT_UREF_RE,
-)
+from justin.actions.timelapse_re import TimelapseRe
 
 
 class Block(NamedTuple):
@@ -33,7 +28,7 @@ class Block(NamedTuple):
 
     @property
     def id(self) -> str | None:
-        m = re.search(_OBJECT_ID_RE, self.header)
+        m = re.search(TimelapseRe.OBJECT_ID, self.header)
         return m.group(1) if m else None
 
     @property
@@ -84,12 +79,12 @@ class Blocks(list[Block]):
         block_by_uid: dict[str, Block] = {}
 
         for block in self:
-            own_id = re.search(_OBJECT_ID_RE, block.header)
+            own_id = re.search(TimelapseRe.OBJECT_ID, block.header)
 
             if own_id and block.tag in member_tags:
                 members_by_id.setdefault(own_id.group(1), []).append(block)
 
-            own_uid = re.search(_OBJECT_UID_RE, block.header)
+            own_uid = re.search(TimelapseRe.OBJECT_UID, block.header)
 
             if own_uid:
                 block_by_uid[own_uid.group(1)] = block
@@ -100,13 +95,13 @@ class Blocks(list[Block]):
         while frontier:
             block = frontier.pop()
 
-            for ref in re.finditer(_OBJECT_REF_RE, block.text):
+            for ref in re.finditer(TimelapseRe.OBJECT_REF, block.text):
                 for target in members_by_id.get(ref.group(1), []):
                     if target.start not in reached:
                         reached[target.start] = target
                         frontier.append(target)
 
-            for uref in re.finditer(_OBJECT_UREF_RE, block.text):
+            for uref in re.finditer(TimelapseRe.OBJECT_UREF, block.text):
                 target = block_by_uid.get(uref.group(1))
 
                 if target is None or target.tag not in member_tags or target.start in reached:
