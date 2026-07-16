@@ -169,7 +169,8 @@ class TimelapseSchema:
         for tag in _FPS_TICKS_TAGS:
             xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
 
-        xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{sequence_duration}</End>")          # where the frames clip ends (after the cover)
+        # where the frames clip ends (after the cover)
+        xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{sequence_duration}</End>")
 
         for tag in _FRAMES_DUR_TAGS:
             xml.replace(f"<{tag}>{_TMPL_FRAMES_DUR}</{tag}>", f"<{tag}>{image_sequence_duration}</{tag}>")
@@ -251,7 +252,8 @@ class TimelapseSchema:
         minus everything the panel clip (its ClipProjectItem) still needs, so the
         shared panel blocks stay put.
         """
-        blocks = Xml(clone).toplevel_blocks()
+        fragment = Xml(clone)
+        blocks = fragment.toplevel_blocks()
         slots = blocks.by_tag(Tag.AudioClipTrackItem)
 
         if not slots:
@@ -262,12 +264,9 @@ class TimelapseSchema:
         slot_only = [block for block in blocks.reachable_cluster(slots, _CLIP_MEDIA_TYPES)
                      if block.start not in panel_starts]
 
-        result = clone
+        fragment.remove_blocks_by_positions([block.span for block in slot_only])
 
-        for block in sorted(slot_only, key=lambda b: b.start, reverse=True):
-            result = result[:block.start] + result[block.end:]
-
-        return result
+        return fragment.text
 
     @staticmethod
     def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]) -> None:
@@ -331,8 +330,7 @@ class TimelapseSchema:
 
             cursor = end
 
-        for start, end, text in sorted(edits, reverse=True):
-            xml.replace_range(start, end, text)
+        xml.replace_ranges(edits)
 
     @staticmethod
     def _track_item_sound_name(track_item: Block, blocks: Blocks) -> str | None:

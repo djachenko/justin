@@ -28,6 +28,10 @@ class Xml:
 
         self._xml = xml
 
+    @property
+    def text(self) -> str:
+        return self._xml
+
     @classmethod
     def from_prproj(cls, path: Path) -> Self:
         with gzip.open(path, 'rb') as f:
@@ -60,6 +64,18 @@ class Xml:
     def replace_range(self, start: int, end: int, text: str) -> None:
         self._xml = self._xml[:start] + text + self._xml[end:]
 
+    def replace_ranges(self, edits: list[tuple[int, int, str]]) -> Self:
+        """Apply several (start, end, replacement) edits in one pass.
+
+        The ranges must not overlap. Edits are applied from the end of the string
+        backwards, so each one's offsets stay valid however the later (earlier in
+        the string) replacements change length.
+        """
+        for start, end, text in sorted(edits, reverse=True):
+            self.replace_range(start, end, text)
+
+        return self
+
     def insert(self, position: int, text: str) -> None:
         self.replace_range(position, position, text)
 
@@ -67,11 +83,8 @@ class Xml:
         self._xml = re.sub(pattern, repl, self._xml, count=count, flags=flags)
 
     def remove_blocks_by_positions(self, positions: list[tuple[int, int]]) -> Self:
-        # Cut from the end backwards so earlier positions don't shift after each cut.
-        for start, end in sorted(positions, reverse=True):
-            self._xml = self._xml[:start] + self._xml[end:]
-
-        return self
+        # Removing a block is just replacing its range with nothing.
+        return self.replace_ranges([(start, end, "") for start, end in positions])
 
     def remove_dangling_refs(self) -> Self:
         """
