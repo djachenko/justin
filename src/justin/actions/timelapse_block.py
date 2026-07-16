@@ -68,6 +68,11 @@ class Blocks(list[Block]):
         else:
             return None
 
+    def __str__(self) -> str:
+        """The raw text of these blocks, concatenated in order — a section ready to
+        splice into a document (or hand to a Sound to realize)."""
+        return "".join(block.text for block in self)
+
     def reachable_cluster(self, seeds: Iterable[Block], member_tags: set[str]) -> "Blocks":
         """Every block reachable from ``seeds`` by following id/uuid pointers.
 
