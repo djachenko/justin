@@ -186,6 +186,52 @@ def _audio_track_items_region(xml: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# _strip_timeline_slot — panel-only clones drop their timeline instance
+# --------------------------------------------------------------------------- #
+
+def test_strip_timeline_slot_removes_slot_keeps_panel():
+    # A minimal clone: the panel clip (ClipProjectItem → MasterClip → AudioClip)
+    # plus a timeline instance (AudioClipTrackItem → its own SubClip → its own
+    # AudioClip). Stripping must drop the timeline instance and keep the panel side.
+    clone = (
+        '\t<ClipProjectItem ObjectID="1" ObjectUID="p-uid">\n'
+        '\t\t<MasterClip ObjectRef="2"/>\n'
+        '\t</ClipProjectItem>\n'
+        '\t<MasterClip ObjectID="2">\n'
+        '\t\t<Clip Index="0" ObjectRef="3"/>\n'
+        '\t</MasterClip>\n'
+        '\t<AudioClip ObjectID="3"/>\n'
+        '\t<AudioClipTrackItem ObjectID="4">\n'
+        '\t\t<SubClip ObjectRef="5"/>\n'
+        '\t</AudioClipTrackItem>\n'
+        '\t<SubClip ObjectID="5">\n'
+        '\t\t<Clip ObjectRef="6"/>\n'
+        '\t</SubClip>\n'
+        '\t<AudioClip ObjectID="6"/>\n'
+    )
+    stripped = TimelapseSchema._strip_timeline_slot(clone)
+
+    # Panel side kept.
+    assert '<ClipProjectItem ObjectID="1"' in stripped
+    assert '<MasterClip ObjectID="2">' in stripped
+    assert '<AudioClip ObjectID="3"/>' in stripped
+    # Timeline-only blocks gone.
+    assert 'ObjectID="4"' not in stripped  # AudioClipTrackItem
+    assert '<SubClip ObjectID="5">' not in stripped
+    assert '<AudioClip ObjectID="6"/>' not in stripped
+
+
+def test_strip_timeline_slot_noop_without_slot():
+    # A clone that already has no AudioClipTrackItem is returned unchanged.
+    clone = (
+        '\t<ClipProjectItem ObjectID="1">\n'
+        '\t\t<MasterClip ObjectRef="2"/>\n'
+        '\t</ClipProjectItem>\n'
+    )
+    assert TimelapseSchema._strip_timeline_slot(clone) == clone
+
+
+# --------------------------------------------------------------------------- #
 # golden: reproduce the real wolfday template structure
 # --------------------------------------------------------------------------- #
 
