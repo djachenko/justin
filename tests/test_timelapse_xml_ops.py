@@ -20,8 +20,13 @@ from justin.actions.timelapse_xml_ops import (
     subclip_ref,
     clip_ref,
     block_name,
+    video_stream_ref,
+    master_clip_slot_ref,
+    reference_ids,
     set_slot_position,
     set_out_point,
+    drop_video_stream,
+    promote_audio_to_first_slot,
     clear_audio_cache_paths,
     remove_track_item_lines,
     append_track_items_after,
@@ -69,6 +74,27 @@ class TestQueries:
     def test_block_name_first_match_only(self):
         assert block_name("<Name>first</Name><Name>second</Name>") == "first"
 
+    def test_video_stream_ref_found(self):
+        assert video_stream_ref('<Media><VideoStream ObjectRef="10"/></Media>') == "10"
+
+    def test_video_stream_ref_absent_when_audio_only(self):
+        assert video_stream_ref('<Media><AudioStream ObjectRef="11"/></Media>') is None
+
+    def test_master_clip_slot_ref_by_index(self):
+        text = '<MasterClip><Clip Index="0" ObjectRef="20"/><Clip Index="1" ObjectRef="21"/></MasterClip>'
+        assert master_clip_slot_ref(text, 0) == "20"
+        assert master_clip_slot_ref(text, 1) == "21"
+
+    def test_master_clip_slot_ref_missing(self):
+        assert master_clip_slot_ref("<MasterClip/>", 0) is None
+
+    def test_reference_ids_collects_all_objectrefs(self):
+        text = '<VideoClip><Markers ObjectRef="30"/><Source ObjectRef="40"/></VideoClip>'
+        assert reference_ids(text) == {"30", "40"}
+
+    def test_reference_ids_empty_when_none(self):
+        assert reference_ids("<VideoClip/>") == set()
+
 
 # --------------------------------------------------------------------------- #
 # block-text edits
@@ -111,13 +137,45 @@ class TestSetOutPoint:
         assert set_out_point("<Nothing/>", 9) == "<Nothing/>"
 
 
+class TestDropVideoStream:
+    def test_removes_the_stream_line(self):
+        media = (
+            '\t<Media ObjectID="1">\n'
+            '\t\t<VideoStream ObjectRef="10"/>\n'
+            '\t\t<AudioStream ObjectRef="11"/>\n'
+            '\t</Media>\n'
+        )
+        result = drop_video_stream(media, "10")
+        assert '<VideoStream ObjectRef="10"/>' not in result
+        assert '<AudioStream ObjectRef="11"/>' in result
+        # The whole line goes, no blank line left behind.
+        assert "\n\n" not in result
+
+    def test_noop_when_id_does_not_match(self):
+        media = '\t\t<VideoStream ObjectRef="10"/>\n'
+        assert drop_video_stream(media, "99") == media
+
+
+class TestPromoteAudioToFirstSlot:
+    def test_drops_video_slot_and_renumbers_audio(self):
+        master = (
+            '\t<MasterClip ObjectID="2">\n'
+            '\t\t<Clip Index="0" ObjectRef="20"/>\n'
+            '\t\t<Clip Index="1" ObjectRef="21"/>\n'
+            '\t</MasterClip>\n'
+        )
+        result = promote_audio_to_first_slot(master, "20", "21")
+        assert '<Clip Index="0" ObjectRef="20"/>' not in result
+        assert '<Clip Index="1" ObjectRef="21"/>' not in result
+        assert '<Clip Index="0" ObjectRef="21"/>' in result
+
+
 # --------------------------------------------------------------------------- #
 # whole-project edits
 # --------------------------------------------------------------------------- #
 
 def _dump(xml: Xml) -> str:
-    # Round-trips through toplevel access; Xml has no public getter, so read the field.
-    return xml._xml
+    return xml.text
 
 
 class TestClearAudioCachePaths:

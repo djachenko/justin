@@ -13,7 +13,7 @@ from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
 
 
 def _dump(xml: Xml) -> str:
-    return xml._xml
+    return xml.text
 
 
 # --------------------------------------------------------------------------- #
@@ -86,6 +86,26 @@ def test_sub_with_count():
     xml = Xml("aaa")
     xml.sub(r"a", "b", count=2)
     assert _dump(xml) == "bba"
+
+
+def test_text_exposes_current_string():
+    xml = Xml("<A/>")
+    assert xml.text == "<A/>"
+    xml.replace("A", "B")
+    assert xml.text == "<B/>"
+
+
+def test_replace_ranges_applies_all_back_to_front():
+    xml = Xml("0123456789")
+    xml.replace_ranges([(1, 3, "__"), (5, 7, "XXXX")])
+    # (5,7) is applied before (1,3); the earlier range's offsets stay valid.
+    assert _dump(xml) == "0__34XXXX789"
+
+
+def test_replace_ranges_survives_length_changes():
+    xml = Xml("aaaa")
+    xml.replace_ranges([(0, 1, "long"), (3, 4, "")])
+    assert _dump(xml) == "longaa"
 
 
 # --------------------------------------------------------------------------- #
@@ -256,3 +276,34 @@ class TestReachableCluster:
             ("AudioClip", '<AudioClip ObjectID="9"/>'),
         )
         assert _cluster_starts(blocks, 0) == [0, 1, 2]
+
+
+class TestBlocksQueries:
+    def _sample(self) -> Blocks:
+        return _blocks(
+            ("Media", '<Media ObjectID="1"><Name>a.mp3</Name></Media>'),
+            ("SubClip", '<SubClip ObjectID="2"><Name>a.mp3</Name></SubClip>'),
+            ("SubClip", '<SubClip ObjectID="3"><Name>b.mp3</Name></SubClip>'),
+        )
+
+    def test_by_tag_filters(self):
+        assert [b.id for b in self._sample().by_tag("SubClip")] == ["2", "3"]
+
+    def test_by_id_finds_one(self):
+        assert self._sample().by_id("SubClip", "3").id == "3"
+
+    def test_by_id_none_for_missing(self):
+        assert self._sample().by_id("SubClip", "99") is None
+
+    def test_by_id_none_for_none_arg(self):
+        assert self._sample().by_id("SubClip", None) is None
+
+    def test_containing_matches_text(self):
+        assert {b.id for b in self._sample().containing("a.mp3")} == {"1", "2"}
+
+    def test_first_returns_head_or_none(self):
+        assert self._sample().by_tag("SubClip").first().id == "2"
+        assert self._sample().by_tag("Nonexistent").first() is None
+
+    def test_queries_return_blocks_and_chain(self):
+        assert self._sample().containing("a.mp3").by_tag("SubClip").first().id == "2"
