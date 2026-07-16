@@ -257,10 +257,10 @@ class TimelapseSchema:
         if not slots:
             return clone
 
-        kept = blocks.reachable_cluster(blocks.by_tag(Tag.ClipProjectItem), _CLIP_MEDIA_TYPES)
-        kept_starts = {block.start for block in kept}
+        panel_cluster = blocks.reachable_cluster(blocks.by_tag(Tag.ClipProjectItem), _CLIP_MEDIA_TYPES)
+        panel_starts = {block.start for block in panel_cluster}
         slot_only = [block for block in blocks.reachable_cluster(slots, _CLIP_MEDIA_TYPES)
-                     if block.start not in kept_starts]
+                     if block.start not in panel_starts]
 
         result = clone
 
@@ -275,19 +275,19 @@ class TimelapseSchema:
         if not (template_uid and clone_uids):
             return
 
-        base = xml.find_panel_item_index(template_uid)
+        anchor_index = xml.find_panel_item_index(template_uid)
 
-        if base is None:
+        if anchor_index is None:
             return
 
         added = "".join(
-            f'\n\t\t\t\t<Item Index="{base + offset}" ObjectURef="{uid}"/>'
+            f'\n\t\t\t\t<Item Index="{anchor_index + offset}" ObjectURef="{uid}"/>'
             for offset, uid in enumerate(clone_uids, start=1)
         )
 
         xml.replace(
-            f'<Item Index="{base}" ObjectURef="{template_uid}"/>',
-            f'<Item Index="{base}" ObjectURef="{template_uid}"/>{added}',
+            f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>',
+            f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>{added}',
         )
 
     @staticmethod

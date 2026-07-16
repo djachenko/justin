@@ -81,7 +81,7 @@ ClassID и `ESP.PresetGuid` оставлять как есть. Если пер�
 
 Клип звука — это ~11–20 блоков, связанных ссылками (не по имени файла!).
 Имя файла (`<Name>x.mp3</Name>`, путь `./sound/x.mp3`) содержат только несколько
-из них; остальные достижимы только обходом ссылок ([`collect_sound_closure`](#структура-кода-генератора)).
+из них; остальные достижимы только обходом ссылок ([`Blocks.reachable_cluster`](#структура-кода-генератора)).
 
 ```
 ClipProjectItem            ← элемент панели проекта, <Name>, ObjectUID (на него ссылается BinProjectItem)
@@ -217,9 +217,9 @@ SubClip), остальное (VideoClip, VideoClipTrackItem, запись в Tra
 ```
 timelapse_re.py        — regex-константы (ObjectID/UID/URef/Ref, uuid-паттерны)
 timelapse_tags.py      — Tag (StrEnum): имена top-level тегов Premiere Pro
-timelapse_block.py     — Block (NamedTuple): один top-level блок + свойства .header/.id/.span
-timelapse_xml.py       — Xml: работа с сырым XML; collect_sound_closure; clone_sound_blocks
-timelapse_xml_ops.py   — именованные regex-операции над Premiere XML (запросы + правки)
+timelapse_block.py     — Block (NamedTuple): один top-level блок (.header/.id/.span); Blocks: коллекция блоков со структурными запросами (by_tag/by_id/containing/reachable_cluster)
+timelapse_xml.py       — Xml: работа с сырым XML (parse/replace/insert/remove/remove_dangling_refs)
+timelapse_xml_ops.py   — именованные regex-операции над Premiere XML (запросы + правки + clone_sound_blocks)
 timelapse_sound.py     — Sound (ABC) → AudioSound / VideoSound: адаптация mp3/mp4-структуры
 timelapse_settings.py  — TimelapseSettings: параметры генерации (fps, timeline_sounds и др.)
 timelapse_sources.py   — TimelapseSources: пути к исходникам (кадры, cover, звуки)
@@ -280,12 +280,12 @@ NamedTuple: `start`, `end`, `tag`, `text`.
 - `remove_blocks_by_positions([(start, end), ...])` — вырезание блоков с конца, чтобы офсеты не съезжали
 - `remove_dangling_refs()` — каскадная очистка висячих ссылок (до 10 итераций до стабилизации)
 
-**`collect_sound_closure`** (`timelapse_xml.py`)  
-Обход графа ссылок от seed-блоков (нашли по имени файла) до полного замыкания кластера.  
-Нужен потому что большинство блоков клипа не содержат имя файла — только id-ссылки.  
-Структура обходимого графа: [Граф одного звука](#граф-одного-звука-аудио-подграф).
+**`Blocks`** (`timelapse_block.py`)  
+`list[Block]` со структурными запросами (знает про теги/id/ссылки, но не про смысл premiere-тегов). Снапшот валиден только до следующей мутации `Xml`.
+- `by_tag` / `by_id` / `containing` / `first` — поиск блоков.
+- `reachable_cluster(seeds, member_tags)` — обход графа ссылок от seed-блоков (нашли по имени файла) до полного замыкания кластера. Нужен потому что большинство блоков клипа не содержат имя файла — только id-ссылки. Пришёл на смену `collect_sound_closure`, отдаёт `Blocks`, а не индексы. Структура обходимого графа: [Граф одного звука](#граф-одного-звука-аудио-подграф).
 
-**`clone_sound_blocks`** (`timelapse_xml.py`)  
+**`clone_sound_blocks`** (`timelapse_xml_ops.py`)  
 Копирует кластер блоков одного звука, давая копии свежие id:
 - числовые ObjectID/Ref сдвигаются на `id_offset` (больше любого существующего id);
 - ObjectUID/ObjectURef и `<ID>` заменяются на новые `uuid4()`;
@@ -301,8 +301,8 @@ ABC с методом `adapt(xml)`. Вызывается после клонир
 Центральный класс. Последовательность операций над `Xml`:
 1. `_substitute_paths` — заменяет wolfday-пути и имена на целевые
 2. `_substitute_ticks` — fps, длительности кадров, аудио, всей последовательности. Подробно: [Время](#время).
-3. `_apply_sounds` — клонирует шаблонный звук N раз, адаптирует (`Sound.adapt`), регистрирует в [панели и таймлайне](#панель-проекта-vs-таймлайн)
-4. `_layout_sounds_in_timeline` / `_remove_sounds_from_timeline` — управление раскладкой. Подробно: [Панель проекта vs таймлайн](#панель-проекта-vs-таймлайн).
+3. `_place_sounds` — клонирует шаблонный звук N раз; звуку не на таймлайне срезает таймлайн-слот (`_strip_timeline_slot`, остаётся только в панели), адаптирует (`Sound.adapt`), регистрирует в [панели](#панель-проекта-vs-таймлайн) (`_register_in_panel`) и на таймлайне. Линейный: без «добавили-потом-убрали».
+4. `_lay_out_timeline` — раскладывает таймлайн-звуки встык (один снапшот, правки с конца). Подробно: [Панель проекта vs таймлайн](#панель-проекта-vs-таймлайн).
 5. `_remove_cover` — вырезает cover и сдвигает кадровый клип в ноль. Подробно: [Лишний cover](#лишний-cover).
 6. `xml.remove_dangling_refs()` — финальная уборка. Подробно: [Каскадное удаление](#каскадное-удаление-висячих-ссылок-remove_dangling_refs).
 
@@ -319,9 +319,9 @@ Xml.from_gzip_bytes(_TEMPLATE_DATA)   ← importlib.resources → template.prpro
         │
    _substitute_*        ← заменяем wolfday-заглушки на реальные значения
         │
-   _apply_sounds        ← clone_sound_blocks × N → Sound.adapt × N → вставка в XML
+   _place_sounds        ← clone_sound_blocks × N → panel-only срезает слот → Sound.adapt × N → вставка
         │
-   _layout / _remove    ← управляем тем, что на таймлайне
+   _lay_out_timeline    ← раскладка выбранных звуков на таймлайне встык
         │
    _remove_cover        ← если cover отсутствует
         │
