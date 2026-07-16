@@ -1,7 +1,6 @@
 import re
 import uuid
 
-from justin.actions.timelapse_block import Block
 from justin.actions.timelapse_re import TimelapseRe
 from justin.actions.timelapse_xml import Xml
 
@@ -208,21 +207,25 @@ class TimelapseXmlOps:
         xml.sub(TimelapseRe.track_items_block(anchor_id), rewrite, count=1, flags=re.DOTALL)
 
     # -----------------------------------------------------------------------
-    # Block cluster operations — work on lists of Block, not on Xml
+    # Integration — assign fresh, non-clashing ids to a realized section
     # -----------------------------------------------------------------------
 
     @staticmethod
-    def clone_sound_blocks(blocks: list[Block], old_name: str, new_name: str, id_offset: int) -> str:
+    def recount_ids(section: str, id_offset: int) -> str:
         """
-        Make an independent copy of one sound's chunks, renamed for a new file.
+        Give a sound section fresh identities so it can coexist in the document.
 
-        A copy has to be fully independent — it must not accidentally share an id
-        with the original or with another copy, or Premiere gets confused. So we
-        give the copy fresh identities:
+        A realized section still carries the template's original ids, shared with
+        every other section realized from the same template. To integrate them all,
+        each gets a distinct id-space:
           * every plain-number id is bumped by ``id_offset`` (picked bigger than any
             id already in use, so the bumped numbers can't clash);
           * every uuid identity (ObjectUID / ObjectURef, and the ``<ID>`` codes) is
             replaced with a brand-new uuid.
+
+        Ids are pure integration — this is where they get assigned, nowhere else.
+        One remap over the whole section keeps its internal cross-references
+        consistent (e.g. a timeline slot's pointer to its own panel MasterClip).
 
         What we must NOT touch is ClassID (and ESP.PresetGuid). Those look like uuids
         too, but they aren't identities — they say *what kind* of chunk this is, and
@@ -230,26 +233,22 @@ class TimelapseXmlOps:
         longer recognises the chunk's type and silently refuses to open the file.
         (This was the bug that made multi-sound projects fail to open.)
         """
-        combined = ''.join(block.text for block in blocks)
-
-        numeric_ids = sorted(set(re.findall(TimelapseRe.OBJECT_ID, combined)), key=int)
+        numeric_ids = sorted(set(re.findall(TimelapseRe.OBJECT_ID, section)), key=int)
         id_remap = {old: str(int(old) + id_offset) for old in numeric_ids}
 
         # Collect uuids used as identities: ObjectUID/ObjectURef attributes and bare <ID> tags.
         # These are 36-char hex strings like "a1b2c3d4-…". ClassID looks the same but is NOT
         # an identity — it names the chunk's type and must not be touched.
-        identity_uids = set(re.findall(TimelapseRe.IDENTITY_UUID, combined))
-        identity_uids |= set(re.findall(TimelapseRe.BARE_ID_TAG, combined))
+        identity_uids = set(re.findall(TimelapseRe.IDENTITY_UUID, section))
+        identity_uids |= set(re.findall(TimelapseRe.BARE_ID_TAG, section))
         uid_remap = {old: str(uuid.uuid4()) for old in identity_uids}
-
-        clone = combined.replace(old_name, new_name)
 
         # TimelapseRe.id_remap(old_id) scopes the swap to ObjectID="N"/ObjectRef="N",
         # so bare numbers elsewhere (e.g. inside a Name) are left untouched.
         for old_id, new_id in id_remap.items():
-            clone = re.sub(TimelapseRe.id_remap(old_id), rf'\g<1>{new_id}"', clone)
+            section = re.sub(TimelapseRe.id_remap(old_id), rf'\g<1>{new_id}"', section)
 
         for old_uid, new_uid in uid_remap.items():
-            clone = clone.replace(old_uid, new_uid)
+            section = section.replace(old_uid, new_uid)
 
-        return clone
+        return section

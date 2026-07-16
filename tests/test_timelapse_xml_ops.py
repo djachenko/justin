@@ -11,7 +11,6 @@ import uuid
 
 import pytest
 
-from justin.actions.timelapse_block import Block
 from justin.actions.timelapse_xml import Xml
 from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
@@ -241,50 +240,37 @@ class TestAppendTrackItemsAfter:
 # block-cluster operations
 # --------------------------------------------------------------------------- #
 
-def _block(idx: int, tag: str, body: str) -> Block:
-    return Block(idx, idx, tag, body)
-
-
-class TestCloneSoundBlocks:
-    def test_renames_and_shifts_numeric_ids(self):
-        block = _block(
-            0, "Media",
-            '\t<Media ObjectID="5"><Name>old.mp3</Name><Sub ObjectRef="5"/></Media>\n',
-        )
-        clone = TimelapseXmlOps.clone_sound_blocks([block], "old.mp3", "new.mp3", id_offset=100)
-        assert "new.mp3" in clone and "old.mp3" not in clone
-        assert 'ObjectID="105"' in clone and 'ObjectRef="105"' in clone
+class TestRecountIds:
+    def test_shifts_numeric_ids(self):
+        section = '\t<Media ObjectID="5"><Sub ObjectRef="5"/></Media>\n'
+        result = TimelapseXmlOps.recount_ids(section, id_offset=100)
+        assert 'ObjectID="105"' in result and 'ObjectRef="105"' in result
 
     def test_leaves_classid_untouched(self):
-        block = _block(
-            0, "Media",
+        section = (
             '<Media ObjectID="5" ClassID="cccccccc-cccc-cccc-cccc-cccccccccccc">'
-            '<Name>old</Name></Media>',
+            '<Name>x</Name></Media>'
         )
-        clone = TimelapseXmlOps.clone_sound_blocks([block], "old", "new", id_offset=1)
-        assert "cccccccc-cccc-cccc-cccc-cccccccccccc" in clone
+        result = TimelapseXmlOps.recount_ids(section, id_offset=1)
+        assert "cccccccc-cccc-cccc-cccc-cccccccccccc" in result
 
     def test_regenerates_identity_uuids_freshly(self):
         old_uid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-        block = _block(
-            0, "Media",
+        section = (
             f'<Media ObjectID="1" ObjectUID="{old_uid}">'
-            f'<Ref ObjectURef="{old_uid}"/><ID>{old_uid}</ID><Name>x</Name></Media>',
+            f'<Ref ObjectURef="{old_uid}"/><ID>{old_uid}</ID></Media>'
         )
-        clone = TimelapseXmlOps.clone_sound_blocks([block], "x", "y", id_offset=1)
-        assert old_uid not in clone
+        result = TimelapseXmlOps.recount_ids(section, id_offset=1)
+        assert old_uid not in result
         # ObjectUID and ObjectURef pointing at the same old uid remap consistently.
-        new_uid = re.search(r'ObjectUID="([^"]+)"', clone).group(1)
-        assert f'ObjectURef="{new_uid}"' in clone
-        assert f"<ID>{new_uid}</ID>" in clone
+        new_uid = re.search(r'ObjectUID="([^"]+)"', result).group(1)
+        assert f'ObjectURef="{new_uid}"' in result
+        assert f"<ID>{new_uid}</ID>" in result
         uuid.UUID(new_uid)  # is a valid uuid
 
-    def test_numeric_id_only_remapped_inside_attributes(self):
+    def test_bare_number_in_name_survives(self):
         # A bare "5" in a Name must survive; only ObjectID/ObjectRef="5" shift.
-        block = _block(
-            0, "Media",
-            '<Media ObjectID="5"><Name>track5.mp3</Name></Media>',
-        )
-        clone = TimelapseXmlOps.clone_sound_blocks([block], "track5.mp3", "track5.mp3", id_offset=100)
-        assert "<Name>track5.mp3</Name>" in clone
-        assert 'ObjectID="105"' in clone
+        section = '<Media ObjectID="5"><Name>track5.mp3</Name></Media>'
+        result = TimelapseXmlOps.recount_ids(section, id_offset=100)
+        assert "<Name>track5.mp3</Name>" in result
+        assert 'ObjectID="105"' in result

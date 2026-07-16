@@ -1,10 +1,11 @@
 """
 Unit tests for the Sound hierarchy.
 
-AudioSound.adapt strips the video half that the template's mp4 sound carries,
-so a plain audio file (mp3, wav, …) ends up with an audio-only structure. These
-tests drive adapt on a small synthetic mp4-shaped project and assert exactly
-what survives.
+``adapt`` realizes a template section as this sound's own: it renames the
+template's placeholder to the sound's filename, and — for audio-only sounds —
+strips the video half the mp4 template carries. These tests drive adapt on a
+small synthetic mp4-shaped section (still named with the placeholder) and assert
+what the realized section looks like.
 """
 
 from pathlib import Path
@@ -12,28 +13,27 @@ from pathlib import Path
 import pytest
 
 from justin.actions.timelapse_sound import Sound, AudioSound, VideoSound
-from justin.actions.timelapse_xml import Xml
+from justin.actions.timelapse_template import TimelapseTemplate
+
+MARKER = TimelapseTemplate.SOUND_NAME  # the placeholder adapt renames away
 
 
-def _dump(xml: Xml) -> str:
-    return xml._xml
-
-
-# A minimal mp4-shaped project: the Media has both a video and an audio stream,
-# the MasterClip lists the VideoClip (slot 0) and AudioClip (slot 1), and both
-# clips share one Markers chunk (id 30) that must NOT be removed with the video.
-def _mp4_project(name: str) -> Xml:
-    return Xml(
+# A minimal mp4-shaped section, still named with the template placeholder: the
+# Media has both a video and an audio stream, the MasterClip lists the VideoClip
+# (slot 0) and AudioClip (slot 1), and both clips share one Markers chunk (id 30)
+# that must NOT be removed with the video.
+def _mp4_section() -> str:
+    return (
         "<Project>\n"
         '\t<Media ObjectID="1">\n'
-        f'\t\t<Name>{name}</Name>\n'
+        f'\t\t<Name>{MARKER}</Name>\n'
         '\t\t<VideoStream ObjectRef="10"/>\n'
         '\t\t<AudioStream ObjectRef="11"/>\n'
         '\t</Media>\n'
         '\t<VideoStream ObjectID="10"/>\n'
         '\t<AudioStream ObjectID="11"/>\n'
         '\t<MasterClip ObjectID="2">\n'
-        f'\t\t<Name>{name}</Name>\n'
+        f'\t\t<Name>{MARKER}</Name>\n'
         '\t\t<Clip Index="0" ObjectRef="20"/>\n'
         '\t\t<Clip Index="1" ObjectRef="21"/>\n'
         '\t</MasterClip>\n'
@@ -68,14 +68,31 @@ class TestFromPath:
 
 
 # --------------------------------------------------------------------------- #
-# AudioSound.adapt — the video-stripping logic
+# Sound.rename — the shared base step both subclasses build adapt from
+# --------------------------------------------------------------------------- #
+
+class TestRename:
+    def test_swaps_placeholder_for_filename_everywhere(self):
+        section = f"<Name>{MARKER}</Name> media ./sound/{MARKER}"
+        assert AudioSound(Path("song.mp3")).rename(section) == "<Name>song.mp3</Name> media ./sound/song.mp3"
+
+    def test_same_rename_for_video_and_audio(self):
+        section = f"<Name>{MARKER}</Name>"
+        assert VideoSound(Path("clip.mp4")).rename(section) == "<Name>clip.mp4</Name>"
+
+
+# --------------------------------------------------------------------------- #
+# AudioSound.adapt — rename + video-strip
 # --------------------------------------------------------------------------- #
 
 class TestAudioSoundAdapt:
+    def test_renames_placeholder_to_the_sound_file(self):
+        result = AudioSound(Path("song.mp3")).adapt(_mp4_section())
+        assert MARKER not in result
+        assert "<Name>song.mp3</Name>" in result
+
     def test_strips_video_side_keeps_audio_and_shared(self):
-        xml = _mp4_project("song.mp3")
-        AudioSound(Path("song.mp3")).adapt(xml)
-        result = _dump(xml)
+        result = AudioSound(Path("song.mp3")).adapt(_mp4_section())
 
         # Video-only chunks gone: the VideoStream block and the VideoClip block.
         assert '<VideoStream ObjectID="10"/>' not in result
@@ -90,43 +107,33 @@ class TestAudioSoundAdapt:
         assert '<Markers ObjectID="30"/>' in result
 
     def test_masterclip_promotes_audio_to_slot_zero(self):
-        xml = _mp4_project("song.mp3")
-        AudioSound(Path("song.mp3")).adapt(xml)
-        result = _dump(xml)
+        result = AudioSound(Path("song.mp3")).adapt(_mp4_section())
 
-        # The VideoClip entry is gone and the AudioClip moves from slot 1 to slot 0.
         assert '<Clip Index="0" ObjectRef="20"/>' not in result
         assert '<Clip Index="1" ObjectRef="21"/>' not in result
         assert '<Clip Index="0" ObjectRef="21"/>' in result
 
-    def test_noop_when_media_absent(self):
-        xml = _mp4_project("song.mp3")
-        before = _dump(xml)
-        # A sound whose name isn't in the project — nothing matches, nothing changes.
-        AudioSound(Path("other.mp3")).adapt(xml)
-        assert _dump(xml) == before
-
-    def test_noop_when_already_audio_only(self):
-        # A Media with no VideoStream pointer: adapt must return early.
-        xml = Xml(
+    def test_already_audio_only_is_renamed_but_not_stripped(self):
+        # A Media with no VideoStream pointer: renamed, structure otherwise intact.
+        section = (
             "<Project>\n"
             '\t<Media ObjectID="1">\n'
-            '\t\t<Name>song.mp3</Name>\n'
+            f'\t\t<Name>{MARKER}</Name>\n'
             '\t\t<AudioStream ObjectRef="11"/>\n'
             '\t</Media>\n'
             "</Project>\n"
         )
-        before = _dump(xml)
-        AudioSound(Path("song.mp3")).adapt(xml)
-        assert _dump(xml) == before
+        result = AudioSound(Path("song.mp3")).adapt(section)
+        assert "<Name>song.mp3</Name>" in result
+        assert '<AudioStream ObjectRef="11"/>' in result
 
 
 # --------------------------------------------------------------------------- #
-# VideoSound.adapt — no structural change for native mp4
+# VideoSound.adapt — rename only, video kept (native mp4)
 # --------------------------------------------------------------------------- #
 
-def test_videosound_adapt_is_noop():
-    xml = _mp4_project("clip.mp4")
-    before = _dump(xml)
-    VideoSound(Path("clip.mp4")).adapt(xml)
-    assert _dump(xml) == before
+def test_videosound_adapt_renames_only():
+    result = VideoSound(Path("clip.mp4")).adapt(_mp4_section())
+    assert "<Name>clip.mp4</Name>" in result        # renamed
+    assert '<VideoStream ObjectID="10"/>' in result  # video kept
+    assert '<Clip Index="0" ObjectRef="20"/>' in result
