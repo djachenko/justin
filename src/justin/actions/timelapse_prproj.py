@@ -169,7 +169,9 @@ class TimelapseSchema:
         for tag in _FPS_TICKS_TAGS:
             xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
 
-        # where the frames clip ends (after the cover)
+        # End of the frames clip on the timeline: it sits right after the cover
+        # frame, so in the template this is the whole sequence (cover + all frames).
+        # With no cover, _remove_cover pulls it back to image_sequence_duration.
         xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{sequence_duration}</End>")
 
         for tag in _FRAMES_DUR_TAGS:
