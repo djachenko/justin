@@ -100,6 +100,14 @@ _SUBCLIP_REF_RE = r'<SubClip ObjectRef="(\d+)"'
 #   "                   — closing quote
 _CLIP_REF_RE = r'<Clip ObjectRef="(\d+)"'
 
+# The VideoStream pointer inside a sound's Media block. The template's sound is an
+# mp4, so its Media points at a VideoStream; an audio-only file's Media does not.
+# → mp4 → mp3 (audio-only)
+#   <VideoStream ObjectRef="   — tag name + attribute prefix
+#   (\d+)                      — capture: the VideoStream block's id
+#   "/>                        — closing quote + self-closing tag
+_VIDEO_STREAM_REF_RE = r'<VideoStream ObjectRef="(\d+)"/>'
+
 # The Name element in any block (typically a SubClip carries the filename here).
 # → SubClip
 #   <Name>      — opening tag
@@ -253,3 +261,13 @@ def _track_items_block_re(anchor_id: str) -> str:
 #   "                          — closing quote
 def _id_remap_re(old_id: str) -> str:
     return rf'((?:ObjectID|ObjectRef)="){re.escape(old_id)}"'
+
+
+# A MasterClip's <Clip Index="N" ObjectRef="M"/> slot. Index 0 is the clip's video
+# half, index 1 the audio half — until the video half is stripped for audio-only.
+# → mp4 → mp3 (audio-only)
+#   <Clip Index="{index}" ObjectRef="   — tag + fixed slot index + attribute prefix
+#   (\d+)                               — capture: the referenced clip's id
+#   "/>                                 — closing quote + self-closing tag
+def _master_clip_slot_re(index: int) -> str:
+    return rf'<Clip Index="{index}" ObjectRef="(\d+)"/>'

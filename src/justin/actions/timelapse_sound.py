@@ -1,14 +1,25 @@
-import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_xml import Xml
+from justin.actions.timelapse_xml_ops import (
+    drop_video_stream,
+    master_clip_slot_ref,
+    promote_audio_to_first_slot,
+    reference_ids,
+    video_stream_ref,
+)
 
 # Formats that carry audio only — no picture. The template's sound is an mp4
 # (which has a video part), so clones of these need that video part stripped.
 AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
 VIDEO_AS_AUDIO_EXTENSIONS = {".mp4"}
+
+# A MasterClip lists its two halves as <Clip Index="N" ...>: slot 0 is the video
+# half, slot 1 the audio half — until the video half is stripped for audio-only.
+_VIDEO_SLOT = 0
+_AUDIO_SLOT = 1
 
 
 class Sound(ABC):
@@ -59,84 +70,51 @@ class AudioSound(Sound):
 
         The template's sound is an mp4, so it has both a video part and an
         audio part. A plain audio file has no video, so we remove:
-          * the video-stream pointer from the Media chunk and the stream block itself;
-          * the VideoClip and the little chunks that hang off it (its markers,
-            its video source) — but only the ones the surviving AudioClip doesn't
-            also need (markers can be shared);
-          * the VideoClip entry in the MasterClip's clip list, and the AudioClip
-            moves up from slot 1 to slot 0.
+          * the video-stream pointer from the Media block and the stream itself;
+          * the VideoClip and the blocks hanging off it (its markers, its video
+            source) — but only the ones the surviving AudioClip doesn't also use
+            (a Markers block can be shared);
+          * the VideoClip entry in the MasterClip, promoting the AudioClip to slot 0.
         """
-        blocks = xml.toplevel_blocks()
+        media = xml.toplevel_blocks().containing(self.name).by_tag(Tag.Media).first()
 
-        sound_media = next(
-            (b for b in blocks if self.name in b.text and b.tag == Tag.Media),
-            None,
-        )
-        if sound_media is None:
+        if media is None:
             return
-        video_stream_ref = re.search(r'<VideoStream ObjectRef="(\d+)"/>', sound_media.text)
-        if video_stream_ref is None:
+
+        video_stream_id = video_stream_ref(media.text)
+
+        if video_stream_id is None:
             return  # no video part — already audio-only, nothing to do
-        video_stream_id = video_stream_ref.group(1)
 
-        media_without_video = sound_media.text.replace(
-            f'\t\t<VideoStream ObjectRef="{video_stream_id}"/>\n', ''
-        )
-        xml.replace_range(sound_media.start, sound_media.end, media_without_video)
+        xml.replace_range(*media.span, drop_video_stream(media.text, video_stream_id))
+
+        # Work out which blocks belong to the video side but not the surviving audio
+        # side (a shared Markers block is reachable from both, so it must stay).
         blocks = xml.toplevel_blocks()
+        master = blocks.containing(self.name).by_tag(Tag.MasterClip).first()
 
-        # Collect which sub-ids belong to the video side vs. the audio side of MasterClip.
-        master_clip = next(
-            (b for b in blocks if self.name in b.text and b.tag == Tag.MasterClip),
-            None,
-        )
-        video_clip_id: str | None = None
-        video_clip_sub_ids: set[str] = set()
-        audio_clip_sub_ids: set[str] = set()
-        if master_clip:
-            if video_clip_ref := re.search(r'<Clip Index="0" ObjectRef="(\d+)"/>', master_clip.text):
-                video_clip_id = video_clip_ref.group(1)
-                video_clip = next(
-                    (b for b in blocks if b.tag == Tag.VideoClip and f'ObjectID="{video_clip_id}"' in b.header),
-                    None,
-                )
-                if video_clip:
-                    video_clip_sub_ids = set(re.findall(r'ObjectRef="(\d+)"', video_clip.text))
-            if audio_clip_ref := re.search(r'<Clip Index="1" ObjectRef="(\d+)"/>', master_clip.text):
-                audio_clip = next(
-                    (b for b in blocks if b.tag == Tag.AudioClip and f'ObjectID="{audio_clip_ref.group(1)}"' in b.header),
-                    None,
-                )
-                if audio_clip:
-                    audio_clip_sub_ids = set(re.findall(r'ObjectRef="(\d+)"', audio_clip.text))
+        video_clip_id = master_clip_slot_ref(master.text, _VIDEO_SLOT) if master else None
+        audio_clip_id = master_clip_slot_ref(master.text, _AUDIO_SLOT) if master else None
+        video_clip = blocks.by_id(Tag.VideoClip, video_clip_id)
+        audio_clip = blocks.by_id(Tag.AudioClip, audio_clip_id)
 
-        video_side_ids = {video_stream_id} | video_clip_sub_ids
+        video_side = {video_stream_id}
         if video_clip_id:
-            video_side_ids.add(video_clip_id)
-        ids_to_remove = video_side_ids - audio_clip_sub_ids
-        to_delete = [
-            b.span for b in blocks
-            if any(f'ObjectID="{bid}"' in b.header for bid in ids_to_remove)
-        ]
-        xml.remove_blocks_by_positions(to_delete)
+            video_side.add(video_clip_id)
+        if video_clip:
+            video_side |= reference_ids(video_clip.text)
 
-        # Drop the VideoClip entry from MasterClip and renumber AudioClip to slot 0.
-        if video_clip_id and master_clip:
-            blocks = xml.toplevel_blocks()
-            master_clip = next(
-                (b for b in blocks if self.name in b.text and b.tag == Tag.MasterClip),
-                None,
-            )
-            if master_clip:
-                clips_list = master_clip.text
-                clips_list = clips_list.replace(
-                    f'\t\t<Clip Index="0" ObjectRef="{video_clip_id}"/>\n', ''
-                )
-                clips_list = re.sub(
-                    r'<Clip Index="1" ObjectRef=', '<Clip Index="0" ObjectRef=',
-                    clips_list, count=1,
-                )
-                xml.replace_range(master_clip.start, master_clip.end, clips_list)
+        audio_side = reference_ids(audio_clip.text) if audio_clip else set()
+        removed = video_side - audio_side
+
+        xml.remove_blocks_by_positions([block.span for block in blocks if block.id in removed])
+
+        # Drop the emptied video slot from the MasterClip and promote the audio to slot 0.
+        if video_clip_id and audio_clip_id:
+            master = xml.toplevel_blocks().containing(self.name).by_tag(Tag.MasterClip).first()
+
+            if master:
+                xml.replace_range(*master.span, promote_audio_to_first_slot(master.text, video_clip_id, audio_clip_id))
 
 
 class VideoSound(Sound):
