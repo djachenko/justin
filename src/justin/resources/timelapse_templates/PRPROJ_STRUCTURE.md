@@ -215,11 +215,11 @@ SubClip), остальное (VideoClip, VideoClipTrackItem, запись в Tra
 Генератор разбит на несколько модулей в `justin/actions/`:
 
 ```
-timelapse_re.py        — regex-константы (ObjectID/UID/URef/Ref, uuid-паттерны)
+timelapse_re.py        — класс TimelapseRe: regex-паттерны Premiere XML (константы + билдеры-staticmethods)
 timelapse_tags.py      — Tag (StrEnum): имена top-level тегов Premiere Pro
 timelapse_block.py     — Block (NamedTuple): один top-level блок (.header/.id/.span); Blocks: коллекция блоков со структурными запросами (by_tag/by_id/containing/reachable_cluster)
 timelapse_xml.py       — Xml: работа с сырым XML (parse/replace/insert/remove/remove_dangling_refs)
-timelapse_xml_ops.py   — именованные regex-операции над Premiere XML (запросы + правки + clone_sound_blocks)
+timelapse_xml_ops.py   — класс TimelapseOps: именованные regex-операции над Premiere XML (запросы + правки + clone_sound_blocks)
 timelapse_sound.py     — Sound (ABC) → AudioSound / VideoSound: адаптация mp3/mp4-структуры
 timelapse_settings.py  — TimelapseSettings: параметры генерации (fps, timeline_sounds и др.)
 timelapse_sources.py   — TimelapseSources: пути к исходникам (кадры, cover, звуки)

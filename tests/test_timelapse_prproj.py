@@ -30,7 +30,7 @@ from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_block import Block
 from justin.actions.timelapse_xml import Xml
-from justin.actions.timelapse_xml_ops import clone_sound_blocks as _clone_sound_blocks
+from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 
 # --------------------------------------------------------------------------- #
@@ -345,7 +345,7 @@ def test_clone_shifts_ids_and_renames():
         '\t<Media ObjectID="5" ClassID="cccccccc-cccc-cccc-cccc-cccccccccccc">'
         '<Name>old.mp3</Name><Sub ObjectRef="5"/></Media>\n',
     )
-    clone = _clone_sound_blocks([block], "old.mp3", "new.mp3", id_offset=100)
+    clone = TimelapseXmlOps.clone_sound_blocks([block], "old.mp3", "new.mp3", id_offset=100)
     assert "new.mp3" in clone and "old.mp3" not in clone
     assert 'ObjectID="105"' in clone and 'ObjectRef="105"' in clone
     # ClassID untouched.

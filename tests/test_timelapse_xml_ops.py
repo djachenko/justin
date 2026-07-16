@@ -13,25 +13,7 @@ import pytest
 
 from justin.actions.timelapse_block import Block
 from justin.actions.timelapse_xml import Xml
-from justin.actions.timelapse_xml_ops import (
-    block_uid,
-    clip_project_item_uid,
-    audio_clip_track_item_id,
-    subclip_ref,
-    clip_ref,
-    block_name,
-    video_stream_ref,
-    master_clip_slot_ref,
-    reference_ids,
-    set_slot_position,
-    set_out_point,
-    drop_video_stream,
-    promote_audio_to_first_slot,
-    clear_audio_cache_paths,
-    remove_track_item_lines,
-    append_track_items_after,
-    clone_sound_blocks,
-)
+from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 
 # --------------------------------------------------------------------------- #
@@ -40,60 +22,60 @@ from justin.actions.timelapse_xml_ops import (
 
 class TestQueries:
     def test_block_uid_found(self):
-        assert block_uid('<Foo ObjectUID="abc-123" ClassID="x"/>') == "abc-123"
+        assert TimelapseXmlOps.block_uid('<Foo ObjectUID="abc-123" ClassID="x"/>') == "abc-123"
 
     def test_block_uid_missing(self):
-        assert block_uid("<Foo ObjectID=\"5\"/>") is None
+        assert TimelapseXmlOps.block_uid("<Foo ObjectID=\"5\"/>") is None
 
     def test_clip_project_item_uid_found(self):
         text = '\t<ClipProjectItem ObjectUID="panel-uid" Version="1">'
-        assert clip_project_item_uid(text) == "panel-uid"
+        assert TimelapseXmlOps.clip_project_item_uid(text) == "panel-uid"
 
     def test_clip_project_item_uid_requires_exact_tag(self):
         # A different tag carrying ObjectUID must not match.
-        assert clip_project_item_uid('<MasterClip ObjectUID="x">') is None
+        assert TimelapseXmlOps.clip_project_item_uid('<MasterClip ObjectUID="x">') is None
 
     def test_audio_clip_track_item_id_found(self):
-        assert audio_clip_track_item_id('<AudioClipTrackItem ObjectID="57">') == "57"
+        assert TimelapseXmlOps.audio_clip_track_item_id('<AudioClipTrackItem ObjectID="57">') == "57"
 
     def test_audio_clip_track_item_id_missing(self):
-        assert audio_clip_track_item_id('<VideoClipTrackItem ObjectID="57">') is None
+        assert TimelapseXmlOps.audio_clip_track_item_id('<VideoClipTrackItem ObjectID="57">') is None
 
     def test_subclip_ref(self):
-        assert subclip_ref('<SubClip ObjectRef="42"/>') == "42"
-        assert subclip_ref("<Other/>") is None
+        assert TimelapseXmlOps.subclip_ref('<SubClip ObjectRef="42"/>') == "42"
+        assert TimelapseXmlOps.subclip_ref("<Other/>") is None
 
     def test_clip_ref(self):
-        assert clip_ref('<Clip ObjectRef="99"/>') == "99"
-        assert clip_ref("<Other/>") is None
+        assert TimelapseXmlOps.clip_ref('<Clip ObjectRef="99"/>') == "99"
+        assert TimelapseXmlOps.clip_ref("<Other/>") is None
 
     def test_block_name(self):
-        assert block_name("<Name>snejnye_volki.mp4</Name>") == "snejnye_volki.mp4"
-        assert block_name("<NoName/>") is None
+        assert TimelapseXmlOps.block_name("<Name>snejnye_volki.mp4</Name>") == "snejnye_volki.mp4"
+        assert TimelapseXmlOps.block_name("<NoName/>") is None
 
     def test_block_name_first_match_only(self):
-        assert block_name("<Name>first</Name><Name>second</Name>") == "first"
+        assert TimelapseXmlOps.block_name("<Name>first</Name><Name>second</Name>") == "first"
 
     def test_video_stream_ref_found(self):
-        assert video_stream_ref('<Media><VideoStream ObjectRef="10"/></Media>') == "10"
+        assert TimelapseXmlOps.video_stream_ref('<Media><VideoStream ObjectRef="10"/></Media>') == "10"
 
     def test_video_stream_ref_absent_when_audio_only(self):
-        assert video_stream_ref('<Media><AudioStream ObjectRef="11"/></Media>') is None
+        assert TimelapseXmlOps.video_stream_ref('<Media><AudioStream ObjectRef="11"/></Media>') is None
 
     def test_master_clip_slot_ref_by_index(self):
         text = '<MasterClip><Clip Index="0" ObjectRef="20"/><Clip Index="1" ObjectRef="21"/></MasterClip>'
-        assert master_clip_slot_ref(text, 0) == "20"
-        assert master_clip_slot_ref(text, 1) == "21"
+        assert TimelapseXmlOps.master_clip_slot_ref(text, 0) == "20"
+        assert TimelapseXmlOps.master_clip_slot_ref(text, 1) == "21"
 
     def test_master_clip_slot_ref_missing(self):
-        assert master_clip_slot_ref("<MasterClip/>", 0) is None
+        assert TimelapseXmlOps.master_clip_slot_ref("<MasterClip/>", 0) is None
 
     def test_reference_ids_collects_all_objectrefs(self):
         text = '<VideoClip><Markers ObjectRef="30"/><Source ObjectRef="40"/></VideoClip>'
-        assert reference_ids(text) == {"30", "40"}
+        assert TimelapseXmlOps.reference_ids(text) == {"30", "40"}
 
     def test_reference_ids_empty_when_none(self):
-        assert reference_ids("<VideoClip/>") == set()
+        assert TimelapseXmlOps.reference_ids("<VideoClip/>") == set()
 
 
 # --------------------------------------------------------------------------- #
@@ -103,7 +85,7 @@ class TestQueries:
 class TestSetSlotPosition:
     def test_replaces_start_and_end(self):
         slot = "<Start>100</Start>\n\t\t\t\t<End>200</End>"
-        result = set_slot_position(slot, start=500, end=900)
+        result = TimelapseXmlOps.set_slot_position(slot, start=500, end=900)
         assert "<Start>500</Start>" in result
         assert "<End>900</End>" in result
         assert "100" not in result and "200" not in result
@@ -111,30 +93,30 @@ class TestSetSlotPosition:
     def test_adds_start_where_first_slot_had_none(self):
         # The first slot (tick 0) has no explicit Start tag.
         slot = "<End>200</End>"
-        result = set_slot_position(slot, start=500, end=900)
+        result = TimelapseXmlOps.set_slot_position(slot, start=500, end=900)
         assert result == "<Start>500</Start>\n\t\t\t\t<End>900</End>"
 
     def test_no_start_when_start_is_none(self):
         slot = "<Start>100</Start>\n\t\t\t\t<End>200</End>"
-        result = set_slot_position(slot, start=None, end=900)
+        result = TimelapseXmlOps.set_slot_position(slot, start=None, end=900)
         assert result == "<End>900</End>"
 
     def test_only_first_occurrence(self):
         slot = "<End>1</End> ... <End>2</End>"
-        result = set_slot_position(slot, start=None, end=9)
+        result = TimelapseXmlOps.set_slot_position(slot, start=None, end=9)
         assert result == "<End>9</End> ... <End>2</End>"
 
 
 class TestSetOutPoint:
     def test_replaces_value(self):
-        assert set_out_point("<OutPoint>1</OutPoint>", 42) == "<OutPoint>42</OutPoint>"
+        assert TimelapseXmlOps.set_out_point("<OutPoint>1</OutPoint>", 42) == "<OutPoint>42</OutPoint>"
 
     def test_only_first_occurrence(self):
         text = "<OutPoint>1</OutPoint><OutPoint>2</OutPoint>"
-        assert set_out_point(text, 9) == "<OutPoint>9</OutPoint><OutPoint>2</OutPoint>"
+        assert TimelapseXmlOps.set_out_point(text, 9) == "<OutPoint>9</OutPoint><OutPoint>2</OutPoint>"
 
     def test_no_outpoint_left_untouched(self):
-        assert set_out_point("<Nothing/>", 9) == "<Nothing/>"
+        assert TimelapseXmlOps.set_out_point("<Nothing/>", 9) == "<Nothing/>"
 
 
 class TestDropVideoStream:
@@ -145,7 +127,7 @@ class TestDropVideoStream:
             '\t\t<AudioStream ObjectRef="11"/>\n'
             '\t</Media>\n'
         )
-        result = drop_video_stream(media, "10")
+        result = TimelapseXmlOps.drop_video_stream(media, "10")
         assert '<VideoStream ObjectRef="10"/>' not in result
         assert '<AudioStream ObjectRef="11"/>' in result
         # The whole line goes, no blank line left behind.
@@ -153,7 +135,7 @@ class TestDropVideoStream:
 
     def test_noop_when_id_does_not_match(self):
         media = '\t\t<VideoStream ObjectRef="10"/>\n'
-        assert drop_video_stream(media, "99") == media
+        assert TimelapseXmlOps.drop_video_stream(media, "99") == media
 
 
 class TestPromoteAudioToFirstSlot:
@@ -164,7 +146,7 @@ class TestPromoteAudioToFirstSlot:
             '\t\t<Clip Index="1" ObjectRef="21"/>\n'
             '\t</MasterClip>\n'
         )
-        result = promote_audio_to_first_slot(master, "20", "21")
+        result = TimelapseXmlOps.promote_audio_to_first_slot(master, "20", "21")
         assert '<Clip Index="0" ObjectRef="20"/>' not in result
         assert '<Clip Index="1" ObjectRef="21"/>' not in result
         assert '<Clip Index="0" ObjectRef="21"/>' in result
@@ -184,7 +166,7 @@ class TestClearAudioCachePaths:
             "<ConformedAudioPath>/Users/x/a.cfa</ConformedAudioPath>"
             "<PeakFilePath>/Users/x/a.pek</PeakFilePath>"
         )
-        clear_audio_cache_paths(xml)
+        TimelapseXmlOps.clear_audio_cache_paths(xml)
         assert _dump(xml) == (
             "<ConformedAudioPath></ConformedAudioPath><PeakFilePath></PeakFilePath>"
         )
@@ -194,12 +176,12 @@ class TestClearAudioCachePaths:
             "<ConformedAudioPath>/one.cfa</ConformedAudioPath>"
             "<ConformedAudioPath>/two.cfa</ConformedAudioPath>"
         )
-        clear_audio_cache_paths(xml)
+        TimelapseXmlOps.clear_audio_cache_paths(xml)
         assert ".cfa" not in _dump(xml)
 
     def test_already_empty_is_noop(self):
         xml = Xml("<ConformedAudioPath></ConformedAudioPath>")
-        clear_audio_cache_paths(xml)
+        TimelapseXmlOps.clear_audio_cache_paths(xml)
         assert _dump(xml) == "<ConformedAudioPath></ConformedAudioPath>"
 
 
@@ -210,7 +192,7 @@ class TestRemoveTrackItemLines:
             '\t\t\t\t\t<TrackItem Index="1" ObjectRef="20"/>\n'
             '\t\t\t\t\t<TrackItem Index="2" ObjectRef="30"/>\n'
         )
-        remove_track_item_lines(xml, ["10", "30"])
+        TimelapseXmlOps.remove_track_item_lines(xml, ["10", "30"])
         result = _dump(xml)
         assert 'ObjectRef="20"' in result
         assert 'ObjectRef="10"' not in result
@@ -221,7 +203,7 @@ class TestRemoveTrackItemLines:
     def test_empty_list_is_noop(self):
         original = '\t<TrackItem Index="0" ObjectRef="10"/>\n'
         xml = Xml(original)
-        remove_track_item_lines(xml, [])
+        TimelapseXmlOps.remove_track_item_lines(xml, [])
         assert _dump(xml) == original
 
 
@@ -233,7 +215,7 @@ class TestAppendTrackItemsAfter:
             '\t\t\t\t\t<TrackItem Index="1" ObjectRef="20"/>\n'
             '\t\t\t\t</TrackItems>'
         )
-        append_track_items_after(xml, anchor_id="10", new_ids=["30", "40"])
+        TimelapseXmlOps.append_track_items_after(xml, anchor_id="10", new_ids=["30", "40"])
         result = _dump(xml)
         assert '<TrackItem Index="2" ObjectRef="30"/>' in result
         assert '<TrackItem Index="3" ObjectRef="40"/>' in result
@@ -248,7 +230,7 @@ class TestAppendTrackItemsAfter:
             '\t<TrackItem Index="0" ObjectRef="99"/>\n'
             '</TrackItems>'
         )
-        append_track_items_after(xml, anchor_id="99", new_ids=["50"])
+        TimelapseXmlOps.append_track_items_after(xml, anchor_id="99", new_ids=["50"])
         result = _dump(xml)
         first, second = result.split("</TrackItems>")[:2]
         assert 'ObjectRef="50"' not in first
@@ -269,7 +251,7 @@ class TestCloneSoundBlocks:
             0, "Media",
             '\t<Media ObjectID="5"><Name>old.mp3</Name><Sub ObjectRef="5"/></Media>\n',
         )
-        clone = clone_sound_blocks([block], "old.mp3", "new.mp3", id_offset=100)
+        clone = TimelapseXmlOps.clone_sound_blocks([block], "old.mp3", "new.mp3", id_offset=100)
         assert "new.mp3" in clone and "old.mp3" not in clone
         assert 'ObjectID="105"' in clone and 'ObjectRef="105"' in clone
 
@@ -279,7 +261,7 @@ class TestCloneSoundBlocks:
             '<Media ObjectID="5" ClassID="cccccccc-cccc-cccc-cccc-cccccccccccc">'
             '<Name>old</Name></Media>',
         )
-        clone = clone_sound_blocks([block], "old", "new", id_offset=1)
+        clone = TimelapseXmlOps.clone_sound_blocks([block], "old", "new", id_offset=1)
         assert "cccccccc-cccc-cccc-cccc-cccccccccccc" in clone
 
     def test_regenerates_identity_uuids_freshly(self):
@@ -289,7 +271,7 @@ class TestCloneSoundBlocks:
             f'<Media ObjectID="1" ObjectUID="{old_uid}">'
             f'<Ref ObjectURef="{old_uid}"/><ID>{old_uid}</ID><Name>x</Name></Media>',
         )
-        clone = clone_sound_blocks([block], "x", "y", id_offset=1)
+        clone = TimelapseXmlOps.clone_sound_blocks([block], "x", "y", id_offset=1)
         assert old_uid not in clone
         # ObjectUID and ObjectURef pointing at the same old uid remap consistently.
         new_uid = re.search(r'ObjectUID="([^"]+)"', clone).group(1)
@@ -303,6 +285,6 @@ class TestCloneSoundBlocks:
             0, "Media",
             '<Media ObjectID="5"><Name>track5.mp3</Name></Media>',
         )
-        clone = clone_sound_blocks([block], "track5.mp3", "track5.mp3", id_offset=100)
+        clone = TimelapseXmlOps.clone_sound_blocks([block], "track5.mp3", "track5.mp3", id_offset=100)
         assert "<Name>track5.mp3</Name>" in clone
         assert 'ObjectID="105"' in clone

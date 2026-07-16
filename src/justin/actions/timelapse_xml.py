@@ -4,21 +4,7 @@ from pathlib import Path
 from typing import Self
 
 from justin.actions.timelapse_block import Block, Blocks
-from justin.actions.timelapse_re import (
-    _OBJECT_ID_RE,
-    _OBJECT_UID_RE,
-    _OBJECT_UREF_RE,
-    _OBJECT_REF_RE,
-    _panel_item_re,
-    _PANEL_ITEMS_BLOCK_RE,
-    _ANY_PANEL_ITEM_LINE_RE,
-    _ANY_TRACK_ITEMS_BLOCK_RE,
-    _ANY_TRACK_ITEM_LINE_RE,
-    _TRACK_ITEM_OBJECTREF_RE,
-    _UUID_REF_TAGS_RE,
-    _NUMERIC_REF_TAGS_RE,
-    _TOPLEVEL_BLOCK_START_RE,
-)
+from justin.actions.timelapse_re import TimelapseRe
 from justin.actions.timelapse_tags import Tag
 
 
@@ -49,11 +35,11 @@ class Xml:
 
     def max_object_id(self) -> int:
         """The highest numeric ObjectID in the project — used to pick a safe id_offset when cloning."""
-        return max(int(i) for i in re.findall(_OBJECT_ID_RE, self._xml))
+        return max(int(i) for i in re.findall(TimelapseRe.OBJECT_ID, self._xml))
 
     def find_panel_item_index(self, uid: str) -> int | None:
         """Index of the <Item ObjectURef="uid"/> entry in the project panel's clip list, or None."""
-        if m := re.search(_panel_item_re(uid), self._xml):
+        if m := re.search(TimelapseRe.panel_item(uid), self._xml):
             return int(m.group(1))
 
         return None
@@ -105,13 +91,13 @@ class Xml:
         """
         for _ in range(10):
             # Collect all ids/uuids that actually exist right now.
-            live_uids = set(re.findall(_OBJECT_UID_RE, self._xml))
-            live_ids = set(re.findall(_OBJECT_ID_RE, self._xml))
+            live_uids = set(re.findall(TimelapseRe.OBJECT_UID, self._xml))
+            live_ids = set(re.findall(TimelapseRe.OBJECT_ID, self._xml))
 
             def prune_panel_items(items_block: re.Match) -> str:
                 def keep(item: re.Match) -> str:
                     # Each <Item .../> line points at a clip by uuid. Drop the line if that clip is gone.
-                    uref = re.search(_OBJECT_UREF_RE, item.group(0))
+                    uref = re.search(TimelapseRe.OBJECT_UREF, item.group(0))
 
                     if uref and uref.group(1) not in live_uids:
                         return ''
@@ -121,23 +107,23 @@ class Xml:
                 # Match any self-closing <Item .../> line (with optional leading spaces).
                 # The space after "<Item " is intentional — without it the pattern would also
                 # match "<Items " and eat the list's own opening tag.
-                return re.sub(_ANY_PANEL_ITEM_LINE_RE, keep, items_block.group(0))
+                return re.sub(TimelapseRe.ANY_PANEL_ITEM_LINE, keep, items_block.group(0))
 
             # Find every <Items>…</Items> block (the project panel's clip list) and prune it.
-            self._xml = re.sub(_PANEL_ITEMS_BLOCK_RE, prune_panel_items, self._xml, flags=re.DOTALL)
+            self._xml = re.sub(TimelapseRe.PANEL_ITEMS_BLOCK, prune_panel_items, self._xml, flags=re.DOTALL)
 
             def prune_track_items(track_items_block: re.Match) -> str:
                 def keep(item: re.Match) -> str:
                     # Each <TrackItem .../> line points at a clip by number. Drop if that clip is gone.
-                    ref = re.search(_OBJECT_REF_RE, item.group(0))
+                    ref = re.search(TimelapseRe.OBJECT_REF, item.group(0))
                     if ref and ref.group(1) not in live_ids:
                         return ''
                     return item.group(0)
 
                 # Same trap: "<TrackItem " needs the space so it doesn't match "<TrackItems ".
-                block = re.sub(_ANY_TRACK_ITEM_LINE_RE, keep, track_items_block.group(0))
+                block = re.sub(TimelapseRe.ANY_TRACK_ITEM_LINE, keep, track_items_block.group(0))
                 # After dropping entries the Index attributes have gaps; renumber them 0, 1, 2, …
-                surviving = list(re.finditer(_TRACK_ITEM_OBJECTREF_RE, block))
+                surviving = list(re.finditer(TimelapseRe.TRACK_ITEM_OBJECTREF, block))
 
                 for new_index, item in enumerate(surviving):
                     renumbered = f'<TrackItem Index="{new_index}" ObjectRef="{item.group(1)}"/>'
@@ -146,23 +132,23 @@ class Xml:
                 return block
 
             # Find every <TrackItems>…</TrackItems> block (one per track) and prune it.
-            self._xml = re.sub(_ANY_TRACK_ITEMS_BLOCK_RE, prune_track_items, self._xml, flags=re.DOTALL)
+            self._xml = re.sub(TimelapseRe.ANY_TRACK_ITEMS_BLOCK, prune_track_items, self._xml, flags=re.DOTALL)
 
             # Re-collect ids after the list cleanup above may have changed things.
-            live_uids = set(re.findall(_OBJECT_UID_RE, self._xml))
-            live_ids = set(re.findall(_OBJECT_ID_RE, self._xml))
+            live_uids = set(re.findall(TimelapseRe.OBJECT_UID, self._xml))
+            live_ids = set(re.findall(TimelapseRe.OBJECT_ID, self._xml))
             to_delete: list[tuple[int, int]] = []
 
             for block in self.toplevel_blocks():
                 # These chunk types point at their media by uuid — drop the chunk if the media is gone.
-                uuid_refs = re.findall(_UUID_REF_TAGS_RE, block.text)
+                uuid_refs = re.findall(TimelapseRe.UUID_REF_TAGS, block.text)
 
                 if any(ref not in live_uids for ref in uuid_refs):
                     to_delete.append(block.span)
                     continue
 
                 # These chunk types point at their parent by number — drop if the parent is gone.
-                numeric_refs = re.findall(_NUMERIC_REF_TAGS_RE, block.text)
+                numeric_refs = re.findall(TimelapseRe.NUMERIC_REF_TAGS, block.text)
 
                 if any(ref not in live_ids for ref in numeric_refs):
                     to_delete.append(block.span)
@@ -185,7 +171,7 @@ class Xml:
 
         # Find every line that starts with exactly one tab followed by a tag opening.
         # The second capture group (space or >) ensures we match a real tag, not a partial word.
-        for match in re.finditer(_TOPLEVEL_BLOCK_START_RE, self._xml):
+        for match in re.finditer(TimelapseRe.TOPLEVEL_BLOCK_START, self._xml):
             tag = match.group(1)
             start = match.start()
 
