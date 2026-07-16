@@ -5,12 +5,15 @@ from justin.actions.timelapse_block import Block
 from justin.actions.timelapse_re import (
     _OBJECT_ID_RE,
     _OBJECT_UID_RE,
+    _OBJECT_REF_RE,
     _IDENTITY_UUID_RE,
     _BARE_ID_TAG_RE,
     _CLIP_PROJECT_ITEM_UID_RE,
     _AUDIO_CLIP_TRACK_ITEM_ID_RE,
     _SUBCLIP_REF_RE,
     _CLIP_REF_RE,
+    _VIDEO_STREAM_REF_RE,
+    _master_clip_slot_re,
     _BLOCK_NAME_RE,
     _SLOT_POSITION_RE,
     _OUT_POINT_RE,
@@ -121,6 +124,32 @@ def block_name(text: str) -> str | None:
     return None
 
 
+def video_stream_ref(media_text: str) -> str | None:
+    """
+    The id of the VideoStream a sound's Media block points at, or None if it has no
+    video part. The template's mp4 sound has one; an audio-only file (mp3, wav, …)
+    doesn't, so its absence is how we detect "already audio-only, nothing to strip".
+    """
+    if m := re.search(_VIDEO_STREAM_REF_RE, media_text):
+        return m.group(1)
+    return None
+
+
+def master_clip_slot_ref(master_text: str, index: int) -> str | None:
+    """
+    The clip id in a MasterClip's slot: index 0 is the video half, index 1 the audio
+    half. Used to find each half so the video side can be stripped for audio-only files.
+    """
+    if m := re.search(_master_clip_slot_re(index), master_text):
+        return m.group(1)
+    return None
+
+
+def reference_ids(text: str) -> set[str]:
+    """Every numeric ObjectRef a block points at — used to compare a clip's sub-blocks."""
+    return set(re.findall(_OBJECT_REF_RE, text))
+
+
 # ---------------------------------------------------------------------------
 # Block text edits — return modified text, do not touch Xml
 # ---------------------------------------------------------------------------
@@ -156,6 +185,25 @@ def set_out_point(clip_text: str, duration: int) -> str:
     #   \d+          — tick count (Premiere ticks, not seconds)
     #   </OutPoint>  — closing tag
     return re.sub(_OUT_POINT_RE, f'<OutPoint>{duration}</OutPoint>', clip_text, count=1)
+
+
+def drop_video_stream(media_text: str, stream_id: str) -> str:
+    """Remove the VideoStream pointer line from a Media block, leaving it audio-only."""
+    return media_text.replace(f'\t\t<VideoStream ObjectRef="{stream_id}"/>\n', '')
+
+
+def promote_audio_to_first_slot(master_text: str, video_clip_id: str, audio_clip_id: str) -> str:
+    """
+    Drop a MasterClip's video slot and move its audio clip from slot 1 up to slot 0.
+    After the video half is stripped, the MasterClip should list only the audio clip,
+    at index 0.
+    """
+    without_video = master_text.replace(f'\t\t<Clip Index="0" ObjectRef="{video_clip_id}"/>\n', '')
+
+    return without_video.replace(
+        f'<Clip Index="1" ObjectRef="{audio_clip_id}"/>',
+        f'<Clip Index="0" ObjectRef="{audio_clip_id}"/>',
+    )
 
 
 # ---------------------------------------------------------------------------
