@@ -85,10 +85,14 @@ class AudioSound(Sound):
         # Work out which blocks belong to the video side but not the surviving audio
         # side (a shared Markers block is reachable from both, so it must stay).
         blocks = xml.toplevel_blocks()
-        master = blocks.containing(self.name).by_tag(Tag.MasterClip).first()
 
-        video_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _VIDEO_SLOT) if master else None
-        audio_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _AUDIO_SLOT) if master else None
+        if master := blocks.containing(self.name).by_tag(Tag.MasterClip).first():
+            video_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _VIDEO_SLOT)
+            audio_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _AUDIO_SLOT)
+        else:
+            video_clip_id = None
+            audio_clip_id = None
+
         video_clip = blocks.by_id(Tag.VideoClip, video_clip_id)
         audio_clip = blocks.by_id(Tag.AudioClip, audio_clip_id)
 
@@ -98,7 +102,11 @@ class AudioSound(Sound):
         if video_clip:
             video_side |= TimelapseXmlOps.reference_ids(video_clip.text)
 
-        audio_side = TimelapseXmlOps.reference_ids(audio_clip.text) if audio_clip else set()
+        if audio_clip:
+            audio_side = TimelapseXmlOps.reference_ids(audio_clip.text)
+        else:
+            audio_side = set()
+
         removed = video_side - audio_side
 
         xml.remove_blocks_by_positions([block.span for block in blocks if block.id in removed])
