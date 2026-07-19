@@ -173,18 +173,6 @@ class TimelapseXmlOps:
         xml.sub(TimelapseRe.PEAK_FILE_PATH, '<PeakFilePath></PeakFilePath>')
 
     @staticmethod
-    def remove_track_item_lines(xml: Xml, track_item_ids: list[str]) -> None:
-        """
-        Strike the given slots from the audio track's slot list.
-        The track's <TrackItems> element lists one self-closing line per slot:
-            <TrackItem Index="2" ObjectRef="57"/>
-        We delete those lines for every ID in the list. The slot blocks themselves
-        are removed separately via remove_blocks_by_positions.
-        """
-        for track_item_id in track_item_ids:
-            xml.sub(TimelapseRe.track_item_slot(track_item_id), '')
-
-    @staticmethod
     def append_track_items_after(xml: Xml, anchor_id: str, new_ids: list[str]) -> None:
         """
         Append new timeline slots to the audio track's slot list, right after an anchor slot.

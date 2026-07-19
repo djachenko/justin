@@ -184,28 +184,6 @@ class TestClearAudioCachePaths:
         assert _dump(xml) == "<ConformedAudioPath></ConformedAudioPath>"
 
 
-class TestRemoveTrackItemLines:
-    def test_removes_named_ids_only(self):
-        xml = Xml(
-            '\t\t\t\t\t<TrackItem Index="0" ObjectRef="10"/>\n'
-            '\t\t\t\t\t<TrackItem Index="1" ObjectRef="20"/>\n'
-            '\t\t\t\t\t<TrackItem Index="2" ObjectRef="30"/>\n'
-        )
-        TimelapseXmlOps.remove_track_item_lines(xml, ["10", "30"])
-        result = _dump(xml)
-        assert 'ObjectRef="20"' in result
-        assert 'ObjectRef="10"' not in result
-        assert 'ObjectRef="30"' not in result
-        # No blank line left where a slot was removed.
-        assert "\n\n" not in result
-
-    def test_empty_list_is_noop(self):
-        original = '\t<TrackItem Index="0" ObjectRef="10"/>\n'
-        xml = Xml(original)
-        TimelapseXmlOps.remove_track_item_lines(xml, [])
-        assert _dump(xml) == original
-
-
 class TestAppendTrackItemsAfter:
     def test_appends_after_last_continuing_index(self):
         xml = Xml(

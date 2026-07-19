@@ -236,16 +236,6 @@ class TimelapseRe:
     def panel_item(uid: str) -> str:
         return rf'<Item Index="(\d+)" ObjectURef="{re.escape(uid)}"'
 
-    # Slot line in a TrackItems list, with surrounding whitespace, for deletion.
-    # → Timeline slot
-    #   [^\S\n]*              — leading whitespace except newlines (the indentation tabs)
-    #   <TrackItem Index="\d+" — tag with any index (targeting by ID, not by position)
-    #   " ObjectRef="{id}"    — the specific slot block ID we want to remove
-    #   />\n                  — self-closing tag + newline (consumed so no blank line remains)
-    @staticmethod
-    def track_item_slot(track_item_id: str) -> str:
-        return rf'[^\S\n]*<TrackItem Index="\d+" ObjectRef="{track_item_id}"/>\n'
-
     # The entire <TrackItems> block that contains a specific anchor slot.
     # → Timeline slot
     #   <TrackItems Version="\d+">     — opening tag with any version number
