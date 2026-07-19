@@ -2,6 +2,10 @@ from enum import StrEnum
 
 
 class Tag(StrEnum):
+    # ── project panel ─────────────────────────────────────────────────────────
+    RootProjectItem              = "RootProjectItem"               # root of the project panel tree
+    BinProjectItem               = "BinProjectItem"                # bin listing clips via <Item ObjectURef>
+
     # ── clip hierarchy ────────────────────────────────────────────────────────
     ClipProjectItem              = "ClipProjectItem"               # clip's entry in the project panel
     MasterClip                   = "MasterClip"                    # container grouping video+audio sides of one file
@@ -28,4 +32,8 @@ class Tag(StrEnum):
     ClipChannelVectorSerializer  = "ClipChannelVectorSerializer"   # list of per-channel serializers
 
     # ── timeline ──────────────────────────────────────────────────────────────
+    Sequence                     = "Sequence"                      # the timeline itself
+    VideoClipTrack               = "VideoClipTrack"                # video track holding frames and cover
+    AudioClipTrack               = "AudioClipTrack"                # audio track holding sounds
     AudioClipTrackItem           = "AudioClipTrackItem"            # slot on the audio track referencing an audio clip
+    VideoClipTrackItem           = "VideoClipTrackItem"            # slot on the video track referencing a video clip

@@ -66,6 +66,14 @@ class TimelapseRe:
     #   "             — closing quote
     OBJECT_REF = r'ObjectRef="(\d+)"'
 
+    # Type UUID: which class the object is. A constant of the type, shared by every
+    # object of that class — NOT an identity, and never regenerated (Premiere would
+    # stop recognising the class and silently refuse to open the project).
+    #   ClassID="        — attribute name
+    #   ([0-9a-f-]{36})  — capture: 36-char hex UUID
+    #   "                — closing quote
+    CLASS_ID = r'ClassID="([0-9a-f-]{36})"'
+
     # UUID used as an identity — either ObjectUID or ObjectURef — for cloning.
     # Matches both in one pass so we can remap every identity in a cloned cluster.
     #   Object(?:UID|URef)="   — either attribute name (non-capturing group)
