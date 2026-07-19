@@ -6,7 +6,7 @@ assert the invariants that make Premiere accept the file, without opening
 Premiere: well-formed XML, no dangling references, no duplicate object uuids,
 consistent per-type ClassIDs on clones, and the expected timeline layout.
 
-``_probe_duration_ticks`` (ffprobe) is monkeypatched so the synthetic sound
+``Sound.duration_ticks`` (ffprobe) is monkeypatched so the synthetic sound
 files can be empty and tests stay hermetic.
 """
 
@@ -18,16 +18,16 @@ from pathlib import Path
 
 import pytest
 
-from justin.actions import timelapse_prproj as tlp
 from justin.actions.timelapse_prproj import (
-    PREMIERE_TIMEBASE,
     TimelapseSchema,
     _resolve_timeline_sounds,
     generate_prproj,
     _TEMPLATE_DATA,
 )
 from justin.actions.timelapse_settings import TimelapseSettings
+from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
+from justin.actions.timelapse_ticks import PREMIERE_TIMEBASE
 from justin.actions.timelapse_xml import Xml
 
 
@@ -66,10 +66,10 @@ def make_timelapse(
 @pytest.fixture(autouse=True)
 def stub_ffprobe(monkeypatch):
     """Deterministic durations keyed by filename, no ffprobe needed."""
-    def fake_duration(path: Path) -> int:
+    def fake_duration(self: Sound) -> int:
         # Distinct per name so sequential layout is observable.
-        return (len(path.name) + 1) * PREMIERE_TIMEBASE
-    monkeypatch.setattr(tlp, "_probe_duration_ticks", fake_duration)
+        return (len(self.name) + 1) * PREMIERE_TIMEBASE
+    monkeypatch.setattr(Sound, "duration_ticks", property(fake_duration))
 
 
 def read_project(path: Path) -> str:
