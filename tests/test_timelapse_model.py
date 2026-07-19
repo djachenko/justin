@@ -102,6 +102,56 @@ class TestIdentitySchemes:
         assert list(doc)[0].block.id is None
 
 
+class TestAccessors:
+    def test_name_is_none_when_absent(self):
+        doc = build(block("AudioClip", AUDIO_CLIP, "5"))
+
+        assert list(doc)[0].name is None
+
+    def test_class_uuid_is_none_on_a_non_object(self):
+        doc = build('\t<Project ObjectRef="1"/>\n')
+
+        assert list(doc)[0].class_uuid is None
+
+    def test_refs_and_urefs_do_not_bleed_into_each_other(self):
+        # "ObjectRef=" is a near-substring of "ObjectURef=", so a pattern widened
+        # on either side starts collecting the other kind of pointer. Checked
+        # against exactly that: widening OBJECT_REF to any quoted value, making its
+        # "U" optional, or loosening OBJECT_UREF all fail this assertion.
+        uid = "12345678-1742-46ec-8663-cda9858b0596"
+        doc = build(block(
+            "MasterClip", MASTER_CLIP, "fb11c33a-b0a9-4465-aa94-b6d5db2628cf",
+            f'<Clip ObjectRef="56"/><Media ObjectURef="{uid}"/>',
+        ))
+        obj = list(doc)[0]
+
+        assert obj.refs == {"56"}
+        assert obj.urefs == {uid}
+
+    def test_refs_collects_every_pointer_once(self):
+        doc = build(block(
+            "AudioClip", AUDIO_CLIP, "5",
+            '<Source ObjectRef="7"/><Content ObjectRef="9"/><Markers ObjectRef="7"/>',
+        ))
+
+        assert list(doc)[0].refs == {"7", "9"}
+
+    def test_no_pointers_gives_empty_sets(self):
+        doc = build(block("AudioClip", AUDIO_CLIP, "5"))
+        obj = list(doc)[0]
+
+        assert obj.refs == set()
+        assert obj.urefs == set()
+
+    def test_parse_dispatches_a_lone_block(self):
+        # Document goes through parse, but the entry point is public on its own.
+        raw = block("AudioClip", AUDIO_CLIP, "5")
+        parsed = PremiereObject.parse(Xml(raw).toplevel_blocks()[0])
+
+        assert isinstance(parsed, AudioClip)
+        assert parsed.identity == "5"
+
+
 class TestLookup:
     def test_by_ref_needs_the_class_to_disambiguate(self):
         # Same number 7, two different classes — exactly the collision the format
