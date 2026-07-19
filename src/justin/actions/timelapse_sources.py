@@ -47,9 +47,8 @@ class TimelapseSources:
         for frame in frames_dir.iterdir():
             if not frame.is_file():
                 continue
-                # raise
 
-            if frame.suffix not in JPEG_EXTENSIONS:
+            if frame.suffix.lower() not in JPEG_EXTENSIONS:
                 continue
 
             frames.append(frame)
