@@ -34,7 +34,6 @@ finds where each block starts and ends in the raw text, and we cut blocks out or
 splice them back in with ordinary string slicing.
 """
 
-import subprocess
 from dataclasses import dataclass
 from importlib.resources import files as _resource_files
 from pathlib import Path
@@ -45,11 +44,9 @@ from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_template import TimelapseTemplate
+from justin.actions import timelapse_ticks
 from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
 from justin.actions.timelapse_xml_ops import TimelapseXmlOps
-
-# Premiere measures time in "ticks". This many ticks make one second.
-PREMIERE_TIMEBASE = 254_016_000_000
 
 _TEMPLATE_DATA: bytes = (
     _resource_files("justin.resources.timelapse_templates")
@@ -61,7 +58,7 @@ _TEMPLATE_DATA: bytes = (
 # substitute_* method (and Sound.rename) swaps them for real values.
 
 # Numeric values baked into the template (106 frames at 10 fps + 1 cover frame).
-_TMPL_FPS_TICKS  = int(PREMIERE_TIMEBASE / 10)
+_TMPL_FPS_TICKS  = timelapse_ticks.ticks_per_frame(10)
 _TMPL_N_FRAMES   = 106
 _TMPL_FRAMES_DUR = _TMPL_N_FRAMES * _TMPL_FPS_TICKS
 _TMPL_SEQ_DUR    = (_TMPL_N_FRAMES + 1) * _TMPL_FPS_TICKS
@@ -86,18 +83,6 @@ def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) ->
 
 
 
-def _probe_duration_ticks(path: Path) -> int:
-    """Ask ffprobe how long a media file is, and give it back in Premiere ticks."""
-    probe = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-    return int(float(probe.stdout.strip()) * PREMIERE_TIMEBASE)
-
-
 @dataclass(frozen=True)
 class TimelapseSchema:
 
@@ -113,7 +98,7 @@ class TimelapseSchema:
         frame_count = sources.frames_count
         first_frame = sources.first_frame.name
 
-        ticks_per_frame = int(PREMIERE_TIMEBASE / settings.fps)
+        ticks_per_frame = timelapse_ticks.ticks_per_frame(settings.fps)
         image_sequence_duration = frame_count * ticks_per_frame
 
         # The cover occupies one extra frame at the start of the sequence.
@@ -201,13 +186,17 @@ class TimelapseSchema:
         template = blocks.reachable_cluster(panel_seeds + slots, _CLIP_MEDIA_TYPES)        # + its timeline slot
 
         # Anchors in the template's panel/track lists, read before it disappears.
-        template_panel_uid = None
+
+
         if template_panel := panel_template.by_tag(Tag.ClipProjectItem).first():
             template_panel_uid = TimelapseXmlOps.block_uid(template_panel.text)
+        else:
+            template_panel_uid = None
 
-        template_slot_id = None
         if template_slot := template.by_tag(Tag.AudioClipTrackItem).first():
             template_slot_id = template_slot.id
+        else:
+            template_slot_id = None
 
         insert_at = max(block.end for block in template)
         max_id = xml.max_object_id()
@@ -289,7 +278,7 @@ class TimelapseSchema:
         is worked out up front, then applied from the end of the document backwards
         so the byte offsets stay valid.
         """
-        durations = {sound.name: _probe_duration_ticks(sound.path) for sound in sounds}
+        durations = {sound.name: sound.duration_ticks for sound in sounds}
         blocks = xml.toplevel_blocks()
 
         slots = [

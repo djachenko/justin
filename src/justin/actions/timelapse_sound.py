@@ -1,8 +1,11 @@
+import subprocess
 from abc import ABC, abstractmethod
+from functools import cached_property
 from pathlib import Path
 
 from justin.actions.timelapse_tags import Tag
 from justin.actions.timelapse_template import TimelapseTemplate
+from justin.actions.timelapse_ticks import seconds_to_ticks
 from justin.actions.timelapse_xml import Xml
 from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
@@ -29,6 +32,18 @@ class Sound(ABC):
     @property
     def stem(self) -> str:
         return self.path.stem
+
+    @cached_property
+    def duration_ticks(self) -> int:
+        """How long this sound plays, in Premiere ticks (measured by ffprobe once, then cached)."""
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(self.path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        return seconds_to_ticks(float(probe.stdout.strip()))
 
     @abstractmethod
     def adapt(self, section: str) -> str:
