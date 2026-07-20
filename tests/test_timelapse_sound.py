@@ -74,11 +74,11 @@ class TestFromPath:
 class TestRename:
     def test_swaps_placeholder_for_filename_everywhere(self):
         section = f"<Name>{MARKER}</Name> media ./sound/{MARKER}"
-        assert AudioSound(Path("song.mp3")).rename(section) == "<Name>song.mp3</Name> media ./sound/song.mp3"
+        assert AudioSound(Path("song.mp3")).replace_name(section) == "<Name>song.mp3</Name> media ./sound/song.mp3"
 
     def test_same_rename_for_video_and_audio(self):
         section = f"<Name>{MARKER}</Name>"
-        assert VideoSound(Path("clip.mp4")).rename(section) == "<Name>clip.mp4</Name>"
+        assert VideoSound(Path("clip.mp4")).replace_name(section) == "<Name>clip.mp4</Name>"
 
 
 # --------------------------------------------------------------------------- #
