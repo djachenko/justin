@@ -26,6 +26,11 @@ src/justin/cms_2/sub_cms/tmplt_cms.py
 
 .DS_Store
 
+examples/
+
+# Real shoot names must never reach the repo — templates are anonymised to step_*.
+*wolfday*
+
 **/ide_runner_local.py
 
 memory/
