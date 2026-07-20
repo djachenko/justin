@@ -109,17 +109,20 @@ class TimelapseSchema:
 
         xml = Xml.from_gzip_bytes(_TEMPLATE_DATA)
 
-        self._substitute_paths(xml, sources.name, first_frame)
-        self._substitute_ticks(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
-        self._clear_audio_caches(xml)
+        self._actualize_paths(xml, sources.name, first_frame) # paths to actual files
+        self._actualize_ticks(xml, ticks_per_frame, image_sequence_duration, sequence_duration) # fps and durations
+        self._clear_audio_caches(xml) # drop caches (they will be regenerated anyway)
 
         if not sounds:
             self._remove_sound(xml)
         else:
-            template_slot_id, slot_ids = self._place_in_panel(xml, sounds, {sound.name for sound in timeline_sounds})
+            template_slot_id, timeline_slots_ids = self._place_in_panel(xml, sounds, {sound.name for sound in timeline_sounds})
 
-            if timeline_sounds:
-                self._place_on_timeline(xml, timeline_sounds, template_slot_id, slot_ids)
+            # The slots are what there is to lay out, so guard on them: the template
+            # cluster (its own slot included) is gone by now, and with no slots the
+            # layout would probe every sound's duration only to place nothing.
+            if timeline_slots_ids:
+                self._place_on_timeline(xml, timeline_sounds, template_slot_id, timeline_slots_ids)
 
         if not sources.cover:
             self._remove_cover(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
@@ -130,7 +133,7 @@ class TimelapseSchema:
         return output_path
 
     @staticmethod
-    def _substitute_paths(xml: Xml, name: str, first_frame: str) -> None:
+    def _actualize_paths(xml: Xml, name: str, first_frame: str) -> None:
         # Premiere uses relative paths (./frames/, ./sound/) to locate media,
         # so we only need to swap the per-filename placeholders and the project name.
         xml.replace(f"./frames/{TimelapseTemplate.FIRST_FRAME}", f"./frames/{first_frame}")
@@ -138,7 +141,7 @@ class TimelapseSchema:
         xml.replace(TimelapseTemplate.PHOTOSET, name)
 
     @staticmethod
-    def _substitute_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
+    def _actualize_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
         for tag in _FPS_TICKS_TAGS:
             xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
 
@@ -179,13 +182,16 @@ class TimelapseSchema:
         the new timeline slot ids so the caller can lay the chosen ones on the timeline.
         """
         blocks = xml.toplevel_blocks()
-        panel_seeds = blocks.containing(TimelapseTemplate.SOUND_NAME)
-        slots = blocks.by_tag(Tag.AudioClipTrackItem)
+        panel_roots = blocks.containing(TimelapseTemplate.SOUND_NAME)
+        timeline_roots = blocks.by_tag(Tag.AudioClipTrackItem)
 
-        panel_template = blocks.reachable_cluster(panel_seeds, _CLIP_MEDIA_TYPES)          # panel clip only
-        template = blocks.reachable_cluster(panel_seeds + slots, _CLIP_MEDIA_TYPES)        # + its timeline slot
+        panel_template = blocks.reachable_cluster(panel_roots, _CLIP_MEDIA_TYPES)          # panel clip only
+        timeline_template = blocks.reachable_cluster(panel_roots + timeline_roots, _CLIP_MEDIA_TYPES)        # + its timeline slot
 
-        # Anchors in the template's panel/track lists, read before it disappears.
+        # Anchors: the template's own panel uid and slot id. Read them now, because
+        # the template blocks are deleted at the end of this method. The <Item>/
+        # <TrackItem> lines naming them sit outside the cluster and survive, so
+        # afterwards we can still find them and splice the clones in right after.
 
 
         if template_panel := panel_template.by_tag(Tag.ClipProjectItem).first():
@@ -193,27 +199,31 @@ class TimelapseSchema:
         else:
             template_panel_uid = None
 
-        if template_slot := template.by_tag(Tag.AudioClipTrackItem).first():
+        if template_slot := timeline_template.by_tag(Tag.AudioClipTrackItem).first():
             template_slot_id = template_slot.id
         else:
             template_slot_id = None
 
-        insert_at = max(block.end for block in template)
+        insert_at = max(block.end for block in timeline_template)
         max_id = xml.max_object_id()
 
         # realize: template → each sound's own section (renamed + adapted, template ids)
-        sections: list[str] = []
+        new_sound_sections: list[str] = []
+
         for sound in sounds:
-            source = template
-            if sound.name not in timeline_names:
+            if sound.name in timeline_names:
+                source = timeline_template
+            else:
                 source = panel_template
-            sections.append(sound.adapt(str(source)))
+
+            new_sound_sections.append(sound.adapt(str(source)))
 
         # integrate: fresh ids, splice in, collect what's registrable
         clones = ""
         panel_uids: list[str] = []
-        slot_ids: list[str] = []
-        for n, section in enumerate(sections, start=1):
+        timeline_ids: list[str] = []
+
+        for n, section in enumerate(new_sound_sections, start=1):
             section = TimelapseXmlOps.recount_ids(section, (max_id + 1) * n)
             clones += section
 
@@ -222,14 +232,14 @@ class TimelapseSchema:
 
             # Only full-template (timeline) sections carry a slot; panel-only ones don't.
             if slot_id := TimelapseXmlOps.audio_clip_track_item_id(section):
-                slot_ids.append(slot_id)
+                timeline_ids.append(slot_id)
 
         xml.insert(insert_at, clones)
-        xml.remove_blocks_by_positions([block.span for block in template])
+        xml.remove_blocks_by_positions([block.span for block in timeline_template])
 
         TimelapseSchema._register_in_panel(xml, template_panel_uid, panel_uids)
 
-        return template_slot_id, slot_ids
+        return template_slot_id, timeline_ids
 
     @staticmethod
     def _place_on_timeline(xml: Xml, sounds: list[Sound], template_slot_id: str | None, slot_ids: list[str]) -> None:
