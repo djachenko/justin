@@ -85,6 +85,9 @@ class Blocks(list[Block]):
 
         Returns the cluster as a ``Blocks``, ordered by position in the document.
         """
+        # member_tags bounds what can be pulled in. A number names a block only
+        # together with its class, and callers delete this cluster, so collecting
+        # one block too many means deleting an unrelated block.
         members_by_id: dict[str, list[Block]] = {}
         block_by_uid: dict[str, Block] = {}
 
@@ -100,17 +103,22 @@ class Blocks(list[Block]):
                 block_by_uid[own_uid.group(1)] = block
 
         reached: dict[int, Block] = {block.start: block for block in seeds}
+        # Not list(seeds): seeds is an Iterable and the line above already drained it.
         frontier = list(reached.values())
 
         while frontier:
             block = frontier.pop()
 
+            # Numeric pointers: the number alone is ambiguous, so every member-tag
+            # block carrying it counts as a target.
             for ref in re.finditer(TimelapseRe.OBJECT_REF, block.text):
                 for target in members_by_id.get(ref.group(1), []):
                     if target.start not in reached:
                         reached[target.start] = target
                         frontier.append(target)
 
+            # Uuid pointers: globally unique, so at most one target — but it still
+            # has to be a member tag to join the cluster.
             for uref in re.finditer(TimelapseRe.OBJECT_UREF, block.text):
                 target = block_by_uid.get(uref.group(1))
 
