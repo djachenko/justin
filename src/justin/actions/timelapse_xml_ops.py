@@ -45,6 +45,7 @@ class TimelapseXmlOps:
         """
         if m := re.search(TimelapseRe.AUDIO_CLIP_TRACK_ITEM_ID, text):
             return m.group(1)
+
         return None
 
     @staticmethod

@@ -53,7 +53,7 @@ class Sound(ABC):
         Subclasses build this out of ``rename``."""
         ...
 
-    def rename(self, section: str) -> str:
+    def replace_name(self, section: str) -> str:
         """Swap the template's placeholder sound name for this sound's real filename."""
         return section.replace(TimelapseTemplate.SOUND_NAME, self.name)
 
@@ -96,9 +96,13 @@ class AudioSound(Sound):
         Works on this sound's own section only (nothing outside its cluster) and
         returns the renamed, audio-only section.
         """
-        section = self.rename(section)
+        section = self.replace_name(section)
         fragment = Xml(section)
-        media = fragment.toplevel_blocks().containing(self.name).by_tag(Tag.Media).first()
+        media = fragment\
+            .toplevel_blocks()\
+            .containing(self.name)\
+            .by_tag(Tag.Media)\
+            .first()
 
         if media is None:
             return section
@@ -125,8 +129,10 @@ class AudioSound(Sound):
         audio_clip = blocks.by_id(Tag.AudioClip, audio_clip_id)
 
         video_side = {video_stream_id}
+
         if video_clip_id:
             video_side.add(video_clip_id)
+
         if video_clip:
             video_side |= TimelapseXmlOps.reference_ids(video_clip.text)
 
@@ -161,4 +167,4 @@ class VideoSound(Sound):
         return self.__path
 
     def adapt(self, section: str) -> str:
-        return self.rename(section)
+        return self.replace_name(section)
