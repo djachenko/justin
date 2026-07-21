@@ -29,6 +29,7 @@ from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_ticks import PREMIERE_TIMEBASE
 from justin.actions.timelapse_xml import Xml
+from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 
 # --------------------------------------------------------------------------- #
@@ -152,12 +153,15 @@ def test_partial_timeline_selection_keeps_only_chosen_sound(tmp_path):
 
     assert track_item_count(xml) == 1
     assert {"alpha.mp3", "beta.mp3"} <= panel_item_names(xml)
-    # The single track item must be beta, not alpha.
+    # The single track item must be beta, not alpha. Read it off the document:
+    # slot → its SubClip → the file the SubClip names.
     blocks = Xml(xml).toplevel_blocks()
-    names = [
-        TimelapseSchema._track_item_sound_name(b, blocks)
-        for b in blocks.by_tag("AudioClipTrackItem")
-    ]
+    names = []
+
+    for slot in blocks.by_tag("AudioClipTrackItem"):
+        subclip = blocks.by_id("SubClip", TimelapseXmlOps.subclip_ref(slot.text))
+        names.append(TimelapseXmlOps.block_name(subclip.text))
+
     assert names == ["beta.mp3"]
 
 

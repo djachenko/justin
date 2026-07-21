@@ -38,7 +38,6 @@ from dataclasses import dataclass
 from importlib.resources import files as _resource_files
 from pathlib import Path
 
-from justin.actions.timelapse_block import Block, Blocks
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
@@ -116,13 +115,9 @@ class TimelapseSchema:
         if not sounds:
             self._remove_sound(xml)
         else:
-            template_slot_id, timeline_slots_ids = self._place_in_panel(xml, sounds, {sound.name for sound in timeline_sounds})
+            template_slot_id, timeline_slots = self._place_in_panel(xml, sounds, {sound.name for sound in timeline_sounds})
 
-            # The slots are what there is to lay out, so guard on them: the template
-            # cluster (its own slot included) is gone by now, and with no slots the
-            # layout would probe every sound's duration only to place nothing.
-            if timeline_slots_ids:
-                self._place_on_timeline(xml, timeline_sounds, template_slot_id, timeline_slots_ids)
+            self._place_on_timeline(xml, template_slot_id, timeline_slots)
 
         if not sources.cover:
             self._remove_cover(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
@@ -165,7 +160,7 @@ class TimelapseSchema:
         xml.remove_blocks_by_positions([b.span for b in sound_blocks])
 
     @staticmethod
-    def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> tuple[str | None, list[str]]:
+    def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> tuple[str | None, list[tuple[str, Sound]]]:
         """
         Realize every sound from the template and put it in the project panel.
 
@@ -179,7 +174,7 @@ class TimelapseSchema:
         Two phases: **realize** — each Sound renames + adapts its own section, in the
         template's ids; **integrate** — assign each a fresh, non-clashing id-space,
         splice them in, register them in the panel. Returns the template slot id and
-        the new timeline slot ids so the caller can lay the chosen ones on the timeline.
+        the new slots as ``(slot id, sound)`` pairs, which is all the timeline needs.
         """
         blocks = xml.toplevel_blocks()
         panel_roots = blocks.containing(TimelapseTemplate.SOUND_NAME)
@@ -221,9 +216,9 @@ class TimelapseSchema:
         # integrate: fresh ids, splice in, collect what's registrable
         clones = ""
         panel_uids: list[str] = []
-        timeline_ids: list[str] = []
+        timeline_slots: list[tuple[str, Sound]] = []
 
-        for n, section in enumerate(new_sound_sections, start=1):
+        for n, (sound, section) in enumerate(zip(sounds, new_sound_sections), start=1):
             section = TimelapseXmlOps.recount_ids(section, (max_id + 1) * n)
             clones += section
 
@@ -231,29 +226,34 @@ class TimelapseSchema:
                 panel_uids.append(uid)
 
             # Only full-template (timeline) sections carry a slot; panel-only ones don't.
+            # Keep the slot paired with the sound it was realized from: that pairing is
+            # exactly what the layout needs, and it is known here for free.
             if slot_id := TimelapseXmlOps.audio_clip_track_item_id(section):
-                timeline_ids.append(slot_id)
+                timeline_slots.append((slot_id, sound))
 
         xml.insert(insert_at, clones)
         xml.remove_blocks_by_positions([block.span for block in timeline_template])
 
         TimelapseSchema._register_in_panel(xml, template_panel_uid, panel_uids)
 
-        return template_slot_id, timeline_ids
+        return template_slot_id, timeline_slots
 
     @staticmethod
-    def _place_on_timeline(xml: Xml, sounds: list[Sound], template_slot_id: str | None, slot_ids: list[str]) -> None:
+    def _place_on_timeline(xml: Xml, template_slot_id: str | None, timeline_slots: list[tuple[str, Sound]]) -> None:
         """
         Put the chosen sounds on the audio track: register their slots, then lay out.
 
         The slots already exist in the document — they co-cloned with their panel clips
         in ``_place_in_panel``. Here we register them on the track (anchored after the
         template's own slot) and line them up back-to-back at their real lengths.
-        """
-        if template_slot_id and slot_ids:
-            TimelapseXmlOps.append_track_items_after(xml, template_slot_id, slot_ids)
 
-        TimelapseSchema._lay_out_timeline(xml, sounds)
+        With no slots there is simply nothing to do, and both steps below are already
+        empty-safe, so the caller needs no special case.
+        """
+        if template_slot_id and timeline_slots:
+            TimelapseXmlOps.append_track_items_after(xml, template_slot_id, [slot_id for slot_id, _ in timeline_slots])
+
+        TimelapseSchema._lay_out_timeline(xml, timeline_slots)
 
     @staticmethod
     def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]) -> None:
@@ -277,30 +277,31 @@ class TimelapseSchema:
         )
 
     @staticmethod
-    def _lay_out_timeline(xml: Xml, sounds: list[Sound]) -> None:
+    def _lay_out_timeline(xml: Xml, timeline_slots: list[tuple[str, Sound]]) -> None:
         """
         Line the timeline sounds up back-to-back at their real lengths.
 
-        Each sound's real length comes from ffprobe. The first sound starts at 0,
+        Each slot arrives paired with the sound it plays, so there is nothing to look
+        up. Each sound's real length comes from ffprobe. The first sound starts at 0,
         the next starts where it ended, and so on. For each slot we set two things:
         where it sits on the track (its Start/End) and how much of the clip plays
         (the AudioClip's OutPoint, reached through the slot's SubClip). Every edit
         is worked out up front, then applied from the end of the document backwards
-        so the byte offsets stay valid.
+        so the byte offsets stay valid — which is why the slots cannot be placed one
+        at a time: each edit changes lengths and shifts every offset after it.
         """
-        durations = {sound.name: sound.duration_ticks for sound in sounds}
         blocks = xml.toplevel_blocks()
-
-        slots = [
-            slot for slot in blocks.by_tag(Tag.AudioClipTrackItem)
-            if TimelapseSchema._track_item_sound_name(slot, blocks) in durations
-        ]
 
         edits: list[tuple[int, int, str]] = []
         cursor = 0
 
-        for slot in slots:
-            duration = durations[TimelapseSchema._track_item_sound_name(slot, blocks)]
+        for slot_id, sound in timeline_slots:
+            slot = blocks.by_id(Tag.AudioClipTrackItem, slot_id)
+
+            if slot is None:
+                continue
+
+            duration = sound.duration_ticks
             end = cursor + duration
 
             # Where the clip sits on the track. It always has an end; it gets a
@@ -319,14 +320,6 @@ class TimelapseSchema:
             cursor = end
 
         xml.replace_ranges(edits)
-
-    @staticmethod
-    def _track_item_sound_name(track_item: Block, blocks: Blocks) -> str | None:
-        """Which sound file a timeline slot plays (read off its SubClip's Name)."""
-        if subclip := blocks.by_id(Tag.SubClip, TimelapseXmlOps.subclip_ref(track_item.text)):
-            return TimelapseXmlOps.block_name(subclip.text)
-        else:
-            return None
 
     @staticmethod
     def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
