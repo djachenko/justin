@@ -31,6 +31,9 @@ examples/
 # Real shoot names must never reach the repo — templates are anonymised to step_*.
 *wolfday*
 
+# Decompressed .prproj kept around for reading; regenerate with gzip.decompress.
+src/justin/resources/timelapse_templates/*.xml
+
 **/ide_runner_local.py
 
 memory/
