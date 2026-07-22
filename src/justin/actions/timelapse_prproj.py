@@ -10,7 +10,7 @@ plays clip #56"). We call each chunk a *block*.
 Writing such a file correctly from scratch is hopeless — there are hundreds of
 interlocking chunks. So instead we cheat: someone built one good timelapse
 project by hand in Premiere and saved it (the "wolfday" template,
-``template.prproj`` — an image sequence + a cover frame + one sound on the
+``timelapse_template.prproj`` — an image sequence + a cover frame + one sound on the
 timeline, 10 fps, with abstract placeholder strings). We open that file's text
 and carefully edit it to describe the timelapse we actually want:
 
@@ -49,7 +49,7 @@ from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 _TEMPLATE_DATA: bytes = (
     _resource_files("justin.resources.timelapse_templates")
-    .joinpath("template.prproj")
+    .joinpath("timelapse_template.prproj")
     .read_bytes()
 )
 
