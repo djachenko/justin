@@ -14,7 +14,7 @@ project by hand in Premiere and saved it (the "wolfday" template,
 timeline, 10 fps, with abstract placeholder strings). We open that file's text
 and carefully edit it to describe the timelapse we actually want:
 
-  * swap in the right folder paths, frame count, and durations (``_substitute_*``);
+  * swap in the right folder paths, frame count, and durations (``_actualize_*``);
   * realize the template's sound as each real sound (rename + strip the video part
     for audio-only files like mp3, ``Sound.adapt``), give each a fresh id-space and
     put it in the project panel (``_place_in_panel``);
@@ -54,7 +54,7 @@ _TEMPLATE_DATA: bytes = (
 )
 
 # Placeholder strings baked into the template live in TimelapseTemplate; each
-# substitute_* method (and Sound.rename) swaps them for real values.
+# _actualize_* method (and Sound.replace_name) swaps them for real values.
 
 # Numeric values baked into the template (106 frames at 10 fps + 1 cover frame).
 _TMPL_FPS_TICKS  = timelapse_ticks.ticks_per_frame(10)
@@ -346,16 +346,20 @@ def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = Tim
     # the next free numbered name instead.
     if output_path.exists():
         suffix = 1
+
         while (candidate := sources.folder / f"{sources.name}_{suffix}.prproj").exists():
             suffix += 1
+
         output_path = candidate
 
     sounds = sources.sounds or []
     timeline_sounds = _resolve_timeline_sounds(sounds, settings.timeline_sounds)
 
     frames_line = str(sources.frames_count)
+
     if sources.cover:
         frames_line += " + cover"
+
     timeline_line = [s.name for s in timeline_sounds] or "panel only"
 
     print(f"Photoset:  {sources.name}")

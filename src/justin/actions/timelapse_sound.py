@@ -50,7 +50,7 @@ class Sound(ABC):
         """Realize a template section as this sound's own — rename the placeholder to
         this sound's file and adapt structure (video stripped for audio-only) — and
         return it (still on template ids; integration assigns fresh ones later).
-        Subclasses build this out of ``rename``."""
+        Subclasses build this out of ``replace_name``."""
         ...
 
     def replace_name(self, section: str) -> str:
