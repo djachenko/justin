@@ -14,15 +14,18 @@ from justin.actions import timelapse_model as model
 from justin.actions.timelapse_model import (
     AudioClip,
     AudioClipTrackItem,
+    AudioStream,
     ClipProjectItem,
     Document,
     MasterClip,
+    Media,
     NumericObject,
     OpaqueObject,
     PremiereObject,
     SubClip,
     UuidObject,
     VideoClip,
+    VideoStream,
 )
 from justin.actions.timelapse_prproj import _TEMPLATE_DATA
 from justin.actions.timelapse_xml import Xml
@@ -188,9 +191,83 @@ class TestLookup:
         assert len(doc.of_type(VideoClip)) == 1
 
 
+class TestEdges:
+    def test_numeric_edge_resolves(self):
+        doc = build(
+            block("AudioClipTrackItem", AudioClipTrackItem.CLASS.uuid, "88", '<SubClip ObjectRef="104"/>'),
+            block("SubClip", SubClip.CLASS.uuid, "104", "<Name>x.mp3</Name>"),
+        )
+
+        assert doc.of_type(AudioClipTrackItem)[0].subclip.identity == "104"
+
+    def test_uuid_edge_resolves(self):
+        uid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        doc = build(
+            block("SubClip", SubClip.CLASS.uuid, "104", f'<MasterClip ObjectURef="{uid}"/>'),
+            block("MasterClip", MASTER_CLIP, uid),
+        )
+
+        assert doc.of_type(SubClip)[0].master_clip.identity == uid
+
+    def test_media_streams_split(self):
+        uid = "cccccccc-dddd-eeee-ffff-000000000000"
+        doc = build(
+            block("Media", Media.CLASS.uuid, uid, '<VideoStream ObjectRef="73"/><AudioStream ObjectRef="80"/>'),
+            block("VideoStream", VideoStream.CLASS.uuid, "73"),
+            block("AudioStream", AudioStream.CLASS.uuid, "80"),
+        )
+        media = doc.of_type(Media)[0]
+
+        assert media.video_stream.identity == "73"
+        assert media.audio_stream.identity == "80"
+
+    def test_edge_is_none_when_pointer_absent(self):
+        # A media with no video stream (audio-only) — the edge simply finds nothing.
+        uid = "cccccccc-dddd-eeee-ffff-000000000000"
+        doc = build(block("Media", Media.CLASS.uuid, uid, '<AudioStream ObjectRef="80"/>'))
+
+        assert doc.of_type(Media)[0].video_stream is None
+
+    def test_edge_is_none_without_a_document(self):
+        # Parsed on its own, an object has no document to resolve edges against.
+        raw = block("AudioClipTrackItem", AudioClipTrackItem.CLASS.uuid, "88", '<SubClip ObjectRef="104"/>')
+        lone = PremiereObject.parse(Xml(raw).toplevel_blocks()[0])
+
+        assert lone.subclip is None
+
+    def test_edge_return_type_is_honest(self):
+        doc = build(
+            block("AudioClipTrackItem", AudioClipTrackItem.CLASS.uuid, "88", '<SubClip ObjectRef="104"/>'),
+            block("SubClip", SubClip.CLASS.uuid, "104"),
+        )
+
+        assert isinstance(doc.of_type(AudioClipTrackItem)[0].subclip, SubClip)
+
+
 class TestAgainstRealTemplate:
     def document(self) -> Document:
         return Document(Xml.from_gzip_bytes(_TEMPLATE_DATA).toplevel_blocks())
+
+    def test_slot_navigates_to_its_master_clip(self):
+        doc = self.document()
+        slot = doc.of_type(AudioClipTrackItem)[0]
+
+        assert isinstance(slot.subclip, SubClip)
+        assert isinstance(slot.subclip.master_clip, MasterClip)
+
+    def test_sound_media_carries_both_streams(self):
+        doc = self.document()
+        sound_media = next(md for md in doc.of_type(Media) if "TMPL_SOUND" in md.block.text)
+
+        assert isinstance(sound_media.video_stream, VideoStream)
+        assert isinstance(sound_media.audio_stream, AudioStream)
+
+    def test_frames_media_has_no_audio(self):
+        # An image sequence has a picture stream but no sound.
+        doc = self.document()
+        frames_media = next(md for md in doc.of_type(Media) if "TMPL_SOUND" not in md.block.text)
+
+        assert frames_media.audio_stream is None
 
     def test_every_block_parses(self):
         doc = self.document()
