@@ -49,6 +49,8 @@ The full class inventory and the measurements behind all of this are kept in the
 project's ``.prproj`` format notes (reverse-engineering reference in memory).
 """
 
+from __future__ import annotations
+
 import re
 from abc import ABC, abstractmethod
 from typing import ClassVar, Iterator, NamedTuple, TypeVar
@@ -85,10 +87,14 @@ class PremiereObject(ABC):
     # None on the abstract bases, which describe an identity scheme rather than a type.
     CLASS: ClassVar[PremiereClass | None] = None
 
-    _BY_CLASS_UUID: ClassVar[dict[str, type["PremiereObject"]]] = {}
+    _BY_CLASS_UUID: ClassVar[dict[str, type[PremiereObject]]] = {}
 
     def __init__(self, block: Block) -> None:
         self._block = block
+        # The document this object belongs to — set by Document once it has parsed
+        # the whole block list. Edges resolve their pointers through it, so an object
+        # parsed on its own (no Document) can be read but not navigated.
+        self._doc: Document | None = None
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
@@ -131,8 +137,33 @@ class PremiereObject(ABC):
         """Uuids this object points at. Unambiguous."""
         return set(re.findall(TimelapseRe.OBJECT_UREF, self._block.text))
 
+    def _ref(self, model_class: type[_T], pattern: str) -> _T | None:
+        """Follow a numeric pointer (matched by ``pattern``) to a typed object.
+
+        The target's class must be known — a number alone is ambiguous — so the
+        caller names it. ``None`` if there's no such pointer or no document to
+        resolve against.
+        """
+        if self._doc is None:
+            return None
+
+        return self._doc.by_ref(model_class, _search(pattern, self._block.text))
+
+    def _uref(self, model_class: type[_T], pattern: str) -> _T | None:
+        """Follow a uuid pointer (matched by ``pattern``) to a typed object.
+
+        A uuid is globally unique, so the target is found without its class; we
+        still check the class to keep the return type honest.
+        """
+        if self._doc is None:
+            return None
+
+        target = self._doc.by_uref(_search(pattern, self._block.text))
+
+        return target if isinstance(target, model_class) else None
+
     @classmethod
-    def parse(cls, block: Block) -> "PremiereObject":
+    def parse(cls, block: Block) -> PremiereObject:
         """Wrap a block in its model class, falling back to :class:`OpaqueObject`.
 
         Dispatches on ``ClassID``, not on the tag — see the module docstring.
@@ -206,6 +237,11 @@ class AudioClipTrack(UuidObject):
 class ClipProjectItem(UuidObject):
     CLASS = PremiereClass("cb4e0ed7-aca1-4171-8525-e3658dec06dd", Tag.ClipProjectItem)
 
+    @property
+    def master_clip(self) -> MasterClip | None:
+        """The clip this panel entry stands for."""
+        return self._uref(MasterClip, TimelapseRe.MASTER_CLIP_UREF)
+
 
 class MasterClip(UuidObject):
     CLASS = PremiereClass("fb11c33a-b0a9-4465-aa94-b6d5db2628cf", Tag.MasterClip)
@@ -213,6 +249,16 @@ class MasterClip(UuidObject):
 
 class Media(UuidObject):
     CLASS = PremiereClass("7a5c103e-f3ac-4391-b6b4-7cc3d2f9a7ff", Tag.Media)
+
+    @property
+    def video_stream(self) -> VideoStream | None:
+        """The picture stream, present only while the media is still an mp4."""
+        return self._ref(VideoStream, TimelapseRe.VIDEO_STREAM_REF)
+
+    @property
+    def audio_stream(self) -> AudioStream | None:
+        """The sound stream — every media has one."""
+        return self._ref(AudioStream, TimelapseRe.AUDIO_STREAM_REF)
 
 
 class AudioClip(NumericObject):
@@ -225,6 +271,15 @@ class VideoClip(NumericObject):
 
 class SubClip(NumericObject):
     CLASS = PremiereClass("e0c58dc9-dbdd-4166-aef7-5db7e3f22e84", Tag.SubClip)
+
+    @property
+    def master_clip(self) -> MasterClip | None:
+        """The panel clip this timeline sub-clip plays a portion of."""
+        return self._uref(MasterClip, TimelapseRe.MASTER_CLIP_UREF)
+
+    # The `<Clip ObjectRef>` edge (→ Audio- or VideoClip) is deliberately absent:
+    # its tag names a role, not the target type, so it needs the ambiguous-pointer
+    # resolution that's still an open design question (grabli #3).
 
 
 # ── media streams ──────────────────────────────────────────────────────────────
@@ -280,6 +335,11 @@ class ClipChannelVectorSerializer(NumericObject):
 class AudioClipTrackItem(NumericObject):
     CLASS = PremiereClass("064ec682-9ba6-11d5-af2d-9ca32c7d6164", Tag.AudioClipTrackItem)
 
+    @property
+    def subclip(self) -> SubClip | None:
+        """The sub-clip this timeline slot plays."""
+        return self._ref(SubClip, TimelapseRe.SUBCLIP_REF)
+
 
 class VideoClipTrackItem(NumericObject):
     CLASS = PremiereClass("368b0406-29e3-4923-9fcd-094fbf9a1089", Tag.VideoClipTrackItem)
@@ -294,6 +354,10 @@ class Document:
 
     def __init__(self, blocks: Blocks) -> None:
         self._objects = [PremiereObject.parse(block) for block in blocks]
+
+        # Hand every object a way back to the document, so its edges can resolve.
+        for obj in self._objects:
+            obj._doc = self
 
     def __iter__(self) -> Iterator[PremiereObject]:
         return iter(self._objects)
