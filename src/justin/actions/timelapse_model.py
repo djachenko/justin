@@ -45,8 +45,8 @@ independent id spaces. Classes that are not modelled degrade to
 :class:`OpaqueObject`, which still reads its tag and identity but claims no
 meaning.
 
-See ``resources/timelapse_templates/PRPROJ_STRUCTURE.md`` for the full inventory
-and the measurements behind all of this.
+The full class inventory and the measurements behind all of this are kept in the
+project's ``.prproj`` format notes (reverse-engineering reference in memory).
 """
 
 import re
