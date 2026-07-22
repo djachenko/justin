@@ -276,7 +276,7 @@ def test_selector_matches_by_name_or_stem(tmp_path):
 
 def test_template_resource_is_packaged():
     from importlib.resources import files as resource_files
-    data = resource_files("justin.resources.timelapse_templates").joinpath("template.prproj").read_bytes()
+    data = resource_files("justin.resources.timelapse_templates").joinpath("timelapse_template.prproj").read_bytes()
     assert len(data) > 0
     xml = gzip.decompress(data).decode("utf-8")
     ET.fromstring(xml)

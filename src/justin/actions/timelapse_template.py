@@ -1,5 +1,5 @@
 class TimelapseTemplate:
-    """Placeholder strings baked into the sample ``template.prproj``.
+    """Placeholder strings baked into the sample ``timelapse_template.prproj``.
 
     These are facts about the specific template we clone from — the abstract names
     it uses so we can find and swap them for a real timelapse's values. Kept in a
