@@ -68,10 +68,10 @@ class TestFromPath:
 
 
 # --------------------------------------------------------------------------- #
-# Sound.rename — the shared base step both subclasses build adapt from
+# Sound.replace_name — the shared base step both subclasses build adapt from
 # --------------------------------------------------------------------------- #
 
-class TestRename:
+class TestReplaceName:
     def test_swaps_placeholder_for_filename_everywhere(self):
         section = f"<Name>{MARKER}</Name> media ./sound/{MARKER}"
         assert AudioSound(Path("song.mp3")).replace_name(section) == "<Name>song.mp3</Name> media ./sound/song.mp3"
