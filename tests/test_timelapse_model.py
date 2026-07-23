@@ -23,6 +23,7 @@ from justin.actions.timelapse_model import (
     Document,
     MasterClip,
     Media,
+    MissingPointer,
     NumericObject,
     OpaqueObject,
     PremiereObject,
@@ -442,6 +443,24 @@ class TestWriteEdges:
         assert '<Clip Index="0" ObjectRef="55"/>' not in xml.text
         assert '<Clip Index="1" ObjectRef="56"/>' not in xml.text
         assert '<Clip Index="0" ObjectRef="56"/>' in xml.text
+
+    def test_removing_a_pointer_that_is_not_there_fails_loud(self):
+        # The video half sits in slot 1 here, not slot 0. Silently returning the text
+        # unchanged would leave the half listed while its blocks get deleted around it.
+        uid = "dddddddd-eeee-ffff-0000-111111111111"
+        doc = build(
+            f'\t<MasterClip ObjectUID="{uid}" ClassID="{MASTER_CLIP}">\n'
+            '\t\t<Clip Index="0" ObjectRef="56"/>\n'
+            '\t\t<Clip Index="1" ObjectRef="55"/>\n'
+            '\t</MasterClip>\n',
+            block("VideoClip", VIDEO_CLIP, "55"),
+            block("AudioClip", AUDIO_CLIP, "56"),
+        )
+        master = doc.of_type(MasterClip)[0]
+        audio, video = master.clips
+
+        with pytest.raises(MissingPointer):
+            master.without_video_half(video, audio)
 
     def test_edits_do_not_mutate_the_model(self):
         # The overlay is a snapshot: producing an edit must leave the block it came
