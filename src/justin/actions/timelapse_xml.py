@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import Self
 
-from justin.actions.timelapse_block import Block, Blocks
+from justin.actions.timelapse_block import Block, Blocks, Edit
 from justin.actions.timelapse_re import TimelapseRe
 from justin.actions.timelapse_tags import Tag
 
@@ -50,7 +50,7 @@ class Xml:
     def replace_range(self, start: int, end: int, text: str) -> None:
         self._xml = self._xml[:start] + text + self._xml[end:]
 
-    def replace_ranges(self, edits: list[tuple[int, int, str]]) -> Self:
+    def replace_ranges(self, edits: list[Edit]) -> Self:
         """Apply several (start, end, replacement) edits in one pass.
 
         The ranges must not overlap. Edits are applied from the end of the string
@@ -70,7 +70,7 @@ class Xml:
 
     def remove_blocks_by_positions(self, positions: list[tuple[int, int]]) -> Self:
         # Removing a block is just replacing its range with nothing.
-        return self.replace_ranges([(start, end, "") for start, end in positions])
+        return self.replace_ranges([Edit(start, end, "") for start, end in positions])
 
     def remove_dangling_refs(self) -> Self:
         """

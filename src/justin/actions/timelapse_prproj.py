@@ -38,6 +38,7 @@ from dataclasses import dataclass
 from importlib.resources import files as _resource_files
 from pathlib import Path
 
+from justin.actions.timelapse_block import Edit
 from justin.actions.timelapse_model import AudioClipTrackItem, Document
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sound import Sound
@@ -293,7 +294,7 @@ class TimelapseSchema:
         """
         document = Document(xml.toplevel_blocks())
 
-        edits: list[tuple[int, int, str]] = []
+        edits: list[Edit] = []
         cursor = 0
 
         for slot_id, sound in timeline_slots:
@@ -308,15 +309,11 @@ class TimelapseSchema:
             # Where the clip sits on the track. It always has an end; it gets a
             # start only once we're past 0 (the first clip has none, matching how
             # the template stores it).
-            slot_block = slot.block
-            edits.append((*slot_block.span, TimelapseXmlOps.set_slot_position(slot_block.text, cursor or None, end)))
+            edits.append(slot.placed_at(cursor or None, end))
 
             # How much of the clip plays — the clip reached through the slot's SubClip.
-            if (subclip := slot.subclip) and (clip := subclip.clip):
-                clip_block = clip.block
-
-                if "<OutPoint>" in clip_block.text:
-                    edits.append((*clip_block.span, TimelapseXmlOps.set_out_point(clip_block.text, duration)))
+            if (subclip := slot.subclip) and (clip := subclip.clip) and (trim := clip.trimmed_to(duration)):
+                edits.append(trim)
 
             cursor = end
 
