@@ -555,16 +555,13 @@ class TestAgainstRealTemplate:
                 assert obj.identity is not None and obj.identity.isdigit()
 
     def test_navigates_slot_to_its_audio_clip(self):
-        from justin.actions.timelapse_xml_ops import TimelapseXmlOps as ops
+        # The chain the layout walks, on the real file: slot → sub-clip → the half
+        # whose OutPoint says how much of the sound plays.
+        slot = self.document().of_type(AudioClipTrackItem)[0]
 
-        doc = self.document()
-        slot = doc.of_type(AudioClipTrackItem)[0]
-        subclip = doc.by_ref(SubClip, ops.subclip_ref(slot.block.text))
-        audio_clip = doc.by_ref(AudioClip, ops.clip_ref(subclip.block.text))
-
-        assert subclip is not None
-        assert audio_clip is not None
-        assert subclip.name is not None
+        assert slot.subclip is not None
+        assert slot.subclip.name is not None
+        assert isinstance(slot.subclip.clip, AudioClip)
 
     def test_pointer_edits_match_how_the_template_writes_a_pointer(self):
         # The edits remove a pointer by rebuilding its exact line. If the builder's
