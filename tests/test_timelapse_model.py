@@ -103,6 +103,20 @@ class TestIdentitySchemes:
         assert isinstance(obj, UuidObject)
         assert obj.identity == uid
 
+    def test_unmodelled_class_reports_whichever_identity_it_has(self):
+        # OpaqueObject spans both schemes — it can't know which one its class uses,
+        # so it answers with the one actually written in the block.
+        unknown = "00000000-1111-2222-3333-444444444444"
+        uid = "99999999-8888-7777-6666-555555555555"
+        doc = build(
+            block("SomeSettings", unknown, "12"),
+            block("OtherSettings", unknown, uid),
+        )
+        numbered, uuided = list(doc)
+
+        assert isinstance(numbered, OpaqueObject) and numbered.identity == "12"
+        assert isinstance(uuided, OpaqueObject) and uuided.identity == uid
+
     def test_uuid_classes_carry_no_object_id(self):
         # The schemes are mutually exclusive: a UuidObject has no number at all.
         doc = build(block("MasterClip", MASTER_CLIP, "fb11c33a-b0a9-4465-aa94-b6d5db2628cf"))
@@ -184,6 +198,7 @@ class TestLookup:
 
         assert doc.by_uref(uid).name == "master"
         assert doc.by_uref("no-such-uid") is None
+        assert doc.by_uref(None) is None  # an absent pointer resolves to nothing, like by_ref
 
     def test_of_type_filters(self):
         doc = build(
@@ -230,6 +245,25 @@ class TestEdges:
         lone = parse(Xml(raw).toplevel_blocks()[0])
 
         assert lone.subclip is None
+
+    def test_list_edge_is_empty_without_a_document(self):
+        # Same rule as the single-ref edges: no document, nothing to resolve against.
+        raw = block("MasterClip", MASTER_CLIP, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                    '<Clip Index="0" ObjectRef="55"/>')
+        lone = parse(Xml(raw).toplevel_blocks()[0])
+
+        assert lone.clips == []
+
+    def test_list_edge_skips_halves_that_are_not_there(self):
+        # A slot pointing at a clip that was already removed contributes nothing,
+        # rather than a None sitting in the list.
+        doc = build(
+            block("MasterClip", MASTER_CLIP, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                  '<Clip Index="0" ObjectRef="55"/><Clip Index="1" ObjectRef="56"/>'),
+            block("AudioClip", AUDIO_CLIP, "56"),
+        )
+
+        assert [type(clip) for clip in doc.of_type(MasterClip)[0].clips] == [AudioClip]
 
     def test_edge_return_type_is_honest(self):
         doc = build(

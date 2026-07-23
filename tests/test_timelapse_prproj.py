@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from justin.actions.timelapse_model import AudioClipTrackItem, Document
 from justin.actions.timelapse_prproj import (
     TimelapseSchema,
     _resolve_timeline_sounds,
@@ -29,7 +30,6 @@ from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
 from justin.actions.timelapse_ticks import PREMIERE_TIMEBASE
 from justin.actions.timelapse_xml import Xml
-from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 
 # --------------------------------------------------------------------------- #
@@ -155,12 +155,8 @@ def test_partial_timeline_selection_keeps_only_chosen_sound(tmp_path):
     assert {"alpha.mp3", "beta.mp3"} <= panel_item_names(xml)
     # The single track item must be beta, not alpha. Read it off the document:
     # slot → its SubClip → the file the SubClip names.
-    blocks = Xml(xml).toplevel_blocks()
-    names = []
-
-    for slot in blocks.by_tag("AudioClipTrackItem"):
-        subclip = blocks.by_id("SubClip", TimelapseXmlOps.subclip_ref(slot.text))
-        names.append(TimelapseXmlOps.block_name(subclip.text))
+    document = Document(Xml(xml).toplevel_blocks())
+    names = [slot.subclip.name for slot in document.of_type(AudioClipTrackItem)]
 
     assert names == ["beta.mp3"]
 
@@ -178,6 +174,28 @@ def test_timeline_sounds_are_laid_out_sequentially(tmp_path):
     assert alpha_dur in ends
     assert alpha_dur in starts  # second clip starts where the first ended
     assert alpha_dur + beta_dur in ends
+
+
+def test_layout_skips_a_slot_the_document_does_not_have(tmp_path):
+    # The layout resolves each slot id through the model. An id that names nothing
+    # must be stepped over, not crash and not shift the sounds that do resolve:
+    # a half-laid-out timeline is worse than a missing clip.
+    timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3",))
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    out = timelapse_dir / "out.prproj"
+    TimelapseSchema()(out, sources, TimelapseSettings(timeline_sounds=["alpha.mp3"]))
+
+    xml = Xml(read_project(out))
+    slot = Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
+    ghost = Sound.from_path(Path("ghost.mp3"))
+
+    TimelapseSchema._lay_out_timeline(xml, [("999999", ghost), (slot.identity, ghost)])
+
+    laid_out = Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
+
+    # The real slot was still laid out — and from tick 0, as the first of the pair.
+    assert f"<End>{ghost.duration_ticks}</End>" in laid_out.block.text
+    assert "<Start>" not in laid_out.block.text
 
 
 def _audio_track_items_region(xml: str) -> str:
