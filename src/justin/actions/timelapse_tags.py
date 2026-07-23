@@ -13,6 +13,10 @@ class Tag(StrEnum):
     VideoClip                    = "VideoClip"                     # video half of a master clip
     SubClip                      = "SubClip"                       # timeline slot playing a portion of a master clip
 
+    # ── role tags ─────────────────────────────────────────────────────────────
+    # Not a type: names the role a pointer plays, and resolves to either half.
+    Clip                         = "Clip"                          # <Clip ObjectRef> → AudioClip or VideoClip
+
     # ── media / streams ───────────────────────────────────────────────────────
     Media                        = "Media"                         # file reference — path, streams, codec info
     AudioStream                  = "AudioStream"                   # audio stream within the media file
