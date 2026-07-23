@@ -85,6 +85,18 @@ class AmbiguousReference(Exception):
         )
 
 
+class MissingPointer(Exception):
+    """A pointer an edit meant to remove is not written the way it was rebuilt.
+
+    Never expected: the callers only ask for pointers they have already resolved.
+    So this says the block's layout is not what the code assumes — a different
+    indentation, or a half sitting in the other slot.
+    """
+
+    def __init__(self, obj: "PremiereObject", line: str) -> None:
+        super().__init__(f"{obj!r} has no {line.strip()}")
+
+
 _T = TypeVar("_T", bound="PremiereObject")
 
 
@@ -180,8 +192,19 @@ class PremiereObject(ABC):
 
     def _without_pointer(self, tag: str, **attributes: object) -> str:
         """This block's text with that pointer gone — its whole line, indentation and
-        trailing newline included, so no blank line is left behind."""
-        return self._block.text.replace(f"\t\t{self._pointer(tag, **attributes)}\n", "")
+        trailing newline included, so no blank line is left behind.
+
+        The line is rebuilt and matched literally, so a mismatch means an assumption
+        about the layout broke. Raising is the point: ``str.replace`` would return the
+        text unchanged, the edit would rewrite the block as itself, and the pointer
+        would survive into a file that Premiere then refuses to open — far from here.
+        """
+        line = f"\t\t{self._pointer(tag, **attributes)}\n"
+
+        if line not in self._block.text:
+            raise MissingPointer(self, line)
+
+        return self._block.text.replace(line, "")
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.identity})"

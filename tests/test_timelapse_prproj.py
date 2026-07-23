@@ -122,11 +122,18 @@ def generate(timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] 
 # scenario matrix — every combination must produce an openable project
 # --------------------------------------------------------------------------- #
 
+# The format axis is not cosmetic: an mp3 is realized by stripping the template's
+# video half (AudioSound.adapt), an mp4 keeps it (VideoSound). Only the mp3 side
+# used to be generated here, so the whole video-keeping path went through no
+# project-level check at all — and the mixed pool puts both in one document, where
+# their id-spaces have to stay apart.
+@pytest.mark.parametrize("pool", [("alpha.mp3", "beta.mp3"), ("alpha.mp3", "song.mp4")],
+                         ids=["audio_only", "mixed_formats"])
 @pytest.mark.parametrize("n_sounds", [0, 1, 2])
 @pytest.mark.parametrize("cover", [True, False])
 @pytest.mark.parametrize("on_timeline", ["none", "all"])
-def test_scenario_matrix_is_structurally_sound(tmp_path, n_sounds, cover, on_timeline):
-    names = ("alpha.mp3", "beta.mp3")[:n_sounds]
+def test_scenario_matrix_is_structurally_sound(tmp_path, n_sounds, cover, on_timeline, pool):
+    names = pool[:n_sounds]
     timelapse_dir = make_timelapse(tmp_path, cover=cover, sounds=names)
     timeline_sounds = list(names) if on_timeline == "all" else []
 
