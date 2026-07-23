@@ -1,13 +1,19 @@
 """
-A typed, read-only view over the project's top-level blocks.
+A typed view over the project's top-level blocks.
 
 The generator edits the project as raw text, by byte offsets. That is what keeps
 it safe: everything it does not understand — the UI state, the dozens of settings
 classes — stays byte-for-byte untouched, so Premiere still accepts the file. This
 module does *not* change that. It is an **overlay**: it wraps blocks so you can
-ask what they are and follow their pointers in typed terms. Every edit still goes
-through ``Xml``. There is deliberately no serialization back out — a full
-parse-and-rewrite would risk perturbing bytes we never meant to touch.
+ask what they are and follow their pointers in typed terms.
+
+Reads are properties (``slot.subclip.clip``). Writes are methods returning an
+:class:`Edit` — one block's span plus its new text — which nothing applies but
+``Xml``. So a write is a *value*, not a mutation: the model stays a snapshot,
+edits stay collectable, and ``Xml`` can still apply them from the end of the
+document backwards with the offsets intact. There is deliberately no
+serialization back out — a full parse-and-rewrite would risk perturbing bytes we
+never meant to touch.
 
 What a class is here
 --------------------
@@ -53,7 +59,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import ClassVar, Iterator, NamedTuple, TypeVar
 
-from justin.actions.timelapse_block import Block, Blocks
+from justin.actions.timelapse_block import Block, Blocks, Edit
 from justin.actions.timelapse_re import TimelapseRe, search_group
 from justin.actions.timelapse_tags import Tag
 
@@ -156,6 +162,10 @@ class PremiereObject(ABC):
 
         return self._doc.by_ref(model_class, search_group(pattern, self._block.text))
 
+    def _edit(self, text: str) -> Edit:
+        """This object's block, rewritten as ``text`` — an edit for ``Xml`` to apply."""
+        return Edit(self._block.start, self._block.end, text)
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.identity})"
 
@@ -228,6 +238,19 @@ class Clip(NumericObject):
     ClassID dispatch in ``parse``.
     """
 
+    def trimmed_to(self, duration: int) -> Edit | None:
+        """This clip, playing only ``duration`` ticks of its media.
+
+        ``None`` when the clip has no ``OutPoint`` — then there is nothing to trim,
+        and saying so is more honest than handing back an edit that changes nothing.
+        """
+        if not re.search(TimelapseRe.OUT_POINT, self._block.text):
+            return None
+
+        return self._edit(
+            re.sub(TimelapseRe.OUT_POINT, f"<OutPoint>{duration}</OutPoint>", self._block.text, count=1)
+        )
+
 
 class AudioClip(Clip):
     CLASS = PremiereClass("b8830d03-de02-41ee-84ec-fe566dc70cd9", Tag.AudioClip)
@@ -251,6 +274,16 @@ class MasterClip(UuidObject):
         ids = re.findall(TimelapseRe.CLIP_SLOT_REFS, self._block.text)
 
         return [clip for i in ids if (clip := self._doc.by_ref(Clip, i)) is not None]
+
+    def without_video_half(self, video: VideoClip, audio: AudioClip) -> Edit:
+        """This master clip with only its audio half, moved up to slot 0 — what it
+        looks like once the picture side is stripped for an audio-only file."""
+        audio_only = self._block.text.replace(f'\t\t<Clip Index="0" ObjectRef="{video.block.id}"/>\n', "")
+
+        return self._edit(audio_only.replace(
+            f'<Clip Index="1" ObjectRef="{audio.block.id}"/>',
+            f'<Clip Index="0" ObjectRef="{audio.block.id}"/>',
+        ))
 
 
 class SubClip(NumericObject):
@@ -291,6 +324,14 @@ class Media(UuidObject):
     def audio_stream(self) -> AudioStream | None:
         """The sound stream — every media has one."""
         return self._ref(AudioStream, TimelapseRe.AUDIO_STREAM_REF)
+
+    def without_video_stream(self, stream: VideoStream) -> Edit:
+        """This media, audio-only: the pointer to its picture stream taken out.
+
+        The stream is passed in rather than looked up again — the caller has to hold
+        it anyway, to decide there is a picture side at all.
+        """
+        return self._edit(self._block.text.replace(f'\t\t<VideoStream ObjectRef="{stream.block.id}"/>\n', ""))
 
 
 class AudioMediaSource(NumericObject):
@@ -340,6 +381,19 @@ class AudioClipTrackItem(NumericObject):
     def subclip(self) -> SubClip | None:
         """The sub-clip this timeline slot plays."""
         return self._ref(SubClip, TimelapseRe.SUBCLIP_REF)
+
+    def placed_at(self, start: int | None, end: int) -> Edit:
+        """This slot, sitting from ``start`` to ``end`` (ticks) on its track.
+
+        ``start=None`` writes no Start element at all — that is how a slot at tick 0
+        is stored, and Premiere reads the absence as 0.
+        """
+        if start is not None:
+            position = f"<Start>{start}</Start>\n\t\t\t\t<End>{end}</End>"
+        else:
+            position = f"<End>{end}</End>"
+
+        return self._edit(re.sub(TimelapseRe.SLOT_POSITION, position, self._block.text, count=1))
 
 
 class VideoClipTrackItem(NumericObject):
