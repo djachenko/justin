@@ -38,6 +38,7 @@ from dataclasses import dataclass
 from importlib.resources import files as _resource_files
 from pathlib import Path
 
+from justin.actions.timelapse_model import AudioClipTrackItem, Document
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
@@ -290,13 +291,13 @@ class TimelapseSchema:
         so the byte offsets stay valid — which is why the slots cannot be placed one
         at a time: each edit changes lengths and shifts every offset after it.
         """
-        blocks = xml.toplevel_blocks()
+        document = Document(xml.toplevel_blocks())
 
         edits: list[tuple[int, int, str]] = []
         cursor = 0
 
         for slot_id, sound in timeline_slots:
-            slot = blocks.by_id(Tag.AudioClipTrackItem, slot_id)
+            slot = document.by_ref(AudioClipTrackItem, slot_id)
 
             if slot is None:
                 continue
@@ -307,15 +308,15 @@ class TimelapseSchema:
             # Where the clip sits on the track. It always has an end; it gets a
             # start only once we're past 0 (the first clip has none, matching how
             # the template stores it).
-            edits.append((*slot.span, TimelapseXmlOps.set_slot_position(slot.text, cursor or None, end)))
+            slot_block = slot.block
+            edits.append((*slot_block.span, TimelapseXmlOps.set_slot_position(slot_block.text, cursor or None, end)))
 
-            # How much of the clip plays — the AudioClip reached through the slot's SubClip.
-            audio_clip = None
-            if subclip := blocks.by_id(Tag.SubClip, TimelapseXmlOps.subclip_ref(slot.text)):
-                audio_clip = blocks.by_id(Tag.AudioClip, TimelapseXmlOps.clip_ref(subclip.text))
+            # How much of the clip plays — the clip reached through the slot's SubClip.
+            if (subclip := slot.subclip) and (clip := subclip.clip):
+                clip_block = clip.block
 
-            if audio_clip and "<OutPoint>" in audio_clip.text:
-                edits.append((*audio_clip.span, TimelapseXmlOps.set_out_point(audio_clip.text, duration)))
+                if "<OutPoint>" in clip_block.text:
+                    edits.append((*clip_block.span, TimelapseXmlOps.set_out_point(clip_block.text, duration)))
 
             cursor = end
 

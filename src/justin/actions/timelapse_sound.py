@@ -2,8 +2,9 @@ import subprocess
 from abc import ABC, abstractmethod
 from functools import cached_property
 from pathlib import Path
+from typing import TypeVar
 
-from justin.actions.timelapse_tags import Tag
+from justin.actions.timelapse_model import AudioClip, Document, MasterClip, Media, PremiereObject, VideoClip
 from justin.actions.timelapse_template import TimelapseTemplate
 from justin.actions.timelapse_ticks import seconds_to_ticks
 from justin.actions.timelapse_xml import Xml
@@ -14,10 +15,7 @@ from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
 VIDEO_AS_AUDIO_EXTENSIONS = {".mp4"}
 
-# A MasterClip lists its two halves as <Clip Index="N" ...>: slot 0 is the video
-# half, slot 1 the audio half — until the video half is stripped for audio-only.
-_VIDEO_SLOT = 0
-_AUDIO_SLOT = 1
+_T = TypeVar("_T", bound=PremiereObject)
 
 
 class Sound(ABC):
@@ -98,59 +96,60 @@ class AudioSound(Sound):
         """
         section = self.replace_name(section)
         fragment = Xml(section)
-        media = fragment\
-            .toplevel_blocks()\
-            .containing(self.name)\
-            .by_tag(Tag.Media)\
-            .first()
+        media = self._own(Document(fragment.toplevel_blocks()), Media)
 
         if media is None:
             return section
 
-        video_stream_id = TimelapseXmlOps.video_stream_ref(media.text)
+        video_stream = media.video_stream
 
-        if video_stream_id is None:
+        if video_stream is None:
             return section  # no video part — already audio-only, nothing to do
 
-        fragment.replace_range(*media.span, TimelapseXmlOps.drop_video_stream(media.text, video_stream_id))
+        video_stream_id = video_stream.block.id
+        media_block = media.block
+
+        fragment.replace_range(*media_block.span, TimelapseXmlOps.drop_video_stream(media_block.text, video_stream_id))
 
         # Work out which blocks belong to the video side but not the surviving audio
         # side (a shared Markers block is reachable from both, so it must stay).
-        blocks = fragment.toplevel_blocks()
+        document = Document(fragment.toplevel_blocks())
+        master = self._own(document, MasterClip)
+        halves = master.clips if master else []
 
-        if master := blocks.containing(self.name).by_tag(Tag.MasterClip).first():
-            video_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _VIDEO_SLOT)
-            audio_clip_id = TimelapseXmlOps.master_clip_slot_ref(master.text, _AUDIO_SLOT)
-        else:
-            video_clip_id = None
-            audio_clip_id = None
-
-        video_clip = blocks.by_id(Tag.VideoClip, video_clip_id)
-        audio_clip = blocks.by_id(Tag.AudioClip, audio_clip_id)
+        video_clip = next((clip for clip in halves if isinstance(clip, VideoClip)), None)
+        audio_clip = next((clip for clip in halves if isinstance(clip, AudioClip)), None)
 
         video_side = {video_stream_id}
 
-        if video_clip_id:
-            video_side.add(video_clip_id)
-
         if video_clip:
-            video_side |= TimelapseXmlOps.reference_ids(video_clip.text)
+            video_side.add(video_clip.block.id)
+            video_side |= video_clip.refs
 
         if audio_clip:
-            audio_side = TimelapseXmlOps.reference_ids(audio_clip.text)
+            audio_side = audio_clip.refs
         else:
             audio_side = set()
 
         removed = video_side - audio_side
 
-        fragment.remove_blocks_by_positions([block.span for block in blocks if block.id in removed])
+        fragment.remove_blocks_by_positions([obj.block.span for obj in document if obj.block.id in removed])
 
         # Drop the emptied video slot from the MasterClip and promote the audio to slot 0.
-        if video_clip_id and audio_clip_id:
-            if master := fragment.toplevel_blocks().containing(self.name).by_tag(Tag.MasterClip).first():
-                fragment.replace_range(*master.span, TimelapseXmlOps.promote_audio_to_first_slot(master.text, video_clip_id, audio_clip_id))
+        if video_clip and audio_clip:
+            if master := self._own(Document(fragment.toplevel_blocks()), MasterClip):
+                master_block = master.block
+                fragment.replace_range(
+                    *master_block.span,
+                    TimelapseXmlOps.promote_audio_to_first_slot(master_block.text, video_clip.block.id, audio_clip.block.id),
+                )
 
         return fragment.text
+
+    def _own(self, document: Document, model_class: type[_T]) -> _T | None:
+        """The one object of that class that belongs to this sound — the section may
+        also carry blocks realized from other placeholders, so match on the filename."""
+        return next((obj for obj in document.of_type(model_class) if self.name in obj.block.text), None)
 
 
 class VideoSound(Sound):
