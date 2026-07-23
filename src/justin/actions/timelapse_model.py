@@ -166,6 +166,23 @@ class PremiereObject(ABC):
         """This object's block, rewritten as ``text`` — an edit for ``Xml`` to apply."""
         return Edit(self._block.start, self._block.end, text)
 
+    @staticmethod
+    def _pointer(tag: str, **attributes: object) -> str:
+        """A pointer element exactly as the file writes it: ``<Tag Attr="v"/>``.
+
+        The one place that knows the shape. Written out by hand in two classes it
+        would be two places to fix, and a mismatch fails silently — the text just
+        stays as it was.
+        """
+        written = " ".join(f'{name}="{value}"' for name, value in attributes.items())
+
+        return f"<{tag} {written}/>"
+
+    def _without_pointer(self, tag: str, **attributes: object) -> str:
+        """This block's text with that pointer gone — its whole line, indentation and
+        trailing newline included, so no blank line is left behind."""
+        return self._block.text.replace(f"\t\t{self._pointer(tag, **attributes)}\n", "")
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.identity})"
 
@@ -266,8 +283,12 @@ class MasterClip(UuidObject):
 
     @property
     def clips(self) -> list[Clip]:
-        """Its halves in slot order: <Clip Index="0"> is video, Index="1"> audio —
-        until the video half is stripped for audio-only and the audio moves to 0."""
+        """Its halves, in the order the slots list them.
+
+        The order is *not* a guarantee: in the shipped template the sound's master
+        clip is video-then-audio, while the sequence's own master clip is the other
+        way round. Ask the type (``isinstance``), never the position.
+        """
         if self._doc is None:
             return []
 
@@ -277,12 +298,16 @@ class MasterClip(UuidObject):
 
     def without_video_half(self, video: VideoClip, audio: AudioClip) -> Edit:
         """This master clip with only its audio half, moved up to slot 0 — what it
-        looks like once the picture side is stripped for an audio-only file."""
-        audio_only = self._block.text.replace(f'\t\t<Clip Index="0" ObjectRef="{video.block.id}"/>\n', "")
+        looks like once the picture side is stripped for an audio-only file.
+
+        Assumes the media layout the template's sound has: video in slot 0, audio in
+        slot 1 (see :meth:`clips` — that order is not universal).
+        """
+        audio_only = self._without_pointer(Tag.Clip, Index=0, ObjectRef=video.block.id)
 
         return self._edit(audio_only.replace(
-            f'<Clip Index="1" ObjectRef="{audio.block.id}"/>',
-            f'<Clip Index="0" ObjectRef="{audio.block.id}"/>',
+            self._pointer(Tag.Clip, Index=1, ObjectRef=audio.block.id),
+            self._pointer(Tag.Clip, Index=0, ObjectRef=audio.block.id),
         ))
 
 
@@ -322,7 +347,8 @@ class Media(UuidObject):
 
     @property
     def audio_stream(self) -> AudioStream | None:
-        """The sound stream — every media has one."""
+        """The sound stream, if the file has one at all — a still or an image
+        sequence is picture-only, and both halves are genuinely optional."""
         return self._ref(AudioStream, TimelapseRe.AUDIO_STREAM_REF)
 
     def without_video_stream(self, stream: VideoStream) -> Edit:
@@ -331,7 +357,7 @@ class Media(UuidObject):
         The stream is passed in rather than looked up again — the caller has to hold
         it anyway, to decide there is a picture side at all.
         """
-        return self._edit(self._block.text.replace(f'\t\t<VideoStream ObjectRef="{stream.block.id}"/>\n', ""))
+        return self._edit(self._without_pointer(Tag.VideoStream, ObjectRef=stream.block.id))
 
 
 class AudioMediaSource(NumericObject):
