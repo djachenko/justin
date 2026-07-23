@@ -38,6 +38,19 @@ class Block(NamedTuple):
         return self.start, self.end
 
 
+class Edit(NamedTuple):
+    """A block's span, and the text that should take its place.
+
+    Nothing is rewritten in place: an edit is *worked out* from a snapshot and only
+    ``Xml`` ever applies it. That keeps the "apply from the end of the document
+    backwards" discipline possible — every edit's offsets are still the snapshot's.
+    """
+
+    start: int
+    end: int
+    text: str
+
+
 class Blocks(list[Block]):
     """A snapshot of the document's top-level blocks, with structural lookups.
 
