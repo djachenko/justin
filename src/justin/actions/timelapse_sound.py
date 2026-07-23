@@ -8,7 +8,6 @@ from justin.actions.timelapse_model import AudioClip, Document, MasterClip, Medi
 from justin.actions.timelapse_template import TimelapseTemplate
 from justin.actions.timelapse_ticks import seconds_to_ticks
 from justin.actions.timelapse_xml import Xml
-from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
 # Formats that carry audio only — no picture. The template's sound is an mp4
 # (which has a video part), so clones of these need that video part stripped.
@@ -107,9 +106,8 @@ class AudioSound(Sound):
             return section  # no video part — already audio-only, nothing to do
 
         video_stream_id = video_stream.block.id
-        media_block = media.block
 
-        fragment.replace_range(*media_block.span, TimelapseXmlOps.drop_video_stream(media_block.text, video_stream_id))
+        fragment.replace_range(*media.without_video_stream(video_stream))
 
         # Work out which blocks belong to the video side but not the surviving audio
         # side (a shared Markers block is reachable from both, so it must stay).
@@ -138,11 +136,7 @@ class AudioSound(Sound):
         # Drop the emptied video slot from the MasterClip and promote the audio to slot 0.
         if video_clip and audio_clip:
             if master := self._own(Document(fragment.toplevel_blocks()), MasterClip):
-                master_block = master.block
-                fragment.replace_range(
-                    *master_block.span,
-                    TimelapseXmlOps.promote_audio_to_first_slot(master_block.text, video_clip.block.id, audio_clip.block.id),
-                )
+                fragment.replace_range(*master.without_video_half(video_clip, audio_clip))
 
         return fragment.text
 
