@@ -200,15 +200,6 @@ class TestEdges:
 
         assert doc.of_type(AudioClipTrackItem)[0].subclip.identity == "104"
 
-    def test_uuid_edge_resolves(self):
-        uid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-        doc = build(
-            block("SubClip", SubClip.CLASS.uuid, "104", f'<MasterClip ObjectURef="{uid}"/>'),
-            block("MasterClip", MASTER_CLIP, uid),
-        )
-
-        assert doc.of_type(SubClip)[0].master_clip.identity == uid
-
     def test_media_streams_split(self):
         uid = "cccccccc-dddd-eeee-ffff-000000000000"
         doc = build(
@@ -248,12 +239,11 @@ class TestAgainstRealTemplate:
     def document(self) -> Document:
         return Document(Xml.from_gzip_bytes(_TEMPLATE_DATA).toplevel_blocks())
 
-    def test_slot_navigates_to_its_master_clip(self):
+    def test_slot_navigates_to_its_subclip(self):
         doc = self.document()
         slot = doc.of_type(AudioClipTrackItem)[0]
 
         assert isinstance(slot.subclip, SubClip)
-        assert isinstance(slot.subclip.master_clip, MasterClip)
 
     def test_sound_media_carries_both_streams(self):
         doc = self.document()

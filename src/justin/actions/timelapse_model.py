@@ -142,19 +142,6 @@ class PremiereObject(ABC):
 
         return self._doc.by_ref(model_class, search_group(pattern, self._block.text))
 
-    def _uref(self, model_class: type[_T], pattern: str) -> _T | None:
-        """Follow a uuid pointer (matched by ``pattern``) to a typed object.
-
-        A uuid is globally unique, so the target is found without its class; we
-        still check the class to keep the return type honest.
-        """
-        if self._doc is None:
-            return None
-
-        target = self._doc.by_uref(search_group(pattern, self._block.text))
-
-        return target if isinstance(target, model_class) else None
-
     @classmethod
     def parse(cls, block: Block) -> PremiereObject:
         """Wrap a block in its model class, falling back to :class:`OpaqueObject`.
@@ -230,11 +217,6 @@ class AudioClipTrack(UuidObject):
 class ClipProjectItem(UuidObject):
     CLASS = PremiereClass("cb4e0ed7-aca1-4171-8525-e3658dec06dd", Tag.ClipProjectItem)
 
-    @property
-    def master_clip(self) -> MasterClip | None:
-        """The clip this panel entry stands for."""
-        return self._uref(MasterClip, TimelapseRe.MASTER_CLIP_UREF)
-
 
 class MasterClip(UuidObject):
     CLASS = PremiereClass("fb11c33a-b0a9-4465-aa94-b6d5db2628cf", Tag.MasterClip)
@@ -265,14 +247,13 @@ class VideoClip(NumericObject):
 class SubClip(NumericObject):
     CLASS = PremiereClass("e0c58dc9-dbdd-4166-aef7-5db7e3f22e84", Tag.SubClip)
 
-    @property
-    def master_clip(self) -> MasterClip | None:
-        """The panel clip this timeline sub-clip plays a portion of."""
-        return self._uref(MasterClip, TimelapseRe.MASTER_CLIP_UREF)
-
-    # The `<Clip ObjectRef>` edge (→ Audio- or VideoClip) is deliberately absent:
-    # its tag names a role, not the target type, so it needs the ambiguous-pointer
-    # resolution that's still an open design question (grabli #3).
+    # Edges deliberately absent for now:
+    #   • `<Clip ObjectRef>` (→ Audio- or VideoClip): its tag names a role, not the
+    #     target type, so it needs the ambiguous-pointer resolution — an open design
+    #     question (grabli #3).
+    #   • `.master_clip` (SubClip → MasterClip): this pointer runs UP the hierarchy
+    #     (the child holds it), and nothing navigates it yet. Following-the-pointer
+    #     (convention A) means we add edges on demand, not on spec.
 
 
 # ── media streams ──────────────────────────────────────────────────────────────
