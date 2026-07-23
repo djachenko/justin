@@ -49,8 +49,6 @@ The full class inventory and the measurements behind all of this are kept in the
 project's ``.prproj`` format notes (reverse-engineering reference in memory).
 """
 
-from __future__ import annotations
-
 import re
 from abc import ABC, abstractmethod
 from typing import ClassVar, Iterator, NamedTuple, TypeVar
@@ -80,7 +78,9 @@ class PremiereObject(ABC):
     # None on the abstract bases, which describe an identity scheme rather than a type.
     CLASS: ClassVar[PremiereClass | None] = None
 
-    _BY_CLASS_UUID: ClassVar[dict[str, type[PremiereObject]]] = {}
+    # ClassID uuid → the model class for it. Values are PremiereObject subclasses;
+    # the type can't say so without naming the class inside its own body.
+    _BY_CLASS_UUID: ClassVar[dict[str, type]] = {}
 
     def __init__(self, block: Block) -> None:
         self._block = block
@@ -141,19 +141,6 @@ class PremiereObject(ABC):
             return None
 
         return self._doc.by_ref(model_class, search_group(pattern, self._block.text))
-
-    @classmethod
-    def parse(cls, block: Block) -> PremiereObject:
-        """Wrap a block in its model class, falling back to :class:`OpaqueObject`.
-
-        Dispatches on ``ClassID``, not on the tag — see the module docstring.
-        """
-        class_uuid = search_group(TimelapseRe.CLASS_ID, block.header)
-
-        if class_uuid is None:
-            return OpaqueObject(block)
-
-        return cls._BY_CLASS_UUID.get(class_uuid, OpaqueObject)(block)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.identity})"
@@ -222,20 +209,6 @@ class MasterClip(UuidObject):
     CLASS = PremiereClass("fb11c33a-b0a9-4465-aa94-b6d5db2628cf", Tag.MasterClip)
 
 
-class Media(UuidObject):
-    CLASS = PremiereClass("7a5c103e-f3ac-4391-b6b4-7cc3d2f9a7ff", Tag.Media)
-
-    @property
-    def video_stream(self) -> VideoStream | None:
-        """The picture stream, present only while the media is still an mp4."""
-        return self._ref(VideoStream, TimelapseRe.VIDEO_STREAM_REF)
-
-    @property
-    def audio_stream(self) -> AudioStream | None:
-        """The sound stream — every media has one."""
-        return self._ref(AudioStream, TimelapseRe.AUDIO_STREAM_REF)
-
-
 class AudioClip(NumericObject):
     CLASS = PremiereClass("b8830d03-de02-41ee-84ec-fe566dc70cd9", Tag.AudioClip)
 
@@ -264,6 +237,22 @@ class AudioStream(NumericObject):
 
 class VideoStream(NumericObject):
     CLASS = PremiereClass("a36e4719-3ec6-4a0c-ab11-8b4aab377aa5", Tag.VideoStream)
+
+
+# Media holds the streams, so it comes after them: its edges name VideoStream /
+# AudioStream directly, which only works once those are defined.
+class Media(UuidObject):
+    CLASS = PremiereClass("7a5c103e-f3ac-4391-b6b4-7cc3d2f9a7ff", Tag.Media)
+
+    @property
+    def video_stream(self) -> VideoStream | None:
+        """The picture stream, present only while the media is still an mp4."""
+        return self._ref(VideoStream, TimelapseRe.VIDEO_STREAM_REF)
+
+    @property
+    def audio_stream(self) -> AudioStream | None:
+        """The sound stream — every media has one."""
+        return self._ref(AudioStream, TimelapseRe.AUDIO_STREAM_REF)
 
 
 class AudioMediaSource(NumericObject):
@@ -319,6 +308,20 @@ class VideoClipTrackItem(NumericObject):
     CLASS = PremiereClass("368b0406-29e3-4923-9fcd-094fbf9a1089", Tag.VideoClipTrackItem)
 
 
+def parse(block: Block) -> PremiereObject:
+    """Wrap a block in its model class, falling back to :class:`OpaqueObject`.
+
+    Dispatches on ``ClassID``, not on the tag — see the module docstring. A plain
+    function, not a classmethod, so its return type can be named directly.
+    """
+    class_uuid = search_group(TimelapseRe.CLASS_ID, block.header)
+
+    if class_uuid is None:
+        return OpaqueObject(block)
+
+    return PremiereObject._BY_CLASS_UUID.get(class_uuid, OpaqueObject)(block)
+
+
 class Document:
     """The document's top-level blocks, as model objects.
 
@@ -327,7 +330,7 @@ class Document:
     """
 
     def __init__(self, blocks: Blocks) -> None:
-        self._objects = [PremiereObject.parse(block) for block in blocks]
+        self._objects = [parse(block) for block in blocks]
 
         # Hand every object a way back to the document, so its edges can resolve.
         for obj in self._objects:
