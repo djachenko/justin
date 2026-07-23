@@ -12,10 +12,32 @@ from pathlib import Path
 
 import pytest
 
+from justin.actions.timelapse_model import (
+    AudioClip,
+    AudioStream,
+    Markers,
+    MasterClip,
+    Media,
+    PremiereObject,
+    VideoClip,
+    VideoStream,
+)
 from justin.actions.timelapse_sound import Sound, AudioSound, VideoSound
 from justin.actions.timelapse_template import TimelapseTemplate
 
 MARKER = TimelapseTemplate.SOUND_NAME  # the placeholder adapt renames away
+
+
+def _block(model_class: type[PremiereObject], object_id: str, body: str = "") -> str:
+    """One block of the given Premiere class. The ClassID is what identifies the
+    class — adapt navigates by it, so a tag alone would not be a real block."""
+    tag, class_id = model_class.CLASS.tag, model_class.CLASS.uuid
+    head = f'\t<{tag} ObjectID="{object_id}" ClassID="{class_id}"'
+
+    if body:
+        return f'{head}>\n{body}\t</{tag}>\n'
+    else:
+        return f'{head}/>\n'
 
 
 # A minimal mp4-shaped section, still named with the template placeholder: the
@@ -25,26 +47,20 @@ MARKER = TimelapseTemplate.SOUND_NAME  # the placeholder adapt renames away
 def _mp4_section() -> str:
     return (
         "<Project>\n"
-        '\t<Media ObjectID="1">\n'
-        f'\t\t<Name>{MARKER}</Name>\n'
-        '\t\t<VideoStream ObjectRef="10"/>\n'
-        '\t\t<AudioStream ObjectRef="11"/>\n'
-        '\t</Media>\n'
-        '\t<VideoStream ObjectID="10"/>\n'
-        '\t<AudioStream ObjectID="11"/>\n'
-        '\t<MasterClip ObjectID="2">\n'
-        f'\t\t<Name>{MARKER}</Name>\n'
-        '\t\t<Clip Index="0" ObjectRef="20"/>\n'
-        '\t\t<Clip Index="1" ObjectRef="21"/>\n'
-        '\t</MasterClip>\n'
-        '\t<VideoClip ObjectID="20">\n'
-        '\t\t<Markers ObjectRef="30"/>\n'
-        '\t</VideoClip>\n'
-        '\t<AudioClip ObjectID="21">\n'
-        '\t\t<Markers ObjectRef="30"/>\n'
-        '\t</AudioClip>\n'
-        '\t<Markers ObjectID="30"/>\n'
-        "</Project>\n"
+        + _block(Media, "1",
+                 f'\t\t<Name>{MARKER}</Name>\n'
+                 '\t\t<VideoStream ObjectRef="10"/>\n'
+                 '\t\t<AudioStream ObjectRef="11"/>\n')
+        + _block(VideoStream, "10")
+        + _block(AudioStream, "11")
+        + _block(MasterClip, "2",
+                 f'\t\t<Name>{MARKER}</Name>\n'
+                 '\t\t<Clip Index="0" ObjectRef="20"/>\n'
+                 '\t\t<Clip Index="1" ObjectRef="21"/>\n')
+        + _block(VideoClip, "20", '\t\t<Markers ObjectRef="30"/>\n')
+        + _block(AudioClip, "21", '\t\t<Markers ObjectRef="30"/>\n')
+        + _block(Markers, "30")
+        + "</Project>\n"
     )
 
 
@@ -95,16 +111,16 @@ class TestAudioSoundAdapt:
         result = AudioSound(Path("song.mp3")).adapt(_mp4_section())
 
         # Video-only chunks gone: the VideoStream block and the VideoClip block.
-        assert '<VideoStream ObjectID="10"/>' not in result
+        assert 'ObjectID="10"' not in result  # VideoStream
         assert 'ObjectID="20"' not in result  # VideoClip
         # The Media no longer points at the video stream.
         assert '<VideoStream ObjectRef="10"/>' not in result
 
         # Audio side survives untouched.
-        assert '<AudioStream ObjectID="11"/>' in result
+        assert 'ObjectID="11"' in result  # AudioStream
         assert 'ObjectID="21"' in result  # AudioClip
         # Shared Markers (referenced by the surviving AudioClip) is kept.
-        assert '<Markers ObjectID="30"/>' in result
+        assert 'ObjectID="30"' in result
 
     def test_masterclip_promotes_audio_to_slot_zero(self):
         result = AudioSound(Path("song.mp3")).adapt(_mp4_section())
@@ -117,11 +133,8 @@ class TestAudioSoundAdapt:
         # A Media with no VideoStream pointer: renamed, structure otherwise intact.
         section = (
             "<Project>\n"
-            '\t<Media ObjectID="1">\n'
-            f'\t\t<Name>{MARKER}</Name>\n'
-            '\t\t<AudioStream ObjectRef="11"/>\n'
-            '\t</Media>\n'
-            "</Project>\n"
+            + _block(Media, "1", f'\t\t<Name>{MARKER}</Name>\n\t\t<AudioStream ObjectRef="11"/>\n')
+            + "</Project>\n"
         )
         result = AudioSound(Path("song.mp3")).adapt(section)
         assert "<Name>song.mp3</Name>" in result
@@ -134,6 +147,6 @@ class TestAudioSoundAdapt:
 
 def test_videosound_adapt_renames_only():
     result = VideoSound(Path("clip.mp4")).adapt(_mp4_section())
-    assert "<Name>clip.mp4</Name>" in result        # renamed
-    assert '<VideoStream ObjectID="10"/>' in result  # video kept
+    assert "<Name>clip.mp4</Name>" in result  # renamed
+    assert 'ObjectID="10"' in result           # video kept
     assert '<Clip Index="0" ObjectRef="20"/>' in result
