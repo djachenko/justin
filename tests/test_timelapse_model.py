@@ -307,6 +307,119 @@ class TestPolymorphicClipEdges:
         assert doc.by_ref(Clip, "999") is None
 
 
+class TestWriteEdges:
+    """Writes are values: a method returns the block's span plus its new text, and
+    only ``Xml`` applies it. So each test asserts both the text and that the edit
+    lands where it claims — a wrong span would corrupt neighbouring blocks."""
+
+    def slot(self, body: str) -> tuple[Xml, AudioClipTrackItem]:
+        # Two blocks, so an edit with a wrong span would visibly damage the second.
+        xml = Xml(
+            block("AudioClipTrackItem", AudioClipTrackItem.CLASS.uuid, "88", body)
+            + block("SubClip", SubClip.CLASS.uuid, "104", "<Name>x.mp3</Name>")
+        )
+
+        return xml, Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
+
+    def test_placed_at_writes_both_ends(self):
+        xml, slot = self.slot("<Start>0</Start>\n\t\t<End>100</End>")
+
+        xml.replace_ranges([slot.placed_at(500, 900)])
+
+        assert "<Start>500</Start>" in xml.text
+        assert "<End>900</End>" in xml.text
+        assert "<End>100</End>" not in xml.text
+
+    def test_placed_at_zero_writes_no_start_at_all(self):
+        # A slot at tick 0 carries no Start element — Premiere reads its absence as 0.
+        xml, slot = self.slot("<Start>500</Start>\n\t\t<End>900</End>")
+
+        xml.replace_ranges([slot.placed_at(None, 400)])
+
+        assert "<Start>" not in xml.text
+        assert "<End>400</End>" in xml.text
+
+    def test_edit_leaves_the_neighbouring_block_intact(self):
+        xml, slot = self.slot("<Start>0</Start>\n\t\t<End>100</End>")
+
+        xml.replace_ranges([slot.placed_at(500, 900)])
+
+        assert '<SubClip ObjectID="104"' in xml.text
+        assert "<Name>x.mp3</Name>" in xml.text
+
+    def test_edit_spans_exactly_its_own_block(self):
+        xml, slot = self.slot("<Start>0</Start>\n\t\t<End>100</End>")
+        edit = slot.placed_at(500, 900)
+
+        assert (edit.start, edit.end) == slot.block.span
+        assert xml.text[edit.start:edit.end] == slot.block.text
+
+    def test_trimmed_to_rewrites_the_out_point(self):
+        doc = build(block("AudioClip", AUDIO_CLIP, "7", "<OutPoint>111</OutPoint>"))
+        edit = doc.of_type(AudioClip)[0].trimmed_to(9999)
+
+        assert "<OutPoint>9999</OutPoint>" in edit.text
+
+    def test_trimmed_to_is_none_without_an_out_point(self):
+        # Nothing to trim is said out loud, rather than returned as a no-op edit.
+        doc = build(block("AudioClip", AUDIO_CLIP, "7"))
+
+        assert doc.of_type(AudioClip)[0].trimmed_to(9999) is None
+
+    def test_trimmed_to_works_on_either_half(self):
+        # `trimmed_to` sits on the shared Clip base, so a video half trims the same way.
+        doc = build(block("VideoClip", VIDEO_CLIP, "7", "<OutPoint>111</OutPoint>"))
+
+        assert "<OutPoint>9999</OutPoint>" in doc.of_type(VideoClip)[0].trimmed_to(9999).text
+
+    def test_without_video_stream_drops_only_the_video_pointer(self):
+        uid = "cccccccc-dddd-eeee-ffff-000000000000"
+        xml = Xml(
+            f'\t<Media ObjectUID="{uid}" ClassID="{Media.CLASS.uuid}">\n'
+            '\t\t<VideoStream ObjectRef="73"/>\n'
+            '\t\t<AudioStream ObjectRef="80"/>\n'
+            '\t</Media>\n'
+            + block("VideoStream", VideoStream.CLASS.uuid, "73")
+        )
+        doc = Document(xml.toplevel_blocks())
+        media = doc.of_type(Media)[0]
+
+        xml.replace_ranges([media.without_video_stream(media.video_stream)])
+
+        assert '<VideoStream ObjectRef="73"/>' not in xml.text
+        assert '<AudioStream ObjectRef="80"/>' in xml.text
+
+    def test_without_video_half_promotes_audio_to_slot_zero(self):
+        uid = "dddddddd-eeee-ffff-0000-111111111111"
+        xml = Xml(
+            f'\t<MasterClip ObjectUID="{uid}" ClassID="{MASTER_CLIP}">\n'
+            '\t\t<Clip Index="0" ObjectRef="55"/>\n'
+            '\t\t<Clip Index="1" ObjectRef="56"/>\n'
+            '\t</MasterClip>\n'
+            + block("VideoClip", VIDEO_CLIP, "55")
+            + block("AudioClip", AUDIO_CLIP, "56")
+        )
+        doc = Document(xml.toplevel_blocks())
+        master = doc.of_type(MasterClip)[0]
+        video, audio = master.clips
+
+        xml.replace_ranges([master.without_video_half(video, audio)])
+
+        assert '<Clip Index="0" ObjectRef="55"/>' not in xml.text
+        assert '<Clip Index="1" ObjectRef="56"/>' not in xml.text
+        assert '<Clip Index="0" ObjectRef="56"/>' in xml.text
+
+    def test_edits_do_not_mutate_the_model(self):
+        # The overlay is a snapshot: producing an edit must leave the block it came
+        # from unchanged, or the "apply from the end backwards" discipline breaks.
+        xml, slot = self.slot("<Start>0</Start>\n\t\t<End>100</End>")
+
+        slot.placed_at(500, 900)
+
+        assert "<End>100</End>" in slot.block.text
+        assert "<End>100</End>" in xml.text
+
+
 class TestAgainstRealTemplate:
     def document(self) -> Document:
         return Document(Xml.from_gzip_bytes(_TEMPLATE_DATA).toplevel_blocks())
