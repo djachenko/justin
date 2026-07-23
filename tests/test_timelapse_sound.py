@@ -129,6 +129,33 @@ class TestAudioSoundAdapt:
         assert '<Clip Index="1" ObjectRef="21"/>' not in result
         assert '<Clip Index="0" ObjectRef="21"/>' in result
 
+    def test_section_without_media_is_only_renamed(self):
+        # Nothing to navigate from: adapt must hand the section back renamed, not blow up.
+        section = "<Project>\n" + _block(AudioClip, "21", f'\t\t<Name>{MARKER}</Name>\n') + "</Project>\n"
+        result = AudioSound(Path("song.mp3")).adapt(section)
+
+        assert result == section.replace(MARKER, "song.mp3")
+
+    def test_video_side_is_stripped_even_without_a_master_clip(self):
+        # The MasterClip is what names the two halves. Without it there is nothing to
+        # promote, but the video stream still has to go — otherwise the section keeps
+        # a picture part an mp3 cannot have.
+        section = (
+            "<Project>\n"
+            + _block(Media, "1",
+                     f'\t\t<Name>{MARKER}</Name>\n'
+                     '\t\t<VideoStream ObjectRef="10"/>\n'
+                     '\t\t<AudioStream ObjectRef="11"/>\n')
+            + _block(VideoStream, "10")
+            + _block(AudioStream, "11")
+            + "</Project>\n"
+        )
+        result = AudioSound(Path("song.mp3")).adapt(section)
+
+        assert '<VideoStream ObjectRef="10"/>' not in result
+        assert 'ObjectID="10"' not in result  # the stream block itself is gone too
+        assert 'ObjectID="11"' in result      # audio untouched
+
     def test_already_audio_only_is_renamed_but_not_stripped(self):
         # A Media with no VideoStream pointer: renamed, structure otherwise intact.
         section = (
