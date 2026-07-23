@@ -65,6 +65,20 @@ class PremiereClass(NamedTuple):
     tag: str
 
 
+class AmbiguousReference(Exception):
+    """A numeric ref matched more than one object of the requested class.
+
+    Only possible for a base class spanning several ClassIDs (``Clip``): the ids
+    collide across its subclasses, so the pointer can't be resolved to one target.
+    """
+
+    def __init__(self, model_class: type, object_id: str, matches: list) -> None:
+        super().__init__(
+            f"{model_class.__name__} id {object_id} matched {len(matches)}: "
+            f"{[type(match).__name__ for match in matches]}"
+        )
+
+
 _T = TypeVar("_T", bound="PremiereObject")
 
 
@@ -205,28 +219,52 @@ class ClipProjectItem(UuidObject):
     CLASS = PremiereClass("cb4e0ed7-aca1-4171-8525-e3658dec06dd", Tag.ClipProjectItem)
 
 
-class MasterClip(UuidObject):
-    CLASS = PremiereClass("fb11c33a-b0a9-4465-aa94-b6d5db2628cf", Tag.MasterClip)
+class Clip(NumericObject):
+    """The audio or video half of a master clip.
+
+    A shared base for AudioClip and VideoClip so a ``<Clip>`` pointer — whose tag
+    is a role, not a type — resolves polymorphically: we look it up as a ``Clip``
+    and get back whichever half it actually names, already correctly typed by the
+    ClassID dispatch in ``parse``.
+    """
 
 
-class AudioClip(NumericObject):
+class AudioClip(Clip):
     CLASS = PremiereClass("b8830d03-de02-41ee-84ec-fe566dc70cd9", Tag.AudioClip)
 
 
-class VideoClip(NumericObject):
+class VideoClip(Clip):
     CLASS = PremiereClass("9308dbef-2440-4acb-9ab2-953b9a4e82ec", Tag.VideoClip)
+
+
+# MasterClip and SubClip name Clip in their edges, so they follow it.
+class MasterClip(UuidObject):
+    CLASS = PremiereClass("fb11c33a-b0a9-4465-aa94-b6d5db2628cf", Tag.MasterClip)
+
+    @property
+    def clips(self) -> list[Clip]:
+        """Its halves in slot order: <Clip Index="0"> is video, Index="1"> audio —
+        until the video half is stripped for audio-only and the audio moves to 0."""
+        if self._doc is None:
+            return []
+
+        ids = re.findall(TimelapseRe.CLIP_SLOT_REFS, self._block.text)
+
+        return [clip for i in ids if (clip := self._doc.by_ref(Clip, i)) is not None]
 
 
 class SubClip(NumericObject):
     CLASS = PremiereClass("e0c58dc9-dbdd-4166-aef7-5db7e3f22e84", Tag.SubClip)
 
-    # Edges deliberately absent for now:
-    #   • `<Clip ObjectRef>` (→ Audio- or VideoClip): its tag names a role, not the
-    #     target type, so it needs the ambiguous-pointer resolution — an open design
-    #     question (grabli #3).
-    #   • `.master_clip` (SubClip → MasterClip): this pointer runs UP the hierarchy
-    #     (the child holds it), and nothing navigates it yet. Following-the-pointer
-    #     (convention A) means we add edges on demand, not on spec.
+    @property
+    def clip(self) -> Clip | None:
+        """The clip half this sub-clip plays — Audio- or VideoClip, resolved through
+        the shared Clip base since the ``<Clip>`` tag names a role, not a type."""
+        return self._ref(Clip, TimelapseRe.CLIP_REF)
+
+    # `.master_clip` (SubClip → MasterClip) is deliberately absent: that pointer runs
+    # UP the hierarchy (the child holds it) and nothing navigates it yet — convention
+    # A adds edges on demand, not on spec.
 
 
 # ── media streams ──────────────────────────────────────────────────────────────
@@ -346,11 +384,21 @@ class Document:
         return [o for o in self._objects if isinstance(o, model_class)]
 
     def by_ref(self, model_class: type[_T], object_id: str | None) -> _T | None:
-        """Resolve a numeric reference — which needs the class to be unambiguous."""
+        """Resolve a numeric reference — which needs the class to be unambiguous.
+
+        A number is unique only within a ClassID, so a base class spanning several
+        (``Clip`` → Audio/VideoClip) could match more than one object — that means
+        the ids collide across the family, and rather than guess we fail loud.
+        """
         if object_id is None:
             return None
 
-        return next((o for o in self.of_type(model_class) if o.identity == object_id), None)
+        matches = [o for o in self.of_type(model_class) if o.identity == object_id]
+
+        if len(matches) > 1:
+            raise AmbiguousReference(model_class, object_id, matches)
+
+        return matches[0] if matches else None
 
     def by_uref(self, uid: str | None) -> PremiereObject | None:
         """Resolve a uuid reference. Globally unique, so no class needed."""

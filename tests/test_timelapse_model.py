@@ -10,11 +10,15 @@ The last test checks the hardcoded ``ClassID`` constants against the real
 template, so a wrong or stale uuid cannot pass silently.
 """
 
+import pytest
+
 from justin.actions import timelapse_model as model
 from justin.actions.timelapse_model import (
+    AmbiguousReference,
     AudioClip,
     AudioClipTrackItem,
     AudioStream,
+    Clip,
     ClipProjectItem,
     Document,
     MasterClip,
@@ -236,6 +240,56 @@ class TestEdges:
         assert isinstance(doc.of_type(AudioClipTrackItem)[0].subclip, SubClip)
 
 
+class TestPolymorphicClipEdges:
+    def test_clip_edge_resolves_to_whichever_half(self):
+        # Same `.clip` edge, different concrete type per instance: <Clip> is a role,
+        # and the target's ClassID (not the ref tag) decides audio vs video.
+        doc = build(
+            block("SubClip", SubClip.CLASS.uuid, "97", '<Clip ObjectRef="113"/>'),
+            block("SubClip", SubClip.CLASS.uuid, "104", '<Clip ObjectRef="117"/>'),
+            block("VideoClip", VIDEO_CLIP, "113"),
+            block("AudioClip", AUDIO_CLIP, "117"),
+        )
+        subs = {sub.identity: sub for sub in doc.of_type(SubClip)}
+
+        assert isinstance(subs["97"].clip, VideoClip)
+        assert isinstance(subs["104"].clip, AudioClip)
+
+    def test_master_clip_lists_its_halves_in_slot_order(self):
+        uid = "dddddddd-eeee-ffff-0000-111111111111"
+        doc = build(
+            block("MasterClip", MASTER_CLIP, uid,
+                  '<Clip Index="0" ObjectRef="55"/><Clip Index="1" ObjectRef="56"/>'),
+            block("VideoClip", VIDEO_CLIP, "55"),
+            block("AudioClip", AUDIO_CLIP, "56"),
+        )
+        clips = doc.of_type(MasterClip)[0].clips
+
+        assert [type(clip) for clip in clips] == [VideoClip, AudioClip]
+
+    def test_base_class_lookup_fails_loud_on_collision(self):
+        # Audio and video clip numbered alike — the base-class lookup refuses to
+        # guess which the ref means, rather than silently pick one.
+        doc = build(
+            block("AudioClip", AUDIO_CLIP, "7"),
+            block("VideoClip", VIDEO_CLIP, "7"),
+        )
+
+        with pytest.raises(AmbiguousReference):
+            doc.by_ref(Clip, "7")
+
+    def test_leaf_class_lookup_is_unaffected_by_collision(self):
+        # The same "7" resolves fine when a concrete class is named — ObjectID is
+        # unique within one ClassID.
+        doc = build(
+            block("AudioClip", AUDIO_CLIP, "7"),
+            block("VideoClip", VIDEO_CLIP, "7"),
+        )
+
+        assert doc.by_ref(AudioClip, "7").identity == "7"
+        assert isinstance(doc.by_ref(AudioClip, "7"), AudioClip)
+
+
 class TestAgainstRealTemplate:
     def document(self) -> Document:
         return Document(Xml.from_gzip_bytes(_TEMPLATE_DATA).toplevel_blocks())
@@ -245,6 +299,23 @@ class TestAgainstRealTemplate:
         slot = doc.of_type(AudioClipTrackItem)[0]
 
         assert isinstance(slot.subclip, SubClip)
+
+    def test_every_subclip_resolves_to_a_clip(self):
+        doc = self.document()
+
+        for sub in doc.of_type(SubClip):
+            assert isinstance(sub.clip, Clip)
+
+    def test_sound_master_lists_both_halves(self):
+        # The sound is an mp4, so its MasterClip has a video and an audio half.
+        doc = self.document()
+        sound_master = next(
+            mc for mc in doc.of_type(MasterClip)
+            if any(isinstance(clip, AudioClip) for clip in mc.clips)
+        )
+        types = {type(clip) for clip in sound_master.clips}
+
+        assert types == {VideoClip, AudioClip}
 
     def test_sound_media_carries_both_streams(self):
         doc = self.document()

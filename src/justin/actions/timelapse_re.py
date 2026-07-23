@@ -129,6 +129,15 @@ class TimelapseRe:
     #   "                   — closing quote
     CLIP_REF = r'<Clip ObjectRef="(\d+)"'
 
+    # Every indexed Clip pointer inside a MasterClip — its halves. Distinct from
+    # CLIP_REF above: those carry an Index attribute (<Clip Index="N" ObjectRef=...>),
+    # so findall over this yields the halves in slot order.
+    # → clip hierarchy
+    #   <Clip Index="\d+" ObjectRef="   — tag with any index + attribute prefix
+    #   (\d+)                           — capture: the Audio/VideoClip id
+    #   "/>                             — closing quote + self-closing tag
+    CLIP_SLOT_REFS = r'<Clip Index="\d+" ObjectRef="(\d+)"/>'
+
     # The VideoStream pointer inside a sound's Media block. The template's sound is an
     # mp4, so its Media points at a VideoStream; an audio-only file's Media does not.
     # → mp4 → mp3 (audio-only)
