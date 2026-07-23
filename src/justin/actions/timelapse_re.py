@@ -145,14 +145,6 @@ class TimelapseRe:
     #   "/>                        — closing quote + self-closing tag
     AUDIO_STREAM_REF = r'<AudioStream ObjectRef="(\d+)"/>'
 
-    # The MasterClip pointer carried by a ClipProjectItem or a SubClip — a uuid, so
-    # the target is unambiguous (unlike numeric refs).
-    # → clip hierarchy
-    #   <MasterClip ObjectURef="   — tag name + uuid-attribute prefix
-    #   ([0-9a-f-]{36})            — capture: the MasterClip's ObjectUID
-    #   "                          — closing quote
-    MASTER_CLIP_UREF = r'<MasterClip ObjectURef="([0-9a-f-]{36})"'
-
     # The Name element in any block (typically a SubClip carries the filename here).
     # → SubClip
     #   <Name>      — opening tag
