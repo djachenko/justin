@@ -289,6 +289,23 @@ class TestPolymorphicClipEdges:
         assert doc.by_ref(AudioClip, "7").identity == "7"
         assert isinstance(doc.by_ref(AudioClip, "7"), AudioClip)
 
+    def test_base_class_lookup_returns_a_single_match(self):
+        # No collision: the fail-fast threshold is >1, not >=1, so a base-class
+        # lookup with a unique target must resolve, not raise.
+        doc = build(
+            block("VideoClip", VIDEO_CLIP, "113"),
+            block("AudioClip", AUDIO_CLIP, "117"),
+        )
+
+        assert isinstance(doc.by_ref(Clip, "113"), VideoClip)
+        assert isinstance(doc.by_ref(Clip, "117"), AudioClip)
+
+    def test_base_class_lookup_missing_returns_none(self):
+        # Zero matches is not an error — only more than one is.
+        doc = build(block("AudioClip", AUDIO_CLIP, "7"))
+
+        assert doc.by_ref(Clip, "999") is None
+
 
 class TestAgainstRealTemplate:
     def document(self) -> Document:
