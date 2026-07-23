@@ -2,8 +2,11 @@
 Unit tests for the pure block/XML operations in timelapse_xml_ops.
 
 These exercise each helper in isolation on hand-written snippets, without going
-through the whole generator: the header queries, the block-text edits, the
-whole-project edits on a small Xml, and the block-cluster operations.
+through the whole generator: the queries on a not-yet-integrated section, the
+whole-project edits on a small Xml, and the id-remapping done when cloning.
+
+Per-block operations are not here — they belong to their model class and are
+tested in test_timelapse_model.
 """
 
 import re
@@ -40,123 +43,11 @@ class TestQueries:
     def test_audio_clip_track_item_id_missing(self):
         assert TimelapseXmlOps.audio_clip_track_item_id('<VideoClipTrackItem ObjectID="57">') is None
 
-    def test_subclip_ref(self):
-        assert TimelapseXmlOps.subclip_ref('<SubClip ObjectRef="42"/>') == "42"
-        assert TimelapseXmlOps.subclip_ref("<Other/>") is None
-
-    def test_clip_ref(self):
-        assert TimelapseXmlOps.clip_ref('<Clip ObjectRef="99"/>') == "99"
-        assert TimelapseXmlOps.clip_ref("<Other/>") is None
-
-    def test_block_name(self):
-        assert TimelapseXmlOps.block_name("<Name>snejnye_volki.mp4</Name>") == "snejnye_volki.mp4"
-        assert TimelapseXmlOps.block_name("<NoName/>") is None
-
-    def test_block_name_first_match_only(self):
-        assert TimelapseXmlOps.block_name("<Name>first</Name><Name>second</Name>") == "first"
-
-    def test_video_stream_ref_found(self):
-        assert TimelapseXmlOps.video_stream_ref('<Media><VideoStream ObjectRef="10"/></Media>') == "10"
-
-    def test_video_stream_ref_absent_when_audio_only(self):
-        assert TimelapseXmlOps.video_stream_ref('<Media><AudioStream ObjectRef="11"/></Media>') is None
-
-    def test_master_clip_slot_ref_by_index(self):
-        text = '<MasterClip><Clip Index="0" ObjectRef="20"/><Clip Index="1" ObjectRef="21"/></MasterClip>'
-        assert TimelapseXmlOps.master_clip_slot_ref(text, 0) == "20"
-        assert TimelapseXmlOps.master_clip_slot_ref(text, 1) == "21"
-
-    def test_master_clip_slot_ref_missing(self):
-        assert TimelapseXmlOps.master_clip_slot_ref("<MasterClip/>", 0) is None
-
-    def test_reference_ids_collects_all_objectrefs(self):
-        text = '<VideoClip><Markers ObjectRef="30"/><Source ObjectRef="40"/></VideoClip>'
-        assert TimelapseXmlOps.reference_ids(text) == {"30", "40"}
-
-    def test_reference_ids_empty_when_none(self):
-        assert TimelapseXmlOps.reference_ids("<VideoClip/>") == set()
-
-
-# --------------------------------------------------------------------------- #
-# block-text edits
-# --------------------------------------------------------------------------- #
-
-class TestSetSlotPosition:
-    def test_replaces_start_and_end(self):
-        slot = "<Start>100</Start>\n\t\t\t\t<End>200</End>"
-        result = TimelapseXmlOps.set_slot_position(slot, start=500, end=900)
-        assert "<Start>500</Start>" in result
-        assert "<End>900</End>" in result
-        assert "100" not in result and "200" not in result
-
-    def test_adds_start_where_first_slot_had_none(self):
-        # The first slot (tick 0) has no explicit Start tag.
-        slot = "<End>200</End>"
-        result = TimelapseXmlOps.set_slot_position(slot, start=500, end=900)
-        assert result == "<Start>500</Start>\n\t\t\t\t<End>900</End>"
-
-    def test_no_start_when_start_is_none(self):
-        slot = "<Start>100</Start>\n\t\t\t\t<End>200</End>"
-        result = TimelapseXmlOps.set_slot_position(slot, start=None, end=900)
-        assert result == "<End>900</End>"
-
-    def test_only_first_occurrence(self):
-        slot = "<End>1</End> ... <End>2</End>"
-        result = TimelapseXmlOps.set_slot_position(slot, start=None, end=9)
-        assert result == "<End>9</End> ... <End>2</End>"
-
-
-class TestSetOutPoint:
-    def test_replaces_value(self):
-        assert TimelapseXmlOps.set_out_point("<OutPoint>1</OutPoint>", 42) == "<OutPoint>42</OutPoint>"
-
-    def test_only_first_occurrence(self):
-        text = "<OutPoint>1</OutPoint><OutPoint>2</OutPoint>"
-        assert TimelapseXmlOps.set_out_point(text, 9) == "<OutPoint>9</OutPoint><OutPoint>2</OutPoint>"
-
-    def test_no_outpoint_left_untouched(self):
-        assert TimelapseXmlOps.set_out_point("<Nothing/>", 9) == "<Nothing/>"
-
-
-class TestDropVideoStream:
-    def test_removes_the_stream_line(self):
-        media = (
-            '\t<Media ObjectID="1">\n'
-            '\t\t<VideoStream ObjectRef="10"/>\n'
-            '\t\t<AudioStream ObjectRef="11"/>\n'
-            '\t</Media>\n'
-        )
-        result = TimelapseXmlOps.drop_video_stream(media, "10")
-        assert '<VideoStream ObjectRef="10"/>' not in result
-        assert '<AudioStream ObjectRef="11"/>' in result
-        # The whole line goes, no blank line left behind.
-        assert "\n\n" not in result
-
-    def test_noop_when_id_does_not_match(self):
-        media = '\t\t<VideoStream ObjectRef="10"/>\n'
-        assert TimelapseXmlOps.drop_video_stream(media, "99") == media
-
-
-class TestPromoteAudioToFirstSlot:
-    def test_drops_video_slot_and_renumbers_audio(self):
-        master = (
-            '\t<MasterClip ObjectID="2">\n'
-            '\t\t<Clip Index="0" ObjectRef="20"/>\n'
-            '\t\t<Clip Index="1" ObjectRef="21"/>\n'
-            '\t</MasterClip>\n'
-        )
-        result = TimelapseXmlOps.promote_audio_to_first_slot(master, "20", "21")
-        assert '<Clip Index="0" ObjectRef="20"/>' not in result
-        assert '<Clip Index="1" ObjectRef="21"/>' not in result
-        assert '<Clip Index="0" ObjectRef="21"/>' in result
-
-
-# --------------------------------------------------------------------------- #
-# whole-project edits
-# --------------------------------------------------------------------------- #
 
 def _dump(xml: Xml) -> str:
     return xml.text
+
+
 
 
 class TestClearAudioCachePaths:

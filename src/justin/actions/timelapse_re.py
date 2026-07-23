@@ -298,13 +298,3 @@ class TimelapseRe:
     @staticmethod
     def id_remap(old_id: str) -> str:
         return rf'((?:ObjectID|ObjectRef)="){re.escape(old_id)}"'
-
-    # A MasterClip's <Clip Index="N" ObjectRef="M"/> slot. Index 0 is the clip's video
-    # half, index 1 the audio half — until the video half is stripped for audio-only.
-    # → mp4 → mp3 (audio-only)
-    #   <Clip Index="{index}" ObjectRef="   — tag + fixed slot index + attribute prefix
-    #   (\d+)                               — capture: the referenced clip's id
-    #   "/>                                 — closing quote + self-closing tag
-    @staticmethod
-    def master_clip_slot(index: int) -> str:
-        return rf'<Clip Index="{index}" ObjectRef="(\d+)"/>'
