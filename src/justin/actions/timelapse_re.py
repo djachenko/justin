@@ -30,6 +30,18 @@ Premiere XML concepts used throughout:
 import re
 
 
+def search_group(pattern: str, text: str) -> str | None:
+    """First capture group of the first match, or ``None``.
+
+    The one shared way to pull a single value out of block text: the model's edges
+    and the xml ops' queries both read Premiere XML through this.
+    """
+    if match := re.search(pattern, text):
+        return match.group(1)
+    else:
+        return None
+
+
 class TimelapseRe:
     """Namespace of Premiere Pro XML patterns (constants) and builders (staticmethods).
 

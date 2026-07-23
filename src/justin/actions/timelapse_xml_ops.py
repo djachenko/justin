@@ -1,7 +1,7 @@
 import re
 import uuid
 
-from justin.actions.timelapse_re import TimelapseRe
+from justin.actions.timelapse_re import TimelapseRe, search_group
 from justin.actions.timelapse_xml import Xml
 
 
@@ -21,9 +21,7 @@ class TimelapseXmlOps:
         instance. Used for ClipProjectItem blocks: we read the template panel entry's UID
         so we know where to anchor the new entries in the panel list.
         """
-        if m := re.search(TimelapseRe.OBJECT_UID, text):
-            return m.group(1)
-        return None
+        return search_group(TimelapseRe.OBJECT_UID, text)
 
     @staticmethod
     def clip_project_item_uid(text: str) -> str | None:
@@ -32,9 +30,7 @@ class TimelapseXmlOps:
         After cloning, we collect this UUID and add an <Item .../> line to the panel
         list so the new clip shows up in the Project panel.
         """
-        if m := re.search(TimelapseRe.CLIP_PROJECT_ITEM_UID, text):
-            return m.group(1)
-        return None
+        return search_group(TimelapseRe.CLIP_PROJECT_ITEM_UID, text)
 
     @staticmethod
     def audio_clip_track_item_id(text: str) -> str | None:
@@ -43,10 +39,7 @@ class TimelapseXmlOps:
         After cloning, we collect this ID and add a <TrackItem .../> line to the audio
         track's slot list so the new clip gets a slot on the timeline.
         """
-        if m := re.search(TimelapseRe.AUDIO_CLIP_TRACK_ITEM_ID, text):
-            return m.group(1)
-
-        return None
+        return search_group(TimelapseRe.AUDIO_CLIP_TRACK_ITEM_ID, text)
 
     @staticmethod
     def subclip_ref(text: str) -> str | None:
@@ -55,9 +48,7 @@ class TimelapseXmlOps:
         A timeline slot (AudioClipTrackItem) holds a SubClip pointer that names the
         SubClip block carrying this slot's playback settings and display name.
         """
-        if m := re.search(TimelapseRe.SUBCLIP_REF, text):
-            return m.group(1)
-        return None
+        return search_group(TimelapseRe.SUBCLIP_REF, text)
 
     @staticmethod
     def clip_ref(text: str) -> str | None:
@@ -67,9 +58,7 @@ class TimelapseXmlOps:
         Following this chain: slot → SubClip → AudioClip lets us set how much of the
         clip plays (via the AudioClip's OutPoint).
         """
-        if m := re.search(TimelapseRe.CLIP_REF, text):
-            return m.group(1)
-        return None
+        return search_group(TimelapseRe.CLIP_REF, text)
 
     @staticmethod
     def block_name(text: str) -> str | None:
@@ -78,9 +67,7 @@ class TimelapseXmlOps:
         For SubClip blocks this is the filename of the media the clip represents.
         We use it to match a timeline slot back to the sound file it plays.
         """
-        if m := re.search(TimelapseRe.BLOCK_NAME, text):
-            return m.group(1)
-        return None
+        return search_group(TimelapseRe.BLOCK_NAME, text)
 
     @staticmethod
     def video_stream_ref(media_text: str) -> str | None:
@@ -89,9 +76,7 @@ class TimelapseXmlOps:
         video part. The template's mp4 sound has one; an audio-only file (mp3, wav, …)
         doesn't, so its absence is how we detect "already audio-only, nothing to strip".
         """
-        if m := re.search(TimelapseRe.VIDEO_STREAM_REF, media_text):
-            return m.group(1)
-        return None
+        return search_group(TimelapseRe.VIDEO_STREAM_REF, media_text)
 
     @staticmethod
     def master_clip_slot_ref(master_text: str, index: int) -> str | None:
@@ -99,9 +84,7 @@ class TimelapseXmlOps:
         The clip id in a MasterClip's slot: index 0 is the video half, index 1 the audio
         half. Used to find each half so the video side can be stripped for audio-only files.
         """
-        if m := re.search(TimelapseRe.master_clip_slot(index), master_text):
-            return m.group(1)
-        return None
+        return search_group(TimelapseRe.master_clip_slot(index), master_text)
 
     @staticmethod
     def reference_ids(text: str) -> set[str]:

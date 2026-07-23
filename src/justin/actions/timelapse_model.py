@@ -56,7 +56,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, Iterator, NamedTuple, TypeVar
 
 from justin.actions.timelapse_block import Block, Blocks
-from justin.actions.timelapse_re import TimelapseRe
+from justin.actions.timelapse_re import TimelapseRe, search_group
 from justin.actions.timelapse_tags import Tag
 
 
@@ -68,13 +68,6 @@ class PremiereClass(NamedTuple):
 
 
 _T = TypeVar("_T", bound="PremiereObject")
-
-
-def _search(pattern: str, text: str) -> str | None:
-    if match := re.search(pattern, text):
-        return match.group(1)
-    else:
-        return None
 
 
 class PremiereObject(ABC):
@@ -114,7 +107,7 @@ class PremiereObject(ABC):
     @property
     def class_uuid(self) -> str | None:
         """The ``ClassID`` as written in the file (absent on non-object elements)."""
-        return _search(TimelapseRe.CLASS_ID, self._block.header)
+        return search_group(TimelapseRe.CLASS_ID, self._block.header)
 
     @property
     @abstractmethod
@@ -125,7 +118,7 @@ class PremiereObject(ABC):
     @property
     def name(self) -> str | None:
         """The object's ``<Name>``, when it has one (clips, media, panel items do)."""
-        return _search(TimelapseRe.BLOCK_NAME, self._block.text)
+        return search_group(TimelapseRe.BLOCK_NAME, self._block.text)
 
     @property
     def refs(self) -> set[str]:
@@ -147,7 +140,7 @@ class PremiereObject(ABC):
         if self._doc is None:
             return None
 
-        return self._doc.by_ref(model_class, _search(pattern, self._block.text))
+        return self._doc.by_ref(model_class, search_group(pattern, self._block.text))
 
     def _uref(self, model_class: type[_T], pattern: str) -> _T | None:
         """Follow a uuid pointer (matched by ``pattern``) to a typed object.
@@ -158,7 +151,7 @@ class PremiereObject(ABC):
         if self._doc is None:
             return None
 
-        target = self._doc.by_uref(_search(pattern, self._block.text))
+        target = self._doc.by_uref(search_group(pattern, self._block.text))
 
         return target if isinstance(target, model_class) else None
 
@@ -168,7 +161,7 @@ class PremiereObject(ABC):
 
         Dispatches on ``ClassID``, not on the tag — see the module docstring.
         """
-        class_uuid = _search(TimelapseRe.CLASS_ID, block.header)
+        class_uuid = search_group(TimelapseRe.CLASS_ID, block.header)
 
         if class_uuid is None:
             return OpaqueObject(block)
@@ -192,7 +185,7 @@ class UuidObject(PremiereObject):
 
     @property
     def identity(self) -> str | None:
-        return _search(TimelapseRe.OBJECT_UID, self._block.header)
+        return search_group(TimelapseRe.OBJECT_UID, self._block.header)
 
 
 class OpaqueObject(PremiereObject):
@@ -207,7 +200,7 @@ class OpaqueObject(PremiereObject):
         if self._block.id is not None:
             return self._block.id
 
-        return _search(TimelapseRe.OBJECT_UID, self._block.header)
+        return search_group(TimelapseRe.OBJECT_UID, self._block.header)
 
 
 # ── panel and timeline containers (uuid identity) ──────────────────────────────
