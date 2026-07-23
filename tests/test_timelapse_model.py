@@ -424,6 +424,23 @@ class TestAgainstRealTemplate:
     def document(self) -> Document:
         return Document(Xml.from_gzip_bytes(_TEMPLATE_DATA).toplevel_blocks())
 
+    def media_master(self, doc: Document) -> MasterClip:
+        """The template's sound: the master clip laid out video-then-audio, which is
+        what `without_video_half` is written for. Picked by that layout, not by
+        position — the sequence's own master clip also has two halves, reversed."""
+        return next(m for m in doc.of_type(MasterClip) if [type(c) for c in m.clips] == [VideoClip, AudioClip])
+
+    def test_half_order_is_not_a_guarantee(self):
+        # Measured, and it decides how `without_video_half` may be used: the sound's
+        # master clip is video-then-audio, the sequence's own is audio-then-video.
+        orders = {
+            tuple(type(clip).__name__ for clip in master.clips)
+            for master in self.document().of_type(MasterClip)
+        }
+
+        assert ("VideoClip", "AudioClip") in orders
+        assert ("AudioClip", "VideoClip") in orders
+
     def test_slot_navigates_to_its_subclip(self):
         doc = self.document()
         slot = doc.of_type(AudioClipTrackItem)[0]
@@ -495,6 +512,30 @@ class TestAgainstRealTemplate:
         assert subclip is not None
         assert audio_clip is not None
         assert subclip.name is not None
+
+    def test_pointer_edits_match_how_the_template_writes_a_pointer(self):
+        # The edits remove a pointer by rebuilding its exact line. If the builder's
+        # form ever drifts from the file's, `.replace` finds nothing and silently
+        # changes nothing — so assert against the real template, not a fixture.
+        doc = self.document()
+        master = self.media_master(doc)
+        video, audio = master.clips
+
+        text = master.without_video_half(video, audio).text
+
+        assert f'ObjectRef="{video.block.id}"' not in text
+        assert f'<Clip Index="0" ObjectRef="{audio.block.id}"/>' in text
+        assert text.count("<Clip ") == 1
+
+    def test_video_stream_pointer_is_removed_from_the_real_media(self):
+        # The sound's media — the only one carrying both halves.
+        doc = self.document()
+        media = next(m for m in doc.of_type(Media) if m.video_stream and m.audio_stream)
+
+        text = media.without_video_stream(media.video_stream).text
+
+        assert f'<VideoStream ObjectRef="{media.video_stream.block.id}"/>' not in text
+        assert f'<AudioStream ObjectRef="{media.audio_stream.block.id}"/>' in text
 
     def test_registry_covers_every_modelled_class_once(self):
         registry = PremiereObject._BY_CLASS_UUID
