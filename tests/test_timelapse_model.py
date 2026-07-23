@@ -23,6 +23,7 @@ from justin.actions.timelapse_model import (
     OpaqueObject,
     PremiereObject,
     SubClip,
+    parse,
     UuidObject,
     VideoClip,
     VideoStream,
@@ -149,7 +150,7 @@ class TestAccessors:
     def test_parse_dispatches_a_lone_block(self):
         # Document goes through parse, but the entry point is public on its own.
         raw = block("AudioClip", AUDIO_CLIP, "5")
-        parsed = PremiereObject.parse(Xml(raw).toplevel_blocks()[0])
+        parsed = parse(Xml(raw).toplevel_blocks()[0])
 
         assert isinstance(parsed, AudioClip)
         assert parsed.identity == "5"
@@ -222,7 +223,7 @@ class TestEdges:
     def test_edge_is_none_without_a_document(self):
         # Parsed on its own, an object has no document to resolve edges against.
         raw = block("AudioClipTrackItem", AudioClipTrackItem.CLASS.uuid, "88", '<SubClip ObjectRef="104"/>')
-        lone = PremiereObject.parse(Xml(raw).toplevel_blocks()[0])
+        lone = parse(Xml(raw).toplevel_blocks()[0])
 
         assert lone.subclip is None
 
