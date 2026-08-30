@@ -1,0 +1,216 @@
+import json
+from abc import abstractmethod, ABC
+from functools import cache, cached_property
+from typing import Iterable, Tuple, List
+from uuid import UUID
+
+from justin.cms.cms import CMS
+from justin.cms.people_cms import PersonMigrationEntry
+from justin.cms.tables.table import Table
+from justin.shared.metafiles.metafile import Json
+from justin.shared.metafiles.metafile import PostStatus, PostMetafile, MetafileReadWriter, GroupMetafile, PhotosetMetafile
+from justin.shared.models.photoset import Photoset
+
+
+class PhotosetMigration:
+    @abstractmethod
+    def migrate(self, photoset: Photoset) -> None:
+        pass
+
+
+class SplitMetafilesMigration(PhotosetMigration):
+    def migrate(self, photoset: Photoset) -> None:
+        metafile_name = "_meta.json"
+        old_metafile_path = photoset.path / metafile_name
+
+        if not old_metafile_path.exists():
+            return
+
+        with old_metafile_path.open() as metafile_file:
+            json_dict = json.load(metafile_file)
+
+        if ("migrated" in json_dict and json_dict["migrated"] or
+                "type" in json_dict or
+                "posts" not in json_dict):
+            return
+
+        posts_jsons: Json = json_dict["posts"]
+
+        posts = []
+
+        for group_id, group_posts in posts_jsons.items():
+            for group_post in group_posts:
+                path = photoset.path / group_post["path"].replace("\\", "/")
+                post_id = int(group_post["id"])
+
+                if group_post["post_status"] == "posted":
+                    group_post["post_status"] = "published"
+
+                post_status = PostStatus(group_post["post_status"])
+
+                post_metafile = PostMetafile(post_id, post_status)
+
+                print(path)
+
+                posts.append((path, post_metafile))
+
+                relative_parts = path.relative_to(photoset.path).parts
+
+                group_metafile = GroupMetafile(group_id=int(group_id))
+                group_metafile_path = photoset.path
+
+                if relative_parts[0] in ("justin", "kot_i_kit", "meeting"):
+                    group_metafile_path /= relative_parts[0]
+                elif relative_parts[0] == "closed":
+                    group_metafile_path /= relative_parts[0]
+                    group_metafile_path /= relative_parts[1]
+
+                posts.append((group_metafile_path, group_metafile))
+
+        writer = MetafileReadWriter.instance()
+
+        for path, post_metafile in posts:
+            new_metafile_path = path / metafile_name
+
+            writer.write(post_metafile, new_metafile_path)
+
+        json_dict["migrated"] = True
+
+        with old_metafile_path.open(mode="w") as metafile_file:
+            json.dump(json_dict, metafile_file, indent=4)
+
+        old_metafile_path.unlink()
+
+
+class RenameFoldersMigration(PhotosetMigration, ABC):
+    @property
+    @abstractmethod
+    def renamings(self) -> Iterable[Tuple[str, str]]:
+        pass
+
+    def migrate(self, photoset: Photoset) -> None:
+        for src, dst in self.renamings:
+            src_path = photoset.path / src
+
+            if not src_path.exists():
+                continue
+
+            dst_path = photoset.path / dst
+
+            if dst_path.exists():
+                print(f"{dst_path} already exists, not migrating from {src_path}.")
+
+                continue
+
+            src_path.rename(dst_path)
+
+        photoset.folder.refresh()
+
+
+class ChangeStructureMigration(RenameFoldersMigration):
+    @cached_property
+    def renamings(self) -> Iterable[Tuple[str, str]]:
+        return [
+            ("our_people", "my_people",),
+            ("selection", "not_signed",),
+        ]
+
+
+class RenamePeopleMigration(RenameFoldersMigration):
+
+    def __init__(self, migrations: Table[PersonMigrationEntry, str]) -> None:
+        super().__init__()
+
+        self.__migrations = migrations
+
+    @property
+    def renamings(self) -> Iterable[Tuple[str, str]]:
+        roots = [
+            "my_people",
+            "closed",
+            "drive",
+        ]
+
+        mapping = []
+
+        for migration in self.__migrations:
+            for root in roots:
+                mapping.append((f"{root}/{migration.src}", f"{root}/{migration.dst}"))
+
+        return mapping
+
+
+class ParseMetafileMigration(PhotosetMigration):
+    def migrate(self, photoset: Photoset) -> None:
+        if PhotosetMetafile.has(photoset.folder):
+            metafile = PhotosetMetafile.get(photoset.folder)
+
+            if isinstance(metafile.photoset_id, UUID):
+                return
+
+        PhotosetMetafile().save(photoset.folder)
+
+
+class AIPostfixMigration(PhotosetMigration):
+    __AI_INFIX = "-Enhanced-NR"
+
+    def migrate(self, photoset: Photoset) -> None:
+        roots = [photoset.path]
+
+        while roots:
+            current_root = roots.pop(0)
+
+            for item in current_root.iterdir():
+                if item.is_dir():
+                    roots.append(item)
+                elif item.is_file():
+                    if AIPostfixMigration.__AI_INFIX in item.stem:
+                        infix_index = item.stem.index(AIPostfixMigration.__AI_INFIX)
+                        new_stem = item.stem[:infix_index]
+
+                        dst = item.with_stem(new_stem)
+
+                        print(f"{item} -> {dst}")
+                        item.rename(dst)
+
+
+class PhotosetMigrationFactory:
+    def __init__(self, cms: CMS) -> None:
+        super().__init__()
+
+        self.__cms = cms
+
+    @cache
+    def part_wise_migrations(self) -> List[PhotosetMigration]:
+        return [
+            self.__split_metafiles_migration(),
+            self.__change_structure_migration(),
+            self.__rename_people_migration(),
+            self.__remove_ai_postfix_migration(),
+        ]
+
+    @cache
+    def part_less_migrations(self) -> List[PhotosetMigration]:
+        return [
+            self.__parse_metafile_migration()
+        ]
+
+    @cache
+    def __split_metafiles_migration(self) -> PhotosetMigration:
+        return SplitMetafilesMigration()
+
+    @cache
+    def __change_structure_migration(self) -> PhotosetMigration:
+        return ChangeStructureMigration()
+
+    @cache
+    def __rename_people_migration(self) -> PhotosetMigration:
+        return RenamePeopleMigration(self.__cms.people_migrations)
+
+    @cache
+    def __parse_metafile_migration(self) -> PhotosetMigration:
+        return ParseMetafileMigration()
+
+    @cache
+    def __remove_ai_postfix_migration(self) -> PhotosetMigration:
+        return AIPostfixMigration()
