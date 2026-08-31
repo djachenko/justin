@@ -15,6 +15,20 @@ from justin.browser.event_setup_settings import EventSetupSettings
 from justin.browser.save_button import find_save_buttons
 
 
+def _value_of(element) -> str:
+    """Selenium отдаёт None, когда атрибута нет.
+
+    Для нас это такая же непринятая настройка, как и неверное значение, — иначе
+    вместо «дата не применилась» получим TypeError из середины сравнения.
+    """
+    value = element.get_attribute("value")
+
+    if value is None:
+        raise ValueError(f"Field {element.get_attribute('id')!r} has no value attribute")
+
+    return value
+
+
 def _clear_and_type(driver: WebDriver, el, value: str) -> None:
     driver.execute_script("arguments[0].value = ''", el)
     el.send_keys(value)
@@ -126,7 +140,7 @@ def _fill_date_field(driver: WebDriver, wait: WebDriverWait, date_input_id: str,
 
     _pick_date(driver, wait, date_el, dt)
 
-    shown = date_el.get_attribute("value")
+    shown = _value_of(date_el)
 
     if str(dt.day) not in shown or str(dt.year) not in shown:
         raise ValueError(f"Date not applied: field shows {shown!r}, expected {dt.date()}")
@@ -139,7 +153,7 @@ def _fill_date_field(driver: WebDriver, wait: WebDriverWait, date_input_id: str,
     _pick_from_selector(driver, wait, hour, dt.hour)
     _pick_from_selector(driver, wait, minute, dt.minute)
 
-    got = (int(hour.get_attribute("value")), int(minute.get_attribute("value")))
+    got = (int(_value_of(hour)), int(_value_of(minute)))
 
     if got != (dt.hour, dt.minute):
         raise ValueError(f"Time not applied: fields show {got}, expected {dt:%H:%M}")
@@ -165,7 +179,7 @@ def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field, label:
     wait.until(option).click()
     time.sleep(0.5)
 
-    shown = field.get_attribute("value")
+    shown = _value_of(field)
 
     if shown != label:
         raise ValueError(f"Selector not applied: field shows {shown!r}, expected {label!r}")
@@ -197,7 +211,7 @@ def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None
     wait.until(items)[expected].click()
     time.sleep(0.5)
 
-    shown = driver.find_element(By.CSS_SELECTOR, _ACCESS_VALUE).get_attribute("value")
+    shown = _value_of(driver.find_element(By.CSS_SELECTOR, _ACCESS_VALUE))
 
     if int(shown) != expected:
         raise ValueError(f"Access not applied: widget holds {shown!r}, expected {expected}")
@@ -207,7 +221,7 @@ def _set_hidden(driver: WebDriver, selector: str, value: str) -> None:
     field = driver.find_element(By.CSS_SELECTOR, selector)
     driver.execute_script("arguments[0].value = arguments[1]", field, value)
 
-    shown = field.get_attribute("value")
+    shown = _value_of(field)
 
     if shown != value:
         raise ValueError(f"Field {selector!r} holds {shown!r}, expected {value!r}")

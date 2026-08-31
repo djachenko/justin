@@ -154,14 +154,14 @@ class EventEditExplorer:
                 role = el.get_attribute("role")
                 aria_checked = el.get_attribute("aria-checked")
                 text = el.text.strip()[:60]
-                info: dict = {"kind": "testid-el", "tag": tag, "testid": tid}
+                testid_info: dict = {"kind": "testid-el", "tag": tag, "testid": tid}
                 if role:
-                    info["role"] = role
+                    testid_info["role"] = role
                 if aria_checked is not None:
-                    info["aria_checked"] = aria_checked
+                    testid_info["aria_checked"] = aria_checked
                 if text:
-                    info["text"] = text
-                results.append(info)
+                    testid_info["text"] = text
+                results.append(testid_info)
                 print(f"{prefix}[{tid}] tag={tag} role={role} aria-checked={aria_checked} text={text!r}")
             except Exception:
                 pass
