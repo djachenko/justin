@@ -3,15 +3,20 @@ from typing import Annotated, Optional
 
 import typer
 from justin_utils import util
+from justin_utils.filesystem import Folder
 from justin_utils.util import parse_date
 from typer import Typer, Argument
 
+from justin.browser.event_creation_settings import Category
 from justin.browser.event_settings_settings import EventSettingsSettings, MessagesSettings
-from justin.browser.section_settings import PhotosSettings, PostsSettings, SectionsConfig
+from justin.browser.event_setup_settings import EventSetupSettings
+from justin.browser.section_settings import (
+    ArticlesSettings, ChatsSettings, ClipsSettings, FilesSettings, MainSection,
+    MaterialsSettings, MomentsSettings, MusicSettings, PhotosSettings, PostsSettings,
+    ProductsSettings, SectionsConfig, ServicesSettings, TopicsSettings, VideosSettings,
+)
 from justin.browser.vk_browser import VKBrowser
 from justin.shared.context import Context
-from justin.shared.filesystem import Folder
-from justin.shared.metafiles.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
 
 
@@ -66,7 +71,7 @@ class SetupEventCommand:
             photoset = Photoset.from_path(path)
 
             def needs_event(folder: Folder | None) -> bool:
-                return folder is not None and not GroupMetafile.has(folder)
+                return folder is not None # and not GroupMetafile.has(folder)
 
             if self.parent:
                 event_parent = self.context.pyvko.get(self.parent)
@@ -90,7 +95,10 @@ class SetupEventCommand:
         start_dt = datetime.combine(event_date, time(hour=12))
         end_dt = start_dt + timedelta(hours=4)
 
-        organiser_id = event_parent.id if event_parent is not None else None
+        if event_parent is not None:
+            organiser_id = event_parent.id
+        else:
+            organiser_id = None
 
         with VKBrowser() as browser:
             if self.create:
@@ -108,15 +116,41 @@ class SetupEventCommand:
             else:
                 raise ValueError("Either --create or --url must be specified")
 
-            browser.apply_settings(event_id, EventSettingsSettings(
-                messages=MessagesSettings(enabled=True),
-                sections=SectionsConfig(
-                    posts=PostsSettings(),
-                    photos=PhotosSettings(),
-                ),
-            ))
+            browser.apply_settings(event_id, SetupEventCommand._default_settings(event_title, organiser_id, start_dt, end_dt))
 
         print(f"Event is ready: https://vk.com/event{event_id}")
+
+    @staticmethod
+    def _default_settings(title: str, organiser_id: int | None, start_dt: datetime, end_dt: datetime) -> EventSettingsSettings:
+        return EventSettingsSettings(
+            setup=EventSetupSettings(
+                title=title,
+                start_dt=start_dt,
+                end_dt=end_dt,
+                category=Category.CIRCUS,
+                organiser_id=organiser_id,
+                is_closed=True,
+            ),
+            messages=MessagesSettings(
+                enabled=False
+            ),
+            sections=SectionsConfig(
+                posts=PostsSettings(),
+                photos=PhotosSettings(),
+                videos=VideosSettings(),
+                topics=TopicsSettings(enabled=False),
+                music=MusicSettings(enabled=False),
+                files=FilesSettings(enabled=False),
+                materials=MaterialsSettings(enabled=False),
+                services=ServicesSettings(enabled=False),
+                chats=ChatsSettings(enabled=False),
+                clips=ClipsSettings(enabled=False),
+                articles=ArticlesSettings(enabled=False),
+                moments=MomentsSettings(enabled=False),
+                products=ProductsSettings(enabled=False),
+                main_section=MainSection.PHOTOS,
+            ),
+        )
 
 
 app = Typer()
@@ -145,7 +179,7 @@ def setup_event(
 
 
 if __name__ == "__main__":
-    TEST_EVENT_ID = 239385759
+    TEST_EVENT_ID = 239324394
 
     with VKBrowser() as browser:
         browser.apply_settings(TEST_EVENT_ID, EventSettingsSettings(
