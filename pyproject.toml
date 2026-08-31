@@ -41,6 +41,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "pytest-timeout>=2.0",
     "mypy>=1.0",
     "ruff>=0.15,<0.16",
     "black>=23.0",
@@ -53,6 +54,7 @@ server = [
 ]
 test = [
     "pytest",
+    "pytest-timeout",
     "ruff>=0.15,<0.16",
     "mypy",
 ]
@@ -69,6 +71,21 @@ justin = "justin.typer.app.console_runner:run"
 Homepage = "https://github.com/djachenko/justin"
 "Bug Tracker" = "https://github.com/djachenko/justin/issues"
 "Source Code" = "https://github.com/djachenko/justin"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: requires live browser with active VK session",
+    "destructive: creates real VK events, run sparingly",
+    "performance: measures wall time, keep off shared/loaded machines",
+]
+# По умолчанию — только то, что можно гонять где угодно: живые тесты требуют браузера
+# с сессией VK, перф-тесты меряют время стены и на общем раннере дают шум.
+# Явный -m в командной строке перекрывает эту строку.
+addopts = "-m 'not integration and not destructive and not performance'"
+# Предохранитель: браузерный тест не должен висеть. Поток, а не сигнал —
+# selenium ждёт в сокете, где сигнал не разбудит.
+timeout = 90
+timeout_method = "thread"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
@@ -124,12 +141,6 @@ module = [
     "justin.cms_2.storage.sqlite.sqlite_database",
 ]
 ignore_errors = true
-
-[tool.pytest.ini_options]
-markers = [
-    "integration: requires live browser with active VK session",
-    "destructive: creates real VK events, run sparingly",
-]
 
 [tool.coverage.run]
 source = ["justin"]
