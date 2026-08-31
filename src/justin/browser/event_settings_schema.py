@@ -174,11 +174,11 @@ class EventSettingsSchema:
     def __call__(self, event_id: int, settings: EventSettingsSettings,
                  driver: WebDriver, wait: WebDriverWait) -> None:
         if settings.setup is not None:
-            print(f"  [setup] applying edit-page settings")
+            print("  [setup] applying edit-page settings")
             self.setup(event_id, settings.setup, driver, wait)
 
         if settings.sections is not None:
-            print(f"  [sections] applying sections config")
+            print("  [sections] applying sections config")
             self._apply_sections(event_id, settings.sections, driver, wait)
 
         if settings.cta is not None:
