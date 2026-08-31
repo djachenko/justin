@@ -1,5 +1,6 @@
 from datetime import date, time, datetime, timedelta
-from typing import Annotated, Optional
+from pathlib import Path
+from typing import Annotated, Iterable, List, Optional
 
 import typer
 from justin_utils import util
@@ -18,105 +19,120 @@ from justin.browser.section_settings import (
 from justin.browser.vk_browser import VKBrowser
 from justin.shared.context import Context
 from justin.shared.models.photoset import Photoset
+from justin.typer.base_commands.pattern_command import Extra, PatternCommand
 
 
-class SetupEventCommand:
+class SetupEventCommand(PatternCommand):
+    """Создаёт или донастраивает событие VK — по фотосету либо вручную.
+
+    Разбор паттернов, построение фотосета и отсев не-фотосетов делает PatternCommand.
+    """
+
     def __init__(
         self,
         context: Context,
+        patterns: Iterable[Path] = (),
         create: bool = False,
         url: Optional[str] = None,
         manual: bool = False,
-        folder: Optional[str] = None,
-        date_: str | None = None,
+        date_: Optional[str] = None,
         title: Optional[str] = None,
         parent: Optional[str] = None,
     ):
-        if date_:
-            date_ = parse_date(date_)
+        super().__init__(context, patterns)
 
-        self.context = context
         self.create = create
         self.url = url
         self.manual = manual
-        self.folder = folder
-        self.date_ = date_
+        self.date = parse_date(date_) if date_ else None
         self.title = title
         self.parent = parent
 
     def run(self) -> None:
         if self.manual:
-            event_title = self.title or input("Enter event title: ")
-            event_date = self.date_ or parse_date(input("Enter event date: "))
+            self.__setup(self.__manual_title(), self.__manual_date(), self.__manual_parent())
 
-            if self.parent:
-                event_parent = self.context.pyvko.get(self.parent)
-            else:
-                parent = util.ask_for_choice("Choose event parent:", ["closed", "meeting"])
+            return
 
-                if parent == "closed":
-                    event_parent = self.context.closed_group
-                elif parent == "meeting":
-                    event_parent = self.context.meeting_group
-                else:
-                    raise ValueError("Invalid parent")
+        super().run()
 
-        elif self.folder:
-            paths = list(util.resolve_patterns(self.folder))
+    def run_for_photoset(self, photoset: Photoset, extra: Extra) -> None:
+        parent = self.__photoset_parent(photoset)
 
-            if len(paths) != 1:
-                raise ValueError("Folder pattern must match exactly one path")
+        if parent is None:
+            print(f"Unable to determine parent. {photoset.path}")
 
-            path = paths[0]
-            photoset = Photoset.from_path(path)
+            return
 
-            def needs_event(folder: Folder | None) -> bool:
-                return folder is not None # and not GroupMetafile.has(folder)
+        title = self.title or photoset.name
 
-            if self.parent:
-                event_parent = self.context.pyvko.get(self.parent)
-            elif any(needs_event(part.closed) for part in photoset.parts):
-                event_parent = self.context.closed_group
-            elif any(needs_event(part.meeting) for part in photoset.parts):
-                event_parent = self.context.meeting_group
-            else:
-                print(f"Unable to determine parent. {photoset.path}")
-                return
+        self.__setup(title, self.date or self.__date_from_name(photoset.name), parent)
 
-            event_title = self.title or photoset.name
+    def __manual_title(self) -> str:
+        return self.title or input("Enter event title: ")
 
-            year, month, day, _ = event_title.split(".", maxsplit=3)
+    def __manual_date(self) -> date:
+        return self.date or parse_date(input("Enter event date: "))
 
-            event_date = self.date_ or date(int(year) + 2000, int(month), int(day))
+    def __manual_parent(self):
+        if self.parent:
+            return self.context.pyvko.get(self.parent)
 
-        else:
-            raise ValueError("Either --manual or --folder must be specified")
+        choice = util.ask_for_choice("Choose event parent:", ["closed", "meeting"])
 
+        if choice == "closed":
+            return self.context.closed_group
+
+        if choice == "meeting":
+            return self.context.meeting_group
+
+        raise ValueError("Invalid parent")
+
+    def __photoset_parent(self, photoset: Photoset):
+        def needs_event(folder: Folder | None) -> bool:
+            return folder is not None  # and not GroupMetafile.has(folder)
+
+        if self.parent:
+            return self.context.pyvko.get(self.parent)
+
+        if any(needs_event(part.closed) for part in photoset.parts):
+            return self.context.closed_group
+
+        if any(needs_event(part.meeting) for part in photoset.parts):
+            return self.context.meeting_group
+
+        return None
+
+    @staticmethod
+    def __date_from_name(name: str) -> date:
+        """Фотосеты названы YY.M.D.event_name — дата события берётся оттуда."""
+        year, month, day, _ = name.split(".", maxsplit=3)
+
+        return date(int(year) + 2000, int(month), int(day))
+
+    def __setup(self, title: str, event_date: date, parent) -> None:
         start_dt = datetime.combine(event_date, time(hour=12))
         end_dt = start_dt + timedelta(hours=4)
-
-        if event_parent is not None:
-            organiser_id = event_parent.id
-        else:
-            organiser_id = None
+        organiser_id = parent.id if parent is not None else None
 
         with VKBrowser() as browser:
             if self.create:
                 event_id = browser.create_event(
-                    title=event_title,
+                    title=title,
                     start_dt=start_dt,
                     end_dt=end_dt,
                     organiser_id=organiser_id,
                     is_closed=True,
                 )
+
                 print(f"Event created: https://vk.com/event{event_id} (id={event_id})")
             elif self.url:
-                event = self.context.pyvko.get(self.url)
-                event_id = abs(event.id)
+                event_id = abs(self.context.pyvko.get(self.url).id)
             else:
                 raise ValueError("Either --create or --url must be specified")
 
-            browser.apply_settings(event_id, SetupEventCommand._default_settings(event_title, organiser_id, start_dt, end_dt))
+            browser.apply_settings(
+                event_id, self._default_settings(title, organiser_id, start_dt, end_dt))
 
         print(f"Event is ready: https://vk.com/event{event_id}")
 
@@ -159,23 +175,21 @@ app = Typer()
 @app.command()
 def setup_event(
     context: Annotated[typer.Context, Argument()],
+    pattern: Annotated[Optional[List[Path]], Argument()] = None,
     create: Annotated[bool, typer.Option("--create")] = False,
     url: Annotated[Optional[str], typer.Option("--url")] = None,
     manual: Annotated[bool, typer.Option("--manual")] = False,
-    folder: Annotated[Optional[str], typer.Option("--folder")] = None,
-    date_: Annotated[str | None, typer.Option("--date")] = None,
+    date_: Annotated[Optional[str], typer.Option("--date")] = None,
     title: Annotated[Optional[str], typer.Option("--title")] = None,
     parent: Annotated[Optional[str], typer.Option("--parent")] = None,
 ) -> None:
     if not create and not url:
         typer.echo("Either --create or --url must be specified", err=True)
+
         raise typer.Exit(1)
 
-    if not manual and not folder:
-        typer.echo("Either --manual or --folder must be specified", err=True)
-        raise typer.Exit(1)
-
-    SetupEventCommand(context.obj, create, url, manual, folder, date_, title, parent).run()
+    SetupEventCommand(context.obj, pattern or [Path.cwd()], create, url, manual,
+                      date_, title, parent).run()
 
 
 if __name__ == "__main__":
