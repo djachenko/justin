@@ -70,6 +70,54 @@ class MaterialsSettings(SectionSettings):
 
 
 @dataclass
+class ServicesSettings(SectionSettings):
+    enabled: bool = False
+
+
+@dataclass
+class ChatsSettings(SectionSettings):
+    """Toggled in the section list itself, without a modal."""
+    enabled: bool = False
+
+
+@dataclass
+class ClipsSettings(SectionSettings):
+    enabled: bool = False
+
+
+@dataclass
+class ArticlesSettings(SectionSettings):
+    enabled: bool = False
+
+
+@dataclass
+class MomentsSettings(SectionSettings):
+    enabled: bool = False
+
+
+@dataclass
+class ProductsSettings(SectionSettings):
+    enabled: bool = False
+
+
+class MainSection(str, Enum):
+    """The main block is the first section in the enabled list — set by reordering."""
+    POSTS = "wall"
+    PHOTOS = "photos"
+    VIDEOS = "videos"
+    TOPICS = "discussions"
+    MUSIC = "audios"
+    FILES = "files"
+    MATERIALS = "wiki"
+    SERVICES = "services"
+    CHATS = "chats"
+    CLIPS = "short_videos"
+    ARTICLES = "articles"
+    MOMENTS = "narratives"
+    PRODUCTS = "market"
+
+
+@dataclass
 class SectionsConfig:
     """None = не трогать секцию."""
     posts: PostsSettings | None = None #= field(default_factory=PostsSettings)
@@ -79,3 +127,10 @@ class SectionsConfig:
     music: MusicSettings | None = None
     files: FilesSettings | None = None
     materials: MaterialsSettings | None = None
+    services: ServicesSettings | None = None
+    chats: ChatsSettings | None = None
+    clips: ClipsSettings | None = None
+    articles: ArticlesSettings | None = None
+    moments: MomentsSettings | None = None
+    products: ProductsSettings | None = None
+    main_section: MainSection | None = None

@@ -3,19 +3,23 @@ import time
 from dataclasses import dataclass
 
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
 from justin.browser.event_settings_settings import (
     AddressesSettings, CtaSettings, EventSettingsSettings,
     ExtrasSettings, MessagesSettings,
 )
+from justin.browser.custom_select import set_custom_select
 from justin.browser.event_setup_schema import EventSetupSchema
+from justin.browser.save_button import find_save_buttons
+from justin.browser.section_settings import MainSection
 from justin.browser.section_schema import (
-    FilesSchema, MaterialsSchema, MusicSchema,
-    PhotosSchema, PostsSchema, TopicsSchema, VideosSchema,
+    FilesSchema, ListSwitchSchema, MaterialsSchema, MusicSchema,
+    PhotosSchema, PostsSchema, ServicesSchema, TopicsSchema, VideosSchema,
 )
 
 
@@ -31,11 +35,10 @@ def _wait_for_content(driver: WebDriver, wait: WebDriverWait) -> None:
 
 
 def _save(driver: WebDriver, wait: WebDriverWait) -> None:
-    """Click group_save if present (legacy pages). React pages auto-save."""
-    btns = driver.find_elements(By.CSS_SELECTOR, "button.group_save")
-    visible = [b for b in btns if b.is_displayed()]
-    if visible:
-        driver.execute_script("arguments[0].click()", visible[0])
+    """Click the save button if the page has one. React pages auto-save."""
+    buttons = find_save_buttons(driver)
+    if buttons:
+        driver.execute_script("arguments[0].click()", buttons[0])
         time.sleep(1.0)
 
 
@@ -49,6 +52,40 @@ def _set_checkbox_label(driver: WebDriver, testid: str, enabled: bool) -> None:
         time.sleep(0.4)
 
 
+_MESSAGES_SELECT = "settings_messages_enabled"
+_MESSAGES_ON = "1"
+_MESSAGES_OFF = "0"
+
+
+def _set_custom_select(driver: WebDriver, wait: WebDriverWait, testid: str, value: str) -> None:
+    """Set a VKUI CustomSelect by value — both the state and the check come from the
+    hidden native select, so nothing here depends on the interface language."""
+    native = wait.until(EC.presence_of_element_located(
+        (By.CSS_SELECTOR, f"select[data-testid='{testid}']")))
+
+    if native.get_attribute("value") == value:
+        return
+
+    holder = driver.find_element(By.CSS_SELECTOR, f"input[data-testid='{testid}']")
+    set_custom_select(driver, wait, holder, value)
+
+    shown = native.get_attribute("value")
+
+    if shown != value:
+        raise ValueError(f"Select {testid!r} holds {shown!r}, expected {value!r}")
+
+
+def _click_submit(driver: WebDriver) -> None:
+    """Click the React settings Save button (no testid, matched by label)."""
+    buttons = find_save_buttons(driver)
+
+    if not buttons:
+        raise NoSuchElementException("Save button not found")
+
+    driver.execute_script("arguments[0].click()", buttons[0])
+    time.sleep(1.0)
+
+
 def _set_idd_toggle(driver: WebDriver, wait: WebDriverWait, testid: str, enabled: bool) -> None:
     """Toggle legacy idd_wrap element (Messages, Addresses). State from text content."""
     el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, f"[data-testid='{testid}']")))
@@ -56,6 +93,78 @@ def _set_idd_toggle(driver: WebDriver, wait: WebDriverWait, testid: str, enabled
     if currently != enabled:
         driver.execute_script("arguments[0].click()", el)
         time.sleep(0.4)
+
+
+_REORDER_TOGGLE = "[data-testid='sections_toggle_reorder']"
+
+
+def _enabled_cells(driver: WebDriver) -> list:
+    section_list = driver.find_element(By.CSS_SELECTOR, "[data-testid='list_enabled']")
+    children = driver.execute_script("return Array.from(arguments[0].children)", section_list)
+
+    return [cell for cell in children if cell.text.strip()]
+
+
+def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
+                      section: MainSection) -> None:
+    """The main block is whatever sits first, so the section is dragged to the top of the list."""
+    label = driver.find_element(
+        By.CSS_SELECTOR, f"[data-testid='{section.value}']").text.strip().splitlines()[0]
+
+    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, _REORDER_TOGGLE))).click()
+    time.sleep(1.5)
+
+    cells = _enabled_cells(driver)
+    position = next((i for i, cell in enumerate(cells)
+                     if cell.text.strip().splitlines()[0] == label), None)
+
+    if position is None:
+        raise NoSuchElementException(f"Section {label!r} is not enabled, cannot make it main")
+
+    if position > 0:
+        _drag_to_top(driver, cells[position], position)
+
+    driver.find_element(By.CSS_SELECTOR, _REORDER_TOGGLE).click()
+    time.sleep(1.5)
+    _confirm_reorder(driver)
+
+    driver.get(f"https://vk.com/event{event_id}/settings/sections")
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='list_enabled']")))
+    time.sleep(1.0)
+
+    first = _enabled_cells(driver)[0].text.strip().splitlines()[0]
+
+    if first != label:
+        raise ValueError(f"Main section not applied: list starts with {first!r}, expected {label!r}")
+
+
+def _confirm_reorder(driver: WebDriver) -> None:
+    """Saving the order raises a warning dialog — the order is kept only after confirming it."""
+    dialogs = [el for el in driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")
+               if el.is_displayed()]
+
+    if not dialogs:
+        return
+
+    dialogs[0].find_element(By.CSS_SELECTOR, "[data-testid='form_modal_save']").click()
+    time.sleep(2.0)
+
+
+def _drag_to_top(driver: WebDriver, cell, position: int) -> None:
+    """VKUI starts dragging only after a hover and a small initial move."""
+    handle = cell.find_element(By.CSS_SELECTOR, ".vkuiCellDragger__host")
+    distance = cell.rect["height"] * position + 10
+    steps = 10
+
+    chain = ActionChains(driver)
+    chain.move_to_element(handle).pause(0.4).click_and_hold().pause(0.4)
+    chain.move_by_offset(0, -3).pause(0.2)
+
+    for _ in range(steps):
+        chain.move_by_offset(0, -distance / steps).pause(0.08)
+
+    chain.pause(0.4).release().perform()
+    time.sleep(1.5)
 
 
 @dataclass(frozen=True)
@@ -117,6 +226,22 @@ class EventSettingsSchema:
         if config.materials is not None:
             print(f"    [materials] {config.materials}")
             MaterialsSchema("wiki")(config.materials, driver, wait)
+        if config.services is not None:
+            print(f"    [services] {config.services}")
+            ServicesSchema("services")(config.services, driver, wait)
+
+        for name, test_id in [("chats", "chats"), ("clips", "short_videos"),
+                              ("articles", "articles"), ("moments", "narratives"),
+                              ("products", "market")]:
+            settings = getattr(config, name)
+
+            if settings is not None:
+                print(f"    [{name}] {settings}")
+                ListSwitchSchema(test_id)(settings, driver, wait)
+
+        if config.main_section is not None:
+            print(f"    [main] {config.main_section.name}")
+            _set_main_section(driver, wait, event_id, config.main_section)
 
     # ── cta ─────────────────────────────────────────────────────
 
@@ -132,15 +257,16 @@ class EventSettingsSchema:
     @staticmethod
     def _apply_messages(event_id: int, s: MessagesSettings,
                         driver: WebDriver, wait: WebDriverWait) -> None:
-        driver.get(f"https://vk.com/event{event_id}?act=messages")
+        driver.get(f"https://vk.com/event{event_id}/settings/messages")
         _wait_for_content(driver, wait)
-        _set_idd_toggle(driver, wait, "groups_edit_g_messages", s.enabled)
+        _set_custom_select(driver, wait, _MESSAGES_SELECT,
+                           _MESSAGES_ON if s.enabled else _MESSAGES_OFF)
         if s.first_message is not None:
-            ta = driver.find_element(By.CSS_SELECTOR, "[id='group_edit_first_message']")
+            ta = driver.find_element(By.CSS_SELECTOR, "[data-testid='settings_messages_first_message']")
             driver.execute_script("arguments[0].value = ''", ta)
             ta.send_keys(s.first_message)
             time.sleep(0.3)
-        _save(driver, wait)
+        _click_submit(driver)
 
     # ── addresses ───────────────────────────────────────────────
 
