@@ -5,12 +5,12 @@ import pytest
 from justin.browser.event_creation_schema import (
     AccessSelect,
     CategorySelect,
-    DateSpingroup,
+    DateSpinGroup,
     EventCreationSchema,
     EventStep1Schema,
     EventStep2Schema,
     EventStep3Schema,
-    OptionalDateSpingroup,
+    OptionalDateSpinGroup,
     OrganizerSelect,
     TitleInput,
 )
@@ -43,8 +43,8 @@ def test_step1_element_types() -> None:
     schema = EventStep1Schema()
     assert isinstance(schema.title, TitleInput)
     assert isinstance(schema.is_closed, AccessSelect)
-    assert isinstance(schema.start_dt, DateSpingroup)
-    assert isinstance(schema.end_dt, OptionalDateSpingroup)
+    assert isinstance(schema.start_dt, DateSpinGroup)
+    assert isinstance(schema.end_dt, OptionalDateSpinGroup)
     assert isinstance(schema.organiser_id, OrganizerSelect)
 
 
