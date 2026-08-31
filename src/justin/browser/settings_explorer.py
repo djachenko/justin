@@ -70,39 +70,6 @@ class SettingsExplorer:
 
         self._generalize(results)
 
-    def _explore_sub_clicks(self) -> list[dict]:
-        driver = self._driver
-        wrap = driver.find_elements(By.CSS_SELECTOR, "#box_layer_wrap")
-        if not wrap:
-            return []
-
-        candidates = [
-            ((el.get_attribute("aria-label") or el.text or "").strip()[:40], el)
-            for el in wrap[0].find_elements(By.CSS_SELECTOR, "button, [role='button']")
-            if el.is_displayed()
-            and (el.get_attribute("aria-label") or el.text or "").strip()
-            not in ("", "Cancel", "Save")
-        ]
-
-        results = []
-        for label, el in candidates:
-            print(f"    → sub-click: '{label}'")
-            before = self._overlay_html()
-            try:
-                driver.execute_script("arguments[0].click()", el)
-                time.sleep(0.8)
-                after = self._overlay_html()
-                diff = self._diff(before, after)
-                results.append({
-                    "label": label,
-                    "diff_lines": len(diff),
-                    "changed": after != before,
-                })
-                print(f"      diff: {len(diff)} lines, changed: {after != before}")
-            except Exception as e:
-                print(f"      error: {e}")
-        return results
-
     def _explore_toggle(self, tid: str, current_testids: list[str]) -> dict | None:
         """Кликнуть тоггл секции, снапшот до/после, вернуть обратно."""
         driver = self._driver
