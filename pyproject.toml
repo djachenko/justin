@@ -45,6 +45,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "pytest-timeout>=2.0",
     "mypy>=1.0",
     "ruff>=0.1.0",
     "black>=23.0",
@@ -57,6 +58,7 @@ server = [
 ]
 test = [
     "pytest",
+    "pytest-timeout",
     "ruff",
     "mypy",
 ]
@@ -78,7 +80,16 @@ Homepage = "https://github.com/djachenko/justin"
 markers = [
     "integration: requires live browser with active VK session",
     "destructive: creates real VK events, run sparingly",
+    "performance: measures wall time, keep off shared/loaded machines",
 ]
+# По умолчанию — только то, что можно гонять где угодно: живые тесты требуют браузера
+# с сессией VK, перф-тесты меряют время стены и на общем раннере дают шум.
+# Явный -m в командной строке перекрывает эту строку.
+addopts = "-m 'not integration and not destructive and not performance'"
+# Предохранитель: браузерный тест не должен висеть. Поток, а не сигнал —
+# selenium ждёт в сокете, где сигнал не разбудит.
+timeout = 90
+timeout_method = "thread"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
