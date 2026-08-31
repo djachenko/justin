@@ -13,7 +13,6 @@ from datetime import datetime, timedelta
 import pytest
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.event_creation_schema import EventCreationSchema
 from justin.browser.event_creation_settings import (
