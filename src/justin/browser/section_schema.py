@@ -1,5 +1,6 @@
 import time
 from dataclasses import dataclass, fields
+from enum import Enum
 
 from selenium.common.exceptions import (
     NoSuchElementException, StaleElementReferenceException, TimeoutException,
@@ -10,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.section_settings import (
-    SectionSettings,
+    AddAllowed, ContentType, PostsPublishing, SectionSettings,
 )
 
 
@@ -73,22 +74,23 @@ class Toggle:
 
 
 @dataclass(frozen=True)
-class Radio:
-    def set_value(self, value: object, driver: WebDriver, wait: WebDriverWait) -> None:
-        el = driver.find_element(By.CSS_SELECTOR, f'[data-testid="{value.value}"]')  # type: ignore[union-attr]
+class Radio[E: Enum]:
+    def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
+        """Значение енума — это и есть testid радиокнопки."""
+        el = driver.find_element(By.CSS_SELECTOR, f'[data-testid="{value.value}"]')
         driver.execute_script("arguments[0].click()", el)
         time.sleep(0.3)
 
 
 @dataclass(frozen=True)
-class Dropdown:
+class Dropdown[E: Enum]:
     test_id: str
 
-    def set_value(self, value: object, driver: WebDriver, wait: WebDriverWait) -> None:
+    def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
         trigger = driver.find_element(By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]')
         driver.execute_script("arguments[0].click()", trigger)
         time.sleep(0.5)
-        option_text = value.value  # type: ignore[union-attr]
+        option_text = value.value
         option = wait.until(lambda d: next(
             (el for el in d.find_elements(By.CSS_SELECTOR, "[data-testid='dropdownactionsheet-item']")
              if el.is_displayed() and option_text in el.text),
@@ -130,47 +132,47 @@ class SectionSchema:
 @dataclass(frozen=True)
 class PostsSchema(SectionSchema):
     enabled: Toggle = Toggle("form_wall_enabled")
-    publishing: Dropdown = Dropdown("form_wall_publishing_allowed")
+    publishing: Dropdown[PostsPublishing] = Dropdown("form_wall_publishing_allowed")
     sharing_disabled: Toggle = Toggle("form_wall_sharing_disabled")
 
 
 @dataclass(frozen=True)
 class PhotosSchema(SectionSchema):
     enabled: Toggle = Toggle("form_photos_toggle")
-    content_type: Radio = Radio()
-    add_allowed: Radio = Radio()
+    content_type: Radio[ContentType] = Radio()
+    add_allowed: Radio[AddAllowed] = Radio()
 
 
 @dataclass(frozen=True)
 class VideosSchema(SectionSchema):
     enabled: Toggle = Toggle("form_videos_toggle")
-    content_type: Radio = Radio()
-    add_allowed: Radio = Radio()
+    content_type: Radio[ContentType] = Radio()
+    add_allowed: Radio[AddAllowed] = Radio()
 
 
 @dataclass(frozen=True)
 class TopicsSchema(SectionSchema):
     enabled: Toggle = Toggle("form_discussions_toggle")
-    add_allowed: Radio = Radio()
+    add_allowed: Radio[AddAllowed] = Radio()
 
 
 @dataclass(frozen=True)
 class MusicSchema(SectionSchema):
     enabled: Toggle = Toggle("form_audios_toggle")
-    content_type: Radio = Radio()
-    add_allowed: Radio = Radio()
+    content_type: Radio[ContentType] = Radio()
+    add_allowed: Radio[AddAllowed] = Radio()
 
 
 @dataclass(frozen=True)
 class FilesSchema(SectionSchema):
     enabled: Toggle = Toggle("form_files_toggle")
-    add_allowed: Radio = Radio()
+    add_allowed: Radio[AddAllowed] = Radio()
 
 
 @dataclass(frozen=True)
 class MaterialsSchema(SectionSchema):
     enabled: Toggle = Toggle("form_wiki_toggle")
-    add_allowed: Radio = Radio()
+    add_allowed: Radio[AddAllowed] = Radio()
 
 
 @dataclass(frozen=True)
