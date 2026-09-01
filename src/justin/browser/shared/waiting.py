@@ -5,7 +5,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 
-from justin.browser.page_explorer import PageExplorer
+from justin.browser.explorers.page import PageExplorer
 
 
 def wait_or_explore(driver: WebDriver, wait: WebDriverWait, condition: Callable) -> Any:

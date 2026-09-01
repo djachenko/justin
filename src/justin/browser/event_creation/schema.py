@@ -9,9 +9,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from justin.browser.event_creation_settings import Category, EventCreationSettings, EventStep1Settings, EventStep2Settings
-from justin.browser.pacing import pause
-from justin.browser.waiting import wait_or_explore
+from justin.browser.event_creation.settings import Category, EventCreationSettings, EventStep1Settings, EventStep2Settings
+from justin.browser.shared.pacing import pause
+from justin.browser.shared.waiting import wait_or_explore
 
 
 @dataclass(frozen=True)

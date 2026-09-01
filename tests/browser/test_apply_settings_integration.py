@@ -5,14 +5,14 @@ Integration tests for apply_settings / EventSettingsSchema.
 """
 import pytest
 
-from justin.browser.event_settings_settings import (
+from justin.browser.event_settings.settings import (
     AddressesSettings,
     CtaSettings,
     EventSettingsSettings,
     ExtrasSettings,
     MessagesSettings,
 )
-from justin.browser.section_settings import PhotosSettings, PostsSettings, SectionsConfig
+from justin.browser.sections.settings import PhotosSettings, PostsSettings, SectionsConfig
 from justin.browser.vk_browser import VKBrowser
 
 
