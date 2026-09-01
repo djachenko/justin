@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from justin.browser.event_setup_settings import EventSetupSettings
-from justin.browser.section_settings import SectionsConfig
+from justin.browser.event_setup.settings import EventSetupSettings
+from justin.browser.sections.settings import SectionsConfig
 
 
 @dataclass

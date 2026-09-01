@@ -73,6 +73,8 @@ Homepage = "https://github.com/djachenko/justin"
 "Source Code" = "https://github.com/djachenko/justin"
 
 [tool.pytest.ini_options]
+# Тесты живут только здесь: иначе pytest подбирает случайные test_*.py из корня.
+testpaths = ["tests"]
 markers = [
     "integration: requires live browser with active VK session",
     "destructive: creates real VK events, run sparingly",

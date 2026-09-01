@@ -2,7 +2,7 @@ from dataclasses import fields
 
 import pytest
 
-from justin.browser.section_schema import (
+from justin.browser.sections.schema import (
     Dropdown,
     FilesSchema,
     MaterialsSchema,
@@ -15,7 +15,7 @@ from justin.browser.section_schema import (
     TopicsSchema,
     VideosSchema,
 )
-from justin.browser.section_settings import (
+from justin.browser.sections.settings import (
     FilesSettings,
     MaterialsSettings,
     MusicSettings,
