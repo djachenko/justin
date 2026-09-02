@@ -14,8 +14,8 @@ import pytest
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from justin.browser.event_creation.schema import EventCreationSchema
-from justin.browser.event_creation.settings import (
+from justin.browser.event_creation.event_creation_schema import EventCreationSchema
+from justin.browser.event_creation.event_creation_settings import (
     Category,
     EventCreationSettings,
     EventStep1Settings,

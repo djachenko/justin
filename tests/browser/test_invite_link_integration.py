@@ -9,8 +9,8 @@ import time
 import pytest
 from selenium.webdriver.common.by import By
 
-from justin.browser.event_setup.schema import _ACCESS_VALUE, _CLOSED, _OPEN, _set_access
-from justin.browser.invite_link.schema import _LINK_PREFIX
+from justin.browser.event_setup.event_setup_schema import _ACCESS_VALUE, _CLOSED, _OPEN, _set_access
+from justin.browser.invite_link.invite_link_schema import _LINK_PREFIX
 from justin.browser.shared.save_button import find_save_buttons
 from justin.browser.vk_browser import VKBrowser
 from tests.browser.vk_page import editing

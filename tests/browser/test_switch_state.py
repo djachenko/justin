@@ -6,8 +6,8 @@
 import pytest
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
-from justin.browser.sections import schema as section_schema
-from justin.browser.sections.schema import Toggle, _switch_state
+from justin.browser.sections import section_schema
+from justin.browser.sections.section_schema import Toggle, _switch_state
 
 
 class FakeElement:

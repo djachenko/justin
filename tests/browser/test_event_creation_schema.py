@@ -2,7 +2,7 @@ from dataclasses import fields
 
 import pytest
 
-from justin.browser.event_creation.schema import (
+from justin.browser.event_creation.event_creation_schema import (
     AccessSelect,
     CategorySelect,
     DateSpinGroup,
@@ -14,7 +14,7 @@ from justin.browser.event_creation.schema import (
     OrganizerSelect,
     TitleInput,
 )
-from justin.browser.event_creation.settings import (
+from justin.browser.event_creation.event_creation_settings import (
     Category,
     EventCreationSettings,
     EventStep1Settings,

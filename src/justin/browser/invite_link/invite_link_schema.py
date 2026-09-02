@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.shared.custom_select import set_custom_select
-from justin.browser.invite_link.settings import InviteLinkSettings
+from justin.browser.invite_link.invite_link_settings import InviteLinkSettings
 
 _CREATE_LINK_BUTTON = "[data-testid='settings-invitations-create-link-button']"
 _MODAL = "[data-testid='link_invite_modal']"

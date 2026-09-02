@@ -1,7 +1,7 @@
 """Метод уникальных значений: покрытие сохраняется, длина падает до самого длинного списка."""
 import pytest
 
-from justin.browser.sections.settings import AddAllowed, ContentType
+from justin.browser.sections.section_settings import AddAllowed, ContentType
 from tests.browser.each_choice import each_choice
 
 BOOLS = [True, False]

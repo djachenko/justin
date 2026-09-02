@@ -14,18 +14,18 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from justin.browser.event_creation.schema import EventCreationSchema
-from justin.browser.event_settings.schema import _MESSAGES_OFF, _MESSAGES_ON, _MESSAGES_SELECT
-from justin.browser.event_setup.schema import (
+from justin.browser.event_creation.event_creation_schema import EventCreationSchema
+from justin.browser.event_settings.event_settings_schema import _MESSAGES_OFF, _MESSAGES_ON, _MESSAGES_SELECT
+from justin.browser.event_setup.event_setup_schema import (
     _ACCESS, _CITY, _SUBJECT, _fill_date_field, _visible_selectors,
 )
 from justin.browser.shared.custom_select import option_by_value
-from justin.browser.invite_link.schema import (
+from justin.browser.invite_link.invite_link_schema import (
     _CREATE_LINK_BUTTON, _LIFETIME, _MODAL, _MODAL_CREATE, _SELECT_HOLDER, _USES,
 )
-from justin.browser.invite_link.settings import LinkLifetime, LinkUses
+from justin.browser.invite_link.invite_link_settings import LinkLifetime, LinkUses
 from justin.browser.shared.save_button import find_save_buttons
-from justin.browser.sections.schema import (
+from justin.browser.sections.section_schema import (
     FilesSchema, MaterialsSchema, MusicSchema,
     PhotosSchema, PostsSchema, TopicsSchema, VideosSchema,
 )

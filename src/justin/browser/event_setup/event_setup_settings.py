@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from justin.browser.event_creation.settings import Category
+from justin.browser.event_creation.event_creation_settings import Category
 
 
 @dataclass
