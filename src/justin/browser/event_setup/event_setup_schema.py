@@ -10,8 +10,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from justin.browser.event_creation.settings import Category
-from justin.browser.event_setup.settings import EventSetupSettings
+from justin.browser.event_creation.event_creation_settings import Category
+from justin.browser.event_setup.event_setup_settings import EventSetupSettings
 from justin.browser.shared.save_button import find_save_buttons
 
 

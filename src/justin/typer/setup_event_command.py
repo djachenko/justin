@@ -8,10 +8,10 @@ from justin_utils.filesystem import Folder
 from justin_utils.util import parse_date
 from typer import Typer, Argument
 
-from justin.browser.event_creation.settings import Category
-from justin.browser.event_settings.settings import EventSettingsSettings, MessagesSettings
-from justin.browser.event_setup.settings import EventSetupSettings
-from justin.browser.sections.settings import (
+from justin.browser.event_creation.event_creation_settings import Category
+from justin.browser.event_settings.event_settings_settings import EventSettingsSettings, MessagesSettings
+from justin.browser.event_setup.event_setup_settings import EventSetupSettings
+from justin.browser.sections.section_settings import (
     ArticlesSettings, ChatsSettings, ClipsSettings, FilesSettings, MainSection,
     MaterialsSettings, MomentsSettings, MusicSettings, PhotosSettings, PostsSettings,
     ProductsSettings, SectionsConfig, ServicesSettings, TopicsSettings, VideosSettings,

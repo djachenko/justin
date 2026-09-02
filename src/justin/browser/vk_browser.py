@@ -9,17 +9,17 @@ from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 
-from justin.browser.sections.settings import SectionsConfig
+from justin.browser.sections.section_settings import SectionsConfig
 
-from justin.browser.invite_link.schema import InviteLinkSchema
-from justin.browser.invite_link.settings import InviteLinkSettings
-from justin.browser.event_settings.schema import EventSettingsSchema
-from justin.browser.event_settings.settings import EventSettingsSettings
-from justin.browser.explorers.settings import SettingsExplorer
-from justin.browser.explorers.event_edit import EventEditExplorer
+from justin.browser.invite_link.invite_link_schema import InviteLinkSchema
+from justin.browser.invite_link.invite_link_settings import InviteLinkSettings
+from justin.browser.event_settings.event_settings_schema import EventSettingsSchema
+from justin.browser.event_settings.event_settings_settings import EventSettingsSettings
+from justin.browser.explorers.settings_explorer import SettingsExplorer
+from justin.browser.explorers.event_edit_explorer import EventEditExplorer
 
-from justin.browser.event_creation.settings import EventCreationSettings, EventStep1Settings
-from justin.browser.event_creation.schema import EventCreationSchema
+from justin.browser.event_creation.event_creation_settings import EventCreationSettings, EventStep1Settings
+from justin.browser.event_creation.event_creation_schema import EventCreationSchema
 
 
 class VKBrowser:

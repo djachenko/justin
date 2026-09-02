@@ -4,7 +4,7 @@ Integration tests — требуют живой браузер с активно
 """
 import pytest
 
-from justin.browser.sections.settings import (
+from justin.browser.sections.section_settings import (
     AddAllowed,
     ContentType,
     FilesSettings,

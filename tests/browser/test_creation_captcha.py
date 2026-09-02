@@ -3,8 +3,8 @@ import builtins
 
 import pytest
 
-from justin.browser.event_creation import schema as event_creation_schema
-from justin.browser.event_creation.schema import _wait_for_captcha_if_needed
+from justin.browser.event_creation import event_creation_schema
+from justin.browser.event_creation.event_creation_schema import _wait_for_captcha_if_needed
 from justin.browser.shared import pacing
 
 

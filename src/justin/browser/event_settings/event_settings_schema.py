@@ -9,15 +9,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
-from justin.browser.event_settings.settings import (
+from justin.browser.event_settings.event_settings_settings import (
     AddressesSettings, CtaSettings, EventSettingsSettings,
     ExtrasSettings, MessagesSettings,
 )
 from justin.browser.shared.custom_select import set_custom_select
-from justin.browser.event_setup.schema import EventSetupSchema
+from justin.browser.event_setup.event_setup_schema import EventSetupSchema
 from justin.browser.shared.save_button import find_save_buttons
-from justin.browser.sections.settings import MainSection
-from justin.browser.sections.schema import (
+from justin.browser.sections.section_settings import MainSection
+from justin.browser.sections.section_schema import (
     FilesSchema, ListSwitchSchema, MaterialsSchema, MusicSchema,
     PhotosSchema, PostsSchema, ServicesSchema, TopicsSchema, VideosSchema,
 )
