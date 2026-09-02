@@ -9,7 +9,7 @@
 CLI-инструмент для автоматизации фотоворкфлоу: от карты памяти до публикации в VK.
 Личный проект, используется в продакшене каждый день.
 
-**Точка входа:** `justin/typer/app/console_runner.py`  
+**Точка входа:** `src/justin/typer/app/console_runner.py`  
 **Установка:** `pip install -e ".[dev]"`  
 **Запуск:** `justin <command> [pattern]`
 
@@ -17,7 +17,8 @@ CLI-инструмент для автоматизации фотоворкфл�
 
 ## Стек
 
-- **Python 3.10+**, Typer (переезд с argparse в процессе), SQLite
+- **Python 3.12+**, Typer (переезд с argparse в процессе), SQLite
+- **Selenium** — автоматизация настроек VK там, где их нет в API
 - **pyvko** — самописная обёртка над VK API (`pip install -e ../pyvko`)
 - **justin_utils** — общие утилиты экосистемы (`pip install -e ../justin_utils`)
 - **valifold** — валидация файловых структур (PyPI: `pip install valifold`)
@@ -27,11 +28,20 @@ CLI-инструмент для автоматизации фотоворкфл�
 ## Структура проекта
 
 ```
-justin/
+src/justin/
 ├── actions/                  # Старые Action-классы (argparse-era, в процессе замены)
 │   └── stage/
 │       └── logic/            # СТАРАЯ иерархия: Selector → Extractor → Check
 │       └── logic2/           # НОВАЯ иерархия (активная разработка — см. /patterns)
+├── browser/                  # Настройки VK через Selenium — то, чего нет в API
+│   ├── vk_browser.py         # VKBrowser — фасад: create_event, apply_settings, invite link
+│   ├── event_creation/       # Визард создания события (iframe, три шага)
+│   ├── event_setup/          # Страница ?act=edit: название, даты, категория, доступ
+│   ├── event_settings/       # Верхняя схема: секции, сообщения, CTA, адреса, extras
+│   ├── sections/             # Секции события и главный блок
+│   ├── invite_link/          # Инвайт-ссылки
+│   ├── explorers/            # Разведка разметки (дампы страниц)
+│   └── shared/               # custom_select, save_button, pacing, waiting
 ├── cms/                      # JSON-based CMS (устарел, не трогать)
 ├── cms_2/                    # SQLite-based CMS (текущий) — см. /cms
 │   └── storage/sqlite/
@@ -40,7 +50,6 @@ justin/
 ├── shared/
 │   ├── config.py             # Загрузка конфига через importlib.util
 │   ├── context.py            # Context — передаётся в команды через typer.Context.obj
-│   ├── filesystem.py         # Folder, File, RelativeFileset, PathBased
 │   ├── metafiles/            # Метафайлы (_meta.json) — см. /metafiles
 │   ├── models/photoset.py    # Photoset — центральная модель
 │   └── structure.py          # Structure, StructureVisitor (будет заменён valifold)
@@ -49,6 +58,13 @@ justin/
 │   └── base_commands/        # PatternCommand, DestinationsAwareCommand
 └── postmypost/               # Telegram crossposting (pyrogram/MTProto)
 ```
+
+Работа с файлами — `justin_utils.filesystem` (`Folder`, `File`), не в этом репозитории.
+
+Пакеты в `browser/` сгруппированы по фичам: схема и настройки одной страницы лежат
+рядом, потому что VK переверстывает страницы поодиночке и правится всегда пара.
+Живые тесты требуют браузера с сессией VK и отобраны маркерами — см. `addopts`
+в `pyproject.toml`.
 
 ---
 
