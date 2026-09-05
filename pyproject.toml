@@ -25,7 +25,7 @@ keywords = ["photo", "processing", "face-recognition", "vk"]
 # Они должны быть доступны в репозитории.
 dependencies = [
     "pyvko>=0.1.11",
-    "justin_utils>=0.0.1",
+    "justin_utils>=0.5.0",
     "Pillow",
     "lazy-object-proxy",
     "exif",
