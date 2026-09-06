@@ -10,6 +10,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.sections.section_settings import SectionsConfig
+from justin.browser.shared.run_mode import is_debug
 
 from justin.browser.invite_link.invite_link_schema import InviteLinkSchema
 from justin.browser.invite_link.invite_link_settings import InviteLinkSettings
@@ -27,11 +28,22 @@ class VKBrowser:
     _TIMEOUT = 0.5 * 60
     ERROR_TITLE = "Error"
 
-    def __init__(self):
+    def __init__(self, headless: bool | None = None):
+        """headless=None — решать по режиму запуска: под отладчиком окно видно.
+
+        Окно нужно там, где на человека рассчитывает сам сценарий: капчу за нас
+        никто не решит. Поэтому create_event поднимает браузер видимым.
+        """
         options = webdriver.ChromeOptions()
         options.add_argument(f"--user-data-dir={self._BROWSER_DATA_DIR}")
         options.add_argument("--no-first-run")
         options.add_argument("--no-default-browser-check")
+
+        if headless is None:
+            headless = not is_debug()
+
+        if headless:
+            options.add_argument("--headless=new")
 
         logging.getLogger("selenium").setLevel(logging.DEBUG)
 

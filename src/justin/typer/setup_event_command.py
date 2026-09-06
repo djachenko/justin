@@ -115,7 +115,8 @@ class SetupEventCommand(PatternCommand):
         end_dt = start_dt + timedelta(hours=4)
         organiser_id = parent.id if parent is not None else None
 
-        with VKBrowser() as browser:
+        # Создание может упереться в капчу, а её решает человек — окно должно быть видно.
+        with VKBrowser(headless=False if self.create else None) as browser:
             if self.create:
                 event_id = browser.create_event(
                     title=title,
