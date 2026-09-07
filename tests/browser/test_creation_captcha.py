@@ -41,18 +41,17 @@ def test_pace_zero_skips_sleep(monkeypatch) -> None:
     monkeypatch.setattr(pacing.time, "sleep", slept.append)
 
     monkeypatch.setattr(pacing, "PACE", 0)
-    pacing.pause(pacing.durations(1.0))
+    pacing.pause(1.0)
 
     monkeypatch.setattr(pacing, "PACE", 2.0)
-    pacing.pause(pacing.durations(1.0, spread=0))
+    pacing.pause(1.0, spread=0)
 
     assert slept == [2.0]
 
 
-def test_durations_are_not_identical() -> None:
-    """Генератор на то и генератор: одинаковые по смыслу паузы всё равно разные."""
-    source = pacing.durations(1.0)
-    drawn = [next(source) for _ in range(5)]
+def test_pauses_are_not_identical() -> None:
+    """Одинаковые по смыслу паузы всё равно разной длины."""
+    drawn = [pacing.varied(1.0) for _ in range(5)]
 
     assert len(set(drawn)) == len(drawn)
     assert all(0.5 <= value <= 1.5 for value in drawn)
