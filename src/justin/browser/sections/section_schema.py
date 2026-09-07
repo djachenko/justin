@@ -1,4 +1,3 @@
-import time
 from dataclasses import dataclass, fields
 from enum import Enum
 
@@ -13,9 +12,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from justin.browser.sections.section_settings import (
     AddAllowed, ContentType, PostsPublishing, SectionSettings,
 )
+from justin.browser.shared.pacing import AFTER_ACTION, BETWEEN_FIELDS, pause
 
 
 _STATE_TIMEOUT = 5
+
+_MODAL_SETTLE = 1.5  # модалка секции закрывается с анимацией, список под ней перерисовывается
+_MODAL_SAVE = "[data-testid='form_modal_save']"
+_DROPDOWN_ITEM = "[data-testid='dropdownactionsheet-item']"
 
 
 def _switch_state(element) -> bool:
@@ -67,10 +71,14 @@ class Toggle:
         el = _find(driver, self.test_id)
         currently_enabled = _switch_state(el)
 
-        if currently_enabled != value:
-            driver.execute_script("arguments[0].click()", el)
-            _wait_for_state(driver, self.test_id, value)
-            time.sleep(0.5)
+        if currently_enabled == value:
+            return
+
+        driver.execute_script("arguments[0].click()", el)
+
+        _wait_for_state(driver, self.test_id, value)
+
+        pause(AFTER_ACTION)
 
 
 @dataclass(frozen=True)
@@ -78,8 +86,10 @@ class Radio[E: Enum]:
     def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
         """Значение енума — это и есть testid радиокнопки."""
         el = driver.find_element(By.CSS_SELECTOR, f'[data-testid="{value.value}"]')
+
         driver.execute_script("arguments[0].click()", el)
-        time.sleep(0.3)
+
+        pause(BETWEEN_FIELDS)
 
 
 @dataclass(frozen=True)
@@ -88,45 +98,72 @@ class Dropdown[E: Enum]:
 
     def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
         trigger = driver.find_element(By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]')
+
         driver.execute_script("arguments[0].click()", trigger)
-        time.sleep(0.5)
+
+        pause(AFTER_ACTION)
+
         option_text = value.value
-        option = wait.until(lambda d: next(
-            (el for el in d.find_elements(By.CSS_SELECTOR, "[data-testid='dropdownactionsheet-item']")
-             if el.is_displayed() and option_text in el.text),
-            None,
-        ))
+        option = wait.until(
+            lambda d: next(
+                (el for el in d.find_elements(By.CSS_SELECTOR, _DROPDOWN_ITEM)
+                 if el.is_displayed() and option_text in el.text),
+                None
+            )
+        )
+
         driver.execute_script("arguments[0].click()", option)
-        time.sleep(0.3)
+
+        pause(BETWEEN_FIELDS)
 
 
 @dataclass(frozen=True)
 class SectionSchema:
     test_id: str
     enabled: Toggle
-    _SECTION_PAUSE: float = 1.5
 
     def __call__(self, settings: SectionSettings, driver: WebDriver, wait: WebDriverWait) -> None:
         self._open(driver, wait)
+
         self.enabled.set_value(settings.enabled, driver, wait)
+
         if settings.enabled:
             for f in fields(settings):
                 if f.name == "enabled":
                     continue
-                getattr(self, f.name).set_value(getattr(settings, f.name), driver, wait)
+
+                element = getattr(self, f.name)
+                value = getattr(settings, f.name)
+
+                element.set_value(value, driver, wait)
+
         self._save(driver, wait)
-        time.sleep(self._SECTION_PAUSE)
+
+        pause(_MODAL_SETTLE)
 
     def _open(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        item = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]')))
+        item = wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]'))
+        )
+
         driver.execute_script("arguments[0].click()", item)
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, f'[data-testid="{self.enabled.test_id}"]')))
-        time.sleep(0.5)
+
+        wait.until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, f'[data-testid="{self.enabled.test_id}"]')
+            )
+        )
+
+        pause(AFTER_ACTION)
 
     def _save(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        btn = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="form_modal_save"]')))
+        btn = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, _MODAL_SAVE))
+        )
+
         driver.execute_script("arguments[0].click()", btn)
-        time.sleep(0.5)
+
+        pause(AFTER_ACTION)
 
 
 @dataclass(frozen=True)
@@ -189,7 +226,11 @@ class ListSwitchSchema:
         item = wait.until(EC.presence_of_element_located(
             (By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]')))
 
-        if _switch_state(item) != settings.enabled:
-            driver.execute_script("arguments[0].click()", item)
-            _wait_for_state(driver, self.test_id, settings.enabled)
-            time.sleep(1.0)
+        if _switch_state(item) == settings.enabled:
+            return
+
+        driver.execute_script("arguments[0].click()", item)
+
+        _wait_for_state(driver, self.test_id, settings.enabled)
+
+        pause(_MODAL_SETTLE)

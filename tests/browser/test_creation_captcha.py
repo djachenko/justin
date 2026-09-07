@@ -44,7 +44,7 @@ def test_pace_zero_skips_sleep(monkeypatch) -> None:
     pacing.pause(1.0)
 
     monkeypatch.setattr(pacing, "PACE", 2.0)
-    pacing.pause(1.0, spread=0)
+    pacing.pause(1.0, spread=1)
 
     assert slept == [2.0]
 
@@ -54,4 +54,16 @@ def test_pauses_are_not_identical() -> None:
     drawn = [pacing.varied(1.0) for _ in range(5)]
 
     assert len(set(drawn)) == len(drawn)
-    assert all(0.5 <= value <= 1.5 for value in drawn)
+
+
+def test_variation_is_multiplicative() -> None:
+    """От половины до двойного: отклонение считается разами, а не разницей."""
+    drawn = [pacing.varied(1.0, spread=2.0) for _ in range(200)]
+
+    assert all(0.5 <= value <= 2.0 for value in drawn)
+    assert min(drawn) < 0.75
+    assert max(drawn) > 1.5
+
+
+def test_spread_of_one_keeps_the_value() -> None:
+    assert pacing.varied(0.3, spread=1) == 0.3

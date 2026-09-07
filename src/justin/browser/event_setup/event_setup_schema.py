@@ -1,6 +1,5 @@
 """Schema for editing an existing VK event via ?act=edit."""
 import re
-import time
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -12,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.event_creation.event_creation_settings import Category
 from justin.browser.event_setup.event_setup_settings import EventSetupSettings
+from justin.browser.shared.pacing import AFTER_ACTION, AFTER_SCROLL, pause
 from justin.browser.shared.save_button import find_save_buttons
 
 
@@ -32,10 +32,14 @@ def _value_of(element) -> str:
 def _clear_and_type(driver: WebDriver, el, value: str) -> None:
     driver.execute_script("arguments[0].value = ''", el)
     el.send_keys(value)
-    time.sleep(0.3)
+
+    pause(AFTER_ACTION)
 
 
 _MAX_YEAR_STEPS = 20
+
+_LAZY_BLOCKS = 1.0  # ленивые блоки страницы догружаются после прокрутки донизу
+_AFTER_SAVE = 1.0  # legacy-страница перезагружается сама, дать ей уйти
 
 _SUBJECT = 0
 _CITY = 6
@@ -49,7 +53,9 @@ _CLOSED = 1
 def _pick_date(driver: WebDriver, wait: WebDriverWait, date_el, dt: datetime) -> None:
     """The date field is readonly — the value can only be set through the datepicker."""
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", date_el)
-    time.sleep(0.3)
+
+    pause(AFTER_SCROLL)
+
     date_el.click()
 
     calendar = date_el.find_element(
@@ -67,7 +73,8 @@ def _pick_date(driver: WebDriver, wait: WebDriverWait, date_el, dt: datetime) ->
         raise NoSuchElementException(f"Day {dt.day} not found in datepicker")
 
     days[0].click()
-    time.sleep(0.5)
+
+    pause(AFTER_ACTION)
 
 
 def _pick_year_and_month(driver: WebDriver, wait: WebDriverWait, calendar, dt: datetime) -> None:
@@ -89,7 +96,8 @@ def _pick_year_and_month(driver: WebDriver, wait: WebDriverWait, calendar, dt: d
             break
 
         _click_arrow(calendar, "left" if dt.year < shown_year else "right")
-        time.sleep(0.4)
+
+        pause(AFTER_ACTION)
     else:
         raise NoSuchElementException(f"Year {dt.year} not reachable in datepicker")
 
@@ -116,7 +124,9 @@ def _visible_cells(calendar) -> list:
 def _pick_from_selector(driver: WebDriver, wait: WebDriverWait, selector_input, value: int) -> None:
     """Hours and minutes are readonly VK selectors — the value is picked from a dropdown."""
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", selector_input)
-    time.sleep(0.3)
+
+    pause(AFTER_SCROLL)
+
     selector_input.click()
 
     def option(_):
@@ -127,7 +137,8 @@ def _pick_from_selector(driver: WebDriver, wait: WebDriverWait, selector_input, 
         return items[0] if items else None
 
     wait.until(option).click()
-    time.sleep(0.3)
+
+    pause(AFTER_ACTION)
 
 
 def _fill_date_field(driver: WebDriver, wait: WebDriverWait, date_input_id: str,
@@ -167,7 +178,9 @@ def _visible_selectors(driver: WebDriver) -> list:
 def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field, label: str) -> None:
     """The selector opens a result_list — options carry no ids, only their labels."""
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", field)
-    time.sleep(0.3)
+
+    pause(AFTER_SCROLL)
+
     field.click()
 
     def option(_):
@@ -177,7 +190,8 @@ def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field, label:
         return items[0] if items else None
 
     wait.until(option).click()
-    time.sleep(0.5)
+
+    pause(AFTER_ACTION)
 
     shown = _value_of(field)
 
@@ -199,7 +213,9 @@ def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None
 
     wrap = driver.find_element(By.CSS_SELECTOR, _ACCESS)
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", wrap)
-    time.sleep(0.3)
+
+    pause(AFTER_SCROLL)
+
     wrap.click()
 
     def items(_):
@@ -209,7 +225,8 @@ def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None
         return found if len(found) > expected else None
 
     wait.until(items)[expected].click()
-    time.sleep(0.5)
+
+    pause(AFTER_ACTION)
 
     shown = _value_of(driver.find_element(By.CSS_SELECTOR, _ACCESS_VALUE))
 
@@ -296,11 +313,19 @@ class EventSetupSchema:
                 return False
 
         wait.until(content_ready)
+
+        # Прокрутка донизу и обратно будит ленивые блоки — без неё часть полей не отрисована.
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-        time.sleep(1.0)
+
+        pause(_LAZY_BLOCKS)
+
         driver.execute_script("window.scrollTo(0, 0)")
-        time.sleep(0.3)
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[id='group_edit_name']")))
+
+        pause(AFTER_SCROLL)
+
+        wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "[id='group_edit_name']"))
+        )
 
     @staticmethod
     def _set_city(driver: WebDriver, wait: WebDriverWait, city: str) -> None:
@@ -317,5 +342,7 @@ class EventSetupSchema:
     @staticmethod
     def _save(driver: WebDriver, wait: WebDriverWait) -> None:
         save_btn = wait.until(lambda d: next(iter(find_save_buttons(d)), None))
+
         driver.execute_script("arguments[0].click()", save_btn)
-        time.sleep(1.0)
+
+        pause(_AFTER_SAVE)
