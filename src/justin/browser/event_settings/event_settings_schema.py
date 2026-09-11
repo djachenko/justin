@@ -1,57 +1,77 @@
 """Top-level schema for configuring a VK event after creation."""
 from dataclasses import dataclass
 
+from justin_utils.util import first
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
 from justin.browser.event_settings.event_settings_settings import (
     AddressesSettings, CtaSettings, EventSettingsSettings,
     ExtrasSettings, MessagesSettings,
 )
-from justin.browser.shared.custom_select import set_custom_select
 from justin.browser.event_setup.event_setup_schema import EventSetupSchema
-from justin.browser.shared.pacing import AFTER_ACTION, PAGE_SETTLE, pause
-from justin.browser.shared.save_button import find_save_buttons
-from justin.browser.sections.section_settings import MainSection
 from justin.browser.sections.section_schema import (
     FilesSchema, ListSwitchSchema, MaterialsSchema, MusicSchema,
     PhotosSchema, PostsSchema, ServicesSchema, TopicsSchema, VideosSchema,
 )
+from justin.browser.sections.section_settings import MainSection, SectionsConfig
+from justin.browser.shared.custom_select import set_custom_select
+from justin.browser.shared.elements import by_css, by_testid, clickable, present
+from justin.browser.shared.pacing import AFTER_ACTION, PAGE_SETTLE, pause, varied
+from justin.browser.shared.page import wait_for_content
+from justin.browser.shared.save_button import click_save, click_save_if_present
 
+_MESSAGES_SELECT = "settings_messages_enabled"
+_MESSAGES_ON = "1"
+_MESSAGES_OFF = "0"
 
-def _wait_for_content(driver: WebDriver, wait: WebDriverWait) -> None:
-    def ready(d) -> bool:
-        try:
-            skeletons = d.find_elements(By.CSS_SELECTOR, "[data-testid='loading-skeleton']")
-            return not any(el.is_displayed() for el in skeletons)
-        except StaleElementReferenceException:
-            return False
-    wait.until(ready)
+_SECTIONS_LIST = by_testid("list_enabled")
+_REORDER_TOGGLE = by_testid("sections_toggle_reorder")
+_MODAL_SAVE = by_testid("form_modal_save")
+_DRAG_HANDLE = by_css(".vkuiCellDragger__host")
+_DIALOG = by_css("[role='dialog']")
 
-    pause(AFTER_ACTION)
+_REORDER_SETTLE = 1.5  # режим перетаскивания включается и выключается с анимацией
 
+# Перетаскивание VKUI: хватка должна быть заметной, а шаг — мелким, иначе оно
+# считает движение рывком и бросает элемент.
+_GRAB = 0.4
+_DRAG_STEP = 0.08
+_DRAG_STEPS = 10
+_NUDGE = 3  # первый сдвиг на пиксели, без него перетаскивание не начинается
 
-def _save(driver: WebDriver, wait: WebDriverWait) -> None:
-    """Click the save button if the page has one. React pages auto-save."""
-    buttons = find_save_buttons(driver)
+# Секции с модалкой: атрибут SectionsConfig → схема. Порядок — порядок применения.
+_MODAL_SECTIONS: list[tuple[str, PostsSchema | PhotosSchema | VideosSchema | TopicsSchema
+                            | MusicSchema | FilesSchema | MaterialsSchema | ServicesSchema]] = [
+    ("posts", PostsSchema("wall")),
+    ("photos", PhotosSchema("photos")),
+    ("videos", VideosSchema("videos")),
+    ("topics", TopicsSchema("discussions")),
+    ("music", MusicSchema("audios")),
+    ("files", FilesSchema("files")),
+    ("materials", MaterialsSchema("wiki")),
+    ("services", ServicesSchema("services")),
+]
 
-    if not buttons:
-        return
-
-    driver.execute_script("arguments[0].click()", buttons[0])
-
-    pause(_AFTER_SAVE)
+# Секции, которые переключаются прямо в списке, без модалки.
+_LIST_SECTIONS: list[tuple[str, ListSwitchSchema]] = [
+    ("chats", ListSwitchSchema("chats")),
+    ("clips", ListSwitchSchema("short_videos")),
+    ("articles", ListSwitchSchema("articles")),
+    ("moments", ListSwitchSchema("narratives")),
+    ("products", ListSwitchSchema("market")),
+]
 
 
 def _set_checkbox_label(driver: WebDriver, testid: str, enabled: bool) -> None:
     """Toggle React checkbox-label (CTA, Extras). State from inner input.checked."""
-    el = driver.find_element(By.CSS_SELECTOR, f"[data-testid='{testid}']")
-    inp = el.find_element(By.CSS_SELECTOR, "input[type='checkbox']")
-    currently = inp.get_attribute("checked") == "true"
+    el = driver.find_element(*by_testid(testid))
+    inp = el.find_element(*by_css("input[type='checkbox']"))
+
+    currently = (inp.get_attribute("checked") == "true")
 
     if currently == enabled:
         return
@@ -61,21 +81,16 @@ def _set_checkbox_label(driver: WebDriver, testid: str, enabled: bool) -> None:
     pause(AFTER_ACTION)
 
 
-_MESSAGES_SELECT = "settings_messages_enabled"
-_MESSAGES_ON = "1"
-_MESSAGES_OFF = "0"
-
-
 def _set_custom_select(driver: WebDriver, wait: WebDriverWait, testid: str, value: str) -> None:
     """Set a VKUI CustomSelect by value — both the state and the check come from the
     hidden native select, so nothing here depends on the interface language."""
-    native = wait.until(EC.presence_of_element_located(
-        (By.CSS_SELECTOR, f"select[data-testid='{testid}']")))
+    native = present(wait, by_css(f"select[data-testid='{testid}']"))
 
     if native.get_attribute("value") == value:
         return
 
-    holder = driver.find_element(By.CSS_SELECTOR, f"input[data-testid='{testid}']")
+    holder = driver.find_element(*by_css(f"input[data-testid='{testid}']"))
+
     set_custom_select(driver, wait, holder, value)
 
     shown = native.get_attribute("value")
@@ -84,22 +99,11 @@ def _set_custom_select(driver: WebDriver, wait: WebDriverWait, testid: str, valu
         raise ValueError(f"Select {testid!r} holds {shown!r}, expected {value!r}")
 
 
-def _click_submit(driver: WebDriver) -> None:
-    """Click the React settings Save button (no testid, matched by label)."""
-    buttons = find_save_buttons(driver)
-
-    if not buttons:
-        raise NoSuchElementException("Save button not found")
-
-    driver.execute_script("arguments[0].click()", buttons[0])
-
-    pause(_AFTER_SAVE)
-
-
 def _set_idd_toggle(driver: WebDriver, wait: WebDriverWait, testid: str, enabled: bool) -> None:
     """Toggle legacy idd_wrap element (Messages, Addresses). State from text content."""
-    el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, f"[data-testid='{testid}']")))
-    currently = el.text.strip().lower() == "enabled"
+    el = present(wait, by_testid(testid))
+
+    currently = (el.text.strip().lower() == "enabled")
 
     if currently == enabled:
         return
@@ -109,46 +113,91 @@ def _set_idd_toggle(driver: WebDriver, wait: WebDriverWait, testid: str, enabled
     pause(AFTER_ACTION)
 
 
-_REORDER_TOGGLE = "[data-testid='sections_toggle_reorder']"
-
-_AFTER_SAVE = 1.0  # сохранение перерисовывает страницу целиком
-_REORDER_SETTLE = 1.5  # режим перетаскивания включается и выключается с анимацией
-
-# Перетаскивание VKUI: хватка должна быть заметной, а шаг — мелким, иначе оно
-# считает движение рывком и бросает элемент.
-_GRAB = 0.4
-_DRAG_STEP = 0.08
-_NUDGE = 3  # первый сдвиг на пиксели, без него перетаскивание не начинается
+def _label_of(cell: WebElement) -> str:
+    return cell.text.strip().splitlines()[0]
 
 
-def _enabled_cells(driver: WebDriver) -> list:
-    section_list = driver.find_element(By.CSS_SELECTOR, "[data-testid='list_enabled']")
+def _enabled_cells(driver: WebDriver) -> list[WebElement]:
+    section_list = driver.find_element(*_SECTIONS_LIST)
     children = driver.execute_script("return Array.from(arguments[0].children)", section_list)
 
     return [cell for cell in children if cell.text.strip()]
 
 
+def _drag_to_top(driver: WebDriver, cell: WebElement, position: int) -> None:
+    """VKUI starts dragging only after a hover and a small initial move."""
+    handle = cell.find_element(*_DRAG_HANDLE)
+    distance = cell.rect["height"] * position + 10
+
+    chain = ActionChains(driver)
+
+    chain \
+        .move_to_element(handle) \
+        .pause(varied(_GRAB)) \
+        .click_and_hold() \
+        .pause(varied(_GRAB)) \
+        .move_by_offset(0, -_NUDGE) \
+        .pause(varied(_DRAG_STEP))
+
+    # Шаги разной длины и с разными паузами — рука не двигается равномерно.
+    for _ in range(_DRAG_STEPS):
+        chain \
+            .move_by_offset(0, -round(varied(distance / _DRAG_STEPS))) \
+            .pause(varied(_DRAG_STEP))
+
+    chain \
+        .move_by_offset(0, -_NUDGE) \
+        .pause(varied(_GRAB)) \
+        .release() \
+        .perform()
+
+    pause(_REORDER_SETTLE)
+
+
+def _confirm_reorder(driver: WebDriver) -> None:
+    """Saving the order raises a warning dialog — the order is kept only after confirming it."""
+    dialogs = [el for el in driver.find_elements(*_DIALOG) if el.is_displayed()]
+
+    if not dialogs:
+        return
+
+    dialogs[0].find_element(*_MODAL_SAVE).click()
+
+    pause(PAGE_SETTLE)
+
+
+def _check_first(driver: WebDriver, label: str, stage: str) -> None:
+    first_label = _label_of(_enabled_cells(driver)[0])
+
+    if first_label != label:
+        raise ValueError(f"Main section not applied {stage}: list starts with {first_label!r}, "
+                         f"expected {label!r}")
+
+
 def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
                       section: MainSection) -> None:
     """The main block is whatever sits first, so the section is dragged to the top of the list."""
-    label = driver.find_element(
-        By.CSS_SELECTOR, f"[data-testid='{section.value}']").text.strip().splitlines()[0]
+    label = _label_of(driver.find_element(*by_testid(section.value)))
 
-    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, _REORDER_TOGGLE))).click()
+    clickable(wait, _REORDER_TOGGLE).click()
 
     pause(_REORDER_SETTLE)
 
     cells = _enabled_cells(driver)
-    position = next((i for i, cell in enumerate(cells)
-                     if cell.text.strip().splitlines()[0] == label), None)
+    found = first(enumerate(cells), key=lambda pair: _label_of(pair[1]) == label)
 
-    if position is None:
+    if found is None:
         raise NoSuchElementException(f"Section {label!r} is not enabled, cannot make it main")
 
-    if position > 0:
-        _drag_to_top(driver, cells[position], position)
+    position, cell = found
 
-    driver.find_element(By.CSS_SELECTOR, _REORDER_TOGGLE).click()
+    if position > 0:
+        _drag_to_top(driver, cell, position)
+
+        # Перетаскивание могло сорваться молча — проверяем до того, как сохранять порядок.
+        _check_first(driver, label, "after drag")
+
+    driver.find_element(*_REORDER_TOGGLE).click()
 
     pause(_REORDER_SETTLE)
 
@@ -156,58 +205,11 @@ def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
 
     driver.get(f"https://vk.com/event{event_id}/settings/sections")
 
-    wait.until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='list_enabled']"))
-    )
-
-    pause(_AFTER_SAVE)
-
-    first = _enabled_cells(driver)[0].text.strip().splitlines()[0]
-
-    if first != label:
-        raise ValueError(f"Main section not applied: list starts with {first!r}, expected {label!r}")
-
-
-def _confirm_reorder(driver: WebDriver) -> None:
-    """Saving the order raises a warning dialog — the order is kept only after confirming it."""
-    dialogs = [el for el in driver.find_elements(By.CSS_SELECTOR, "[role='dialog']")
-               if el.is_displayed()]
-
-    if not dialogs:
-        return
-
-    dialogs[0].find_element(By.CSS_SELECTOR, "[data-testid='form_modal_save']").click()
+    present(wait, _SECTIONS_LIST)
 
     pause(PAGE_SETTLE)
 
-
-def _drag_to_top(driver: WebDriver, cell, position: int) -> None:
-    """VKUI starts dragging only after a hover and a small initial move."""
-    handle = cell.find_element(By.CSS_SELECTOR, ".vkuiCellDragger__host")
-    distance = cell.rect["height"] * position + 10
-    steps = 10
-
-    chain = ActionChains(driver)
-
-    chain \
-        .move_to_element(handle) \
-        .pause(_GRAB) \
-        .click_and_hold() \
-        .pause(_GRAB) \
-        .move_by_offset(0, -_NUDGE) \
-        .pause(_DRAG_STEP)
-
-    for _ in range(steps):
-        chain \
-            .move_by_offset(0, -distance / steps) \
-            .pause(_DRAG_STEP)
-
-    chain \
-        .pause(_GRAB) \
-        .release() \
-        .perform()
-
-    pause(_REORDER_SETTLE)
+    _check_first(driver, label, "after save")
 
 
 @dataclass(frozen=True)
@@ -243,61 +245,42 @@ class EventSettingsSchema:
     # ── sections ────────────────────────────────────────────────
 
     @staticmethod
-    def _apply_sections(event_id: int, config, driver: WebDriver, wait: WebDriverWait) -> None:
+    def _apply_sections(event_id: int, config: SectionsConfig,
+                        driver: WebDriver, wait: WebDriverWait) -> None:
         driver.get(f"https://vk.com/event{event_id}/settings/sections")
 
-        wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='list_enabled']"))
-        )
+        present(wait, _SECTIONS_LIST)
 
         pause(AFTER_ACTION)
 
-        if config.posts is not None:
-            print(f"    [posts] {config.posts}")
-            PostsSchema("wall")(config.posts, driver, wait)
-        if config.photos is not None:
-            print(f"    [photos] {config.photos}")
-            PhotosSchema("photos")(config.photos, driver, wait)
-        if config.videos is not None:
-            print(f"    [videos] {config.videos}")
-            VideosSchema("videos")(config.videos, driver, wait)
-        if config.topics is not None:
-            print(f"    [topics] {config.topics}")
-            TopicsSchema("discussions")(config.topics, driver, wait)
-        if config.music is not None:
-            print(f"    [music] {config.music}")
-            MusicSchema("audios")(config.music, driver, wait)
-        if config.files is not None:
-            print(f"    [files] {config.files}")
-            FilesSchema("files")(config.files, driver, wait)
-        if config.materials is not None:
-            print(f"    [materials] {config.materials}")
-            MaterialsSchema("wiki")(config.materials, driver, wait)
-        if config.services is not None:
-            print(f"    [services] {config.services}")
-            ServicesSchema("services")(config.services, driver, wait)
-
-        for name, test_id in [("chats", "chats"), ("clips", "short_videos"),
-                              ("articles", "articles"), ("moments", "narratives"),
-                              ("products", "market")]:
+        for name, schema in [*_MODAL_SECTIONS, *_LIST_SECTIONS]:
             settings = getattr(config, name)
 
-            if settings is not None:
-                print(f"    [{name}] {settings}")
-                ListSwitchSchema(test_id)(settings, driver, wait)
+            if settings is None:
+                continue
+
+            print(f"    [{name}] {settings}")
+
+            schema(settings, driver, wait)
 
         if config.main_section is not None:
             print(f"    [main] {config.main_section.name}")
+
             _set_main_section(driver, wait, event_id, config.main_section)
 
     # ── cta ─────────────────────────────────────────────────────
 
     @staticmethod
     def _apply_cta(event_id: int, s: CtaSettings, driver: WebDriver, wait: WebDriverWait) -> None:
+        """CTA — call to action: кнопка действия в шапке сообщества («Написать», «Перейти»).
+
+        React-страница, сохраняется сама при переключении — кнопки Save нет.
+        """
         driver.get(f"https://vk.com/event{event_id}/settings/cta")
-        _wait_for_content(driver, wait)
+
+        wait_for_content(wait)
+
         _set_checkbox_label(driver, "groups_edit_header_switch_label_cta", s.enabled)
-        # React page — auto-saves on toggle, no group_save button
 
     # ── messages ────────────────────────────────────────────────
 
@@ -305,19 +288,25 @@ class EventSettingsSchema:
     def _apply_messages(event_id: int, s: MessagesSettings,
                         driver: WebDriver, wait: WebDriverWait) -> None:
         driver.get(f"https://vk.com/event{event_id}/settings/messages")
-        _wait_for_content(driver, wait)
-        _set_custom_select(driver, wait, _MESSAGES_SELECT,
-                           _MESSAGES_ON if s.enabled else _MESSAGES_OFF)
+
+        wait_for_content(wait)
+
+        if s.enabled:
+            value = _MESSAGES_ON
+        else:
+            value = _MESSAGES_OFF
+
+        _set_custom_select(driver, wait, _MESSAGES_SELECT, value)
+
         if s.first_message is not None:
-            ta = driver.find_element(
-                By.CSS_SELECTOR, "[data-testid='settings_messages_first_message']")
+            ta = driver.find_element(*by_testid("settings_messages_first_message"))
 
             driver.execute_script("arguments[0].value = ''", ta)
             ta.send_keys(s.first_message)
 
             pause(AFTER_ACTION)
 
-        _click_submit(driver)
+        click_save(driver, wait)
 
     # ── addresses ───────────────────────────────────────────────
 
@@ -325,9 +314,12 @@ class EventSettingsSchema:
     def _apply_addresses(event_id: int, s: AddressesSettings,
                          driver: WebDriver, wait: WebDriverWait) -> None:
         driver.get(f"https://vk.com/event{event_id}?act=addresses")
-        _wait_for_content(driver, wait)
+
+        wait_for_content(wait)
+
         _set_idd_toggle(driver, wait, "groups_edit_g_addresses", s.enabled)
-        _save(driver, wait)
+
+        click_save_if_present(driver)
 
     # ── extras ──────────────────────────────────────────────────
 
@@ -335,15 +327,19 @@ class EventSettingsSchema:
     def _apply_extras(event_id: int, s: ExtrasSettings,
                       driver: WebDriver, wait: WebDriverWait) -> None:
         driver.get(f"https://vk.com/event{event_id}/settings/extras")
-        _wait_for_content(driver, wait)
+
+        wait_for_content(wait)
 
         if s.hide_tag_suggestions is not None:
             _set_checkbox_label(driver, "photo_recognize_enabled", s.hide_tag_suggestions)
+
         if s.co_creatorship is not None:
             _set_checkbox_label(driver, "clips_co_ownership_enabled", s.co_creatorship)
+
         if s.story_replies is not None:
             _set_checkbox_label(driver, "stories_replies_enabled", s.story_replies)
+
         if s.show_in_left_menu is not None:
             _set_checkbox_label(driver, "show_in_left_menu", s.show_in_left_menu)
 
-        _save(driver, wait)
+        click_save_if_present(driver)
