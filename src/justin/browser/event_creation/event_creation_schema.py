@@ -6,16 +6,14 @@ from urllib.parse import urlparse
 
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.event_creation.event_creation_settings import Category, EventCreationSettings, \
     EventStep1Settings, EventStep2Settings
 from justin.browser.shared.captcha import wait_for_captcha_if_needed
-from justin.browser.shared.elements import by_css, by_testid, by_xpath
+from justin.browser.shared.elements import by_css, by_testid, by_xpath, clickable, found, present
 from justin.browser.shared.pacing import AFTER_ACTION, BETWEEN_FIELDS, pause
 from justin.browser.shared.react_select import set_react_select
-from justin.browser.shared.waiting import wait_for
 
 
 @dataclass(frozen=True)
@@ -23,7 +21,7 @@ class TitleInput:
     test_id: str
 
     def set_value(self, value: str, driver: WebDriver, wait: WebDriverWait) -> None:
-        el = wait_for(driver, wait, EC.element_to_be_clickable(by_testid(self.test_id)))
+        el = clickable(wait, by_testid(self.test_id))
 
         ActionChains(driver) \
             .click(el) \
@@ -77,11 +75,7 @@ class OptionalDateSpinGroup:
         if value is None:
             return
 
-        end_date_btn = wait_for(
-            driver,
-            wait,
-            EC.presence_of_element_located(by_xpath("//*[contains(text(), 'Enter end date')]"))
-        )
+        end_date_btn = present(wait, by_xpath("//*[contains(text(), 'Enter end date')]"))
 
         driver.execute_script("arguments[0].click()", end_date_btn)
 
@@ -104,12 +98,9 @@ class OrganizerSelect:
 @dataclass(frozen=True)
 class CategorySelect:
     def set_value(self, value: Category, driver: WebDriver, wait: WebDriverWait) -> None:
-        btn = wait_for(
-            driver,
+        btn = clickable(
             wait,
-            EC.element_to_be_clickable(
-                by_css(f'[data-testid="wizard_theme_subcathegory"][data-name="{value.value}"]')
-            )
+            by_css(f'[data-testid="wizard_theme_subcathegory"][data-name="{value.value}"]')
         )
 
         driver.execute_script("arguments[0].click()", btn)
@@ -143,7 +134,7 @@ class EventStep1Schema(WizardStep[EventStep1Settings]):
     organiser_id: OrganizerSelect = OrganizerSelect()
 
     def submit(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        btn = wait_for(driver, wait, EC.element_to_be_clickable(by_testid("done_button")))
+        btn = clickable(wait, by_testid("done_button"))
 
         btn.click()
 
@@ -155,13 +146,7 @@ class EventStep2Schema(WizardStep[EventStep2Settings]):
     category: CategorySelect = CategorySelect()
 
     def submit(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        btn = wait_for(
-            driver,
-            wait,
-            EC.element_to_be_clickable(
-                by_xpath("//button[normalize-space()='Create event' and not(@disabled)]")
-            )
-        )
+        btn = clickable(wait, by_xpath("//button[normalize-space()='Create event' and not(@disabled)]"))
 
         driver.execute_script("arguments[0].click()", btn)
 
@@ -188,7 +173,7 @@ def _event_id_in(url: str) -> int | None:
 @dataclass(frozen=True)
 class EventStep3Schema:
     def submit(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        btn = wait_for(driver, wait, EC.element_to_be_clickable(by_testid("go_to_community")))
+        btn = clickable(wait, by_testid("go_to_community"))
 
         driver.execute_script("arguments[0].click()", btn)
         driver.switch_to.default_content()
@@ -196,7 +181,7 @@ class EventStep3Schema:
         wait_for_captcha_if_needed(driver, _CREATION_URL_TAIL)
 
     def event_id(self, driver: WebDriver, wait: WebDriverWait) -> int:
-        wait_for(driver, wait, lambda d: _event_id_in(d.current_url) is not None)
+        found(wait, lambda d: _event_id_in(d.current_url))
 
         return self._parse_event_id(driver.current_url)
 
@@ -222,7 +207,7 @@ class EventCreationSchema:
     def __call__(self, settings: EventCreationSettings, driver: WebDriver, wait: WebDriverWait) -> int:
         driver.get(self._URL)
 
-        iframe = wait_for(driver, wait, EC.presence_of_element_located(by_css(self._IFRAME_CSS)))
+        iframe = present(wait, by_css(self._IFRAME_CSS))
 
         driver.switch_to.frame(iframe)
 

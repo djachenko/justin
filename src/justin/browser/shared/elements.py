@@ -8,6 +8,7 @@
 """
 from typing import Callable
 
+from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
@@ -44,6 +45,7 @@ def gone(wait: WebDriverWait, locator: Locator) -> None:
     wait.until_not(EC.presence_of_element_located(locator))
 
 
-def found(wait: WebDriverWait, finder: Callable) -> WebElement:
-    """Для условий, которые не выражаются локатором: finder сам ищет и возвращает элемент или None."""
-    return wait.until(finder)
+def found[T](wait: WebDriverWait, finder: Callable[[WebDriver], T | None]) -> T:
+    """Для условий, которые не выражаются локатором: finder сам ищет и возвращает
+    найденное или None, пока искать рано. until понимает только False как «ещё нет»."""
+    return wait.until(lambda driver: finder(driver) or False)

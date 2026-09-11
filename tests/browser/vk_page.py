@@ -15,12 +15,12 @@ import time
 from contextlib import contextmanager
 
 import pytest
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
 
+from justin.browser.shared.elements import Locator, gone
+from justin.browser.shared.page import content_rendered
 from justin.browser.vk_browser import VKBrowser
 
 WAIT = 10  # секунд: тесту хватает, а на задушенной VK не превращает прогон в минуты
@@ -48,8 +48,8 @@ def editing(browser: VKBrowser, url: str):
 
 
 @contextmanager
-def modal(browser: VKBrowser, url: str, inside_modal: str):
-    """inside_modal — селектор элемента внутри модалки: по его исчезновению видно, закрылась ли."""
+def modal(browser: VKBrowser, url: str, inside_modal: Locator):
+    """inside_modal — элемент внутри модалки: по его исчезновению видно, закрылась ли."""
     wait = _load_if_stale(browser, url)
     _state["dirty"] = True
 
@@ -77,7 +77,7 @@ def _load_if_stale(browser: VKBrowser, url: str):
         pytest.skip(f"VK отдаёт {browser.ERROR_TITLE!r}: кулдаун после интенсивных прогонов "
                     f"либо страница действительно пропала — {url}")
 
-    wait.until(_rendered)
+    wait.until(content_rendered)
     time.sleep(0.5)
 
     _state.update(url=url, dirty=False)
@@ -85,21 +85,13 @@ def _load_if_stale(browser: VKBrowser, url: str):
     return wait
 
 
-def _rendered(driver) -> bool:
-    try:
-        skeletons = driver.find_elements(By.CSS_SELECTOR, "[data-testid='loading-skeleton']")
-
-        return not any(el.is_displayed() for el in skeletons)
-    except StaleElementReferenceException:
-        return False
-
-
-def _closed_by_escape(browser: VKBrowser, inside_modal: str) -> bool:
-    ActionChains(browser.driver).send_keys(Keys.ESCAPE).perform()
+def _closed_by_escape(browser: VKBrowser, inside_modal: Locator) -> bool:
+    ActionChains(browser.driver) \
+        .send_keys(Keys.ESCAPE) \
+        .perform()
 
     try:
-        browser.new_wait(_SHORT).until_not(
-            EC.presence_of_element_located((By.CSS_SELECTOR, inside_modal)))
+        gone(browser.new_wait(_SHORT), inside_modal)
     except TimeoutException:
         return False
 

@@ -5,24 +5,28 @@ from selenium.common.exceptions import (
     NoSuchElementException, StaleElementReferenceException, TimeoutException,
 )
 from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.sections.section_settings import (
     AddAllowed, ContentType, PostsPublishing, SectionSettings,
 )
+from justin.browser.shared.elements import by_css, by_testid, clickable, found, present
 from justin.browser.shared.pacing import AFTER_ACTION, BETWEEN_FIELDS, pause
-
 
 _STATE_TIMEOUT = 5
 
 _MODAL_SETTLE = 1.5  # модалка секции закрывается с анимацией, список под ней перерисовывается
-_MODAL_SAVE = "[data-testid='form_modal_save']"
-_DROPDOWN_ITEM = "[data-testid='dropdownactionsheet-item']"
+_MODAL_SAVE = by_testid("form_modal_save")
+_DROPDOWN_ITEM = by_testid("dropdownactionsheet-item")
+_SWITCH = by_css("[role='switch']")
 
 
-def _switch_state(element) -> bool:
+def _find(driver: WebDriver, test_id: str) -> WebElement:
+    return driver.find_element(*by_testid(test_id))
+
+
+def _switch_state(element: WebElement) -> bool:
     """Some testids sit on the switch itself, others on the cell that wraps it.
 
     An element with no state at all is not a switch we know how to read: reporting it as
@@ -31,14 +35,16 @@ def _switch_state(element) -> bool:
     state = element.get_attribute("aria-checked")
 
     if state is None:
-        switches = element.find_elements(By.CSS_SELECTOR, "[role='switch']")
-        state = switches[0].get_attribute("aria-checked") if switches else None
+        switches = element.find_elements(*_SWITCH)
+
+        if switches:
+            state = switches[0].get_attribute("aria-checked")
 
     if state not in ("true", "false"):
         raise NoSuchElementException(
             f"No switch state on {element.get_attribute('data-testid')!r}, got {state!r}")
 
-    return state == "true"
+    return (state == "true")
 
 
 def _wait_for_state(driver: WebDriver, test_id: str, expected: bool) -> None:
@@ -57,10 +63,6 @@ def _wait_for_state(driver: WebDriver, test_id: str, expected: bool) -> None:
         WebDriverWait(driver, _STATE_TIMEOUT).until(applied)
     except TimeoutException:
         raise ValueError(f"Switch {test_id!r} stayed {not expected}, expected {expected}")
-
-
-def _find(driver: WebDriver, test_id: str):
-    return driver.find_element(By.CSS_SELECTOR, f'[data-testid="{test_id}"]')
 
 
 @dataclass(frozen=True)
@@ -85,7 +87,7 @@ class Toggle:
 class Radio[E: Enum]:
     def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
         """Значение енума — это и есть testid радиокнопки."""
-        el = driver.find_element(By.CSS_SELECTOR, f'[data-testid="{value.value}"]')
+        el = _find(driver, value.value)
 
         driver.execute_script("arguments[0].click()", el)
 
@@ -97,16 +99,17 @@ class Dropdown[E: Enum]:
     test_id: str
 
     def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
-        trigger = driver.find_element(By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]')
+        trigger = _find(driver, self.test_id)
 
         driver.execute_script("arguments[0].click()", trigger)
 
         pause(AFTER_ACTION)
 
         option_text = value.value
-        option = wait.until(
+        option = found(
+            wait,
             lambda d: next(
-                (el for el in d.find_elements(By.CSS_SELECTOR, _DROPDOWN_ITEM)
+                (el for el in d.find_elements(*_DROPDOWN_ITEM)
                  if el.is_displayed() and option_text in el.text),
                 None
             )
@@ -142,24 +145,16 @@ class SectionSchema:
         pause(_MODAL_SETTLE)
 
     def _open(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        item = wait.until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]'))
-        )
+        item = clickable(wait, by_testid(self.test_id))
 
         driver.execute_script("arguments[0].click()", item)
 
-        wait.until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, f'[data-testid="{self.enabled.test_id}"]')
-            )
-        )
+        present(wait, by_testid(self.enabled.test_id))
 
         pause(AFTER_ACTION)
 
     def _save(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        btn = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, _MODAL_SAVE))
-        )
+        btn = present(wait, _MODAL_SAVE)
 
         driver.execute_script("arguments[0].click()", btn)
 
@@ -223,8 +218,7 @@ class ListSwitchSchema:
     test_id: str
 
     def __call__(self, settings: SectionSettings, driver: WebDriver, wait: WebDriverWait) -> None:
-        item = wait.until(EC.presence_of_element_located(
-            (By.CSS_SELECTOR, f'[data-testid="{self.test_id}"]')))
+        item = present(wait, by_testid(self.test_id))
 
         if _switch_state(item) == settings.enabled:
             return

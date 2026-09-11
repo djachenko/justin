@@ -11,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.sections.section_settings import SectionsConfig
 from justin.browser.shared.run_mode import is_debug
+from justin.browser.shared.waiting import Wait
 
 from justin.browser.invite_link.invite_link_schema import InviteLinkSchema
 from justin.browser.invite_link.invite_link_settings import InviteLinkSettings
@@ -112,7 +113,7 @@ class VKBrowser:
     def new_wait(self, timeout: float | None = None) -> WebDriverWait:
         """Tests pass a shorter timeout: a throttled VK would otherwise cost half a minute
         per wait, and a suite of them takes minutes to report what one page already said."""
-        return WebDriverWait(self._driver, timeout or self._TIMEOUT)
+        return Wait(self._driver, timeout or self._TIMEOUT)
 
     def create_event(
         self,
