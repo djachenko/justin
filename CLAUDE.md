@@ -41,7 +41,8 @@ src/justin/
 │   ├── sections/             # Секции события и главный блок
 │   ├── invite_link/          # Инвайт-ссылки
 │   ├── explorers/            # Разведка разметки (дампы страниц)
-│   └── shared/               # custom_select, save_button, pacing, waiting
+│   └── shared/               # elements (сахар над локаторами), page, save_button,
+│                             # custom_select, react_select, captcha, pacing, waiting, run_mode
 ├── cms/                      # JSON-based CMS (устарел, не трогать)
 ├── cms_2/                    # SQLite-based CMS (текущий) — см. /cms
 │   └── storage/sqlite/
@@ -63,8 +64,9 @@ src/justin/
 
 Пакеты в `browser/` сгруппированы по фичам: схема и настройки одной страницы лежат
 рядом, потому что VK переверстывает страницы поодиночке и правится всегда пара.
-Живые тесты требуют браузера с сессией VK и отобраны маркерами — см. `addopts`
-в `pyproject.toml`.
+Под отладчиком (`run_mode.is_debug`) браузер виден и дампит страницу при таймауте;
+в обычном запуске — headless и без дампов. Живые тесты требуют браузера с сессией VK
+и отобраны маркерами — см. `addopts` в `pyproject.toml`.
 
 ---
 
@@ -89,6 +91,6 @@ stage4.published/ ← опубликовано
 
 **`Photoset`** (`shared/models/photoset.py`) — центральная модель. Свойства: `sources` (RAW), `results` (JPEG), `not_signed` (отбор), `justin`, `closed`, `meeting`, `my_people`, `parts`.
 
-**`Folder`** (`shared/filesystem.py`) — обёртка над Path с удобным доступом к подпапкам (`folder["justin"]`).
+**`Folder`** (`justin_utils.filesystem`) — обёртка над Path с удобным доступом к подпапкам (`folder["justin"]`).
 
 **`Context`** (`shared/context.py`) — синглтон сессии. Содержит `pyvko`, `world`, конфиг. Передаётся в команды через `typer.Context.obj`.
