@@ -12,6 +12,7 @@ class NoFilesForNameError(Exception):
     message: str
 
 
+
 def validate_join(join: Iterable[Tuple[str, Any]], name: str):
     names_of_unjoined_files = []
 

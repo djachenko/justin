@@ -7,7 +7,7 @@ name = "justin"
 version = "0.2.2"
 description = "Photo processing and management tool"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 authors = [
     { name = "Harry Djachenko", email = "i.s.djachenko@gmail.com" }
 ]
@@ -15,10 +15,6 @@ license = { text = "MIT" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -29,7 +25,7 @@ keywords = ["photo", "processing", "face-recognition", "vk"]
 # Они должны быть доступны в репозитории.
 dependencies = [
     "pyvko>=0.1.11",
-    "justin_utils>=0.0.1",
+    "justin_utils>=0.5.0",
     "Pillow",
     "lazy-object-proxy",
     "exif",
@@ -37,6 +33,7 @@ dependencies = [
     "google-auth-oauthlib",
     "frozendict",
     "typer[all]>=0.26.8",
+    "selenium>=4.0",
     # "face_recognition",  # Опциональная зависимость, может быть добавлена при необходимости
     "coverage"
 ]
@@ -44,8 +41,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "pytest-timeout>=2.0",
     "mypy>=1.0",
-    "ruff>=0.1.0",
+    "ruff>=0.15,<0.16",
     "black>=23.0",
 ]
 server = [
@@ -56,7 +54,8 @@ server = [
 ]
 test = [
     "pytest",
-    "ruff",
+    "pytest-timeout",
+    "ruff>=0.15,<0.16",
     "mypy",
 ]
 release = [
@@ -72,6 +71,23 @@ justin = "justin.typer.app.console_runner:run"
 Homepage = "https://github.com/djachenko/justin"
 "Bug Tracker" = "https://github.com/djachenko/justin/issues"
 "Source Code" = "https://github.com/djachenko/justin"
+
+[tool.pytest.ini_options]
+# Тесты живут только здесь: иначе pytest подбирает случайные test_*.py из корня.
+testpaths = ["tests"]
+markers = [
+    "integration: requires live browser with active VK session",
+    "destructive: creates real VK events, run sparingly",
+    "performance: measures wall time, keep off shared/loaded machines",
+]
+# По умолчанию — только то, что можно гонять где угодно: живые тесты требуют браузера
+# с сессией VK, перф-тесты меряют время стены и на общем раннере дают шум.
+# Явный -m в командной строке перекрывает эту строку.
+addopts = "-m 'not integration and not destructive and not performance'"
+# Предохранитель: браузерный тест не должен висеть. Поток, а не сигнал —
+# selenium ждёт в сокете, где сигнал не разбудит.
+timeout = 90
+timeout_method = "thread"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
