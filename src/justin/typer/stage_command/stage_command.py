@@ -6,6 +6,7 @@ from typer import Argument, Typer
 
 from justin.shared.context import Context
 from justin.shared.models.photoset import Photoset
+from justin_utils.filesystem import Folder
 from justin.typer.base_commands.pattern_command import PatternCommand, Extra
 from justin.typer.stage_command.checks.base import StageCheckError
 from justin.typer.stage_command.checks_reporter import ChecksReporter, TyperChecksReporter
@@ -72,6 +73,9 @@ class StageCommand(PatternCommand):
 
         current_stage.exit(part, self.__reporter)
         new_stage.enter(part, self.__reporter)
+
+    def on_not_a_photoset(self, folder: Folder) -> None:
+        self.__reporter.on_not_a_photoset(folder.path)
 
 
 def create_stage_commands(stages_factory: StagesFactory) -> Typer:

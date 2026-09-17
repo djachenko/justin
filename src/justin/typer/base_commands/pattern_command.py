@@ -50,7 +50,7 @@ class PatternCommand(ABC):
         photoset = Photoset.from_folder(folder)
 
         if photoset is None:
-            print(f"Folder {folder} is no photoset.")
+            self.on_not_a_photoset(folder)
 
             return
 
@@ -88,6 +88,9 @@ class PatternCommand(ABC):
 
     def run_for_part(self, part: Photoset, extra: Extra) -> None:
         raise NotImplementedError(f"{type(self).__name__} must implement run_for_part")
+
+    def on_not_a_photoset(self, folder: Folder) -> None:
+        print(f"Folder {folder} is no photoset.")
 
     @staticmethod
     def __handle_aftershoot(photoset: Photoset, context: Context) -> None:

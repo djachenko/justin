@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import List
 
 import typer
@@ -36,6 +37,10 @@ class ChecksReporter(ABC):
 
     @abstractmethod
     def on_photoset_failure(self, photoset: Photoset, problems: List[Problem]) -> None:
+        pass
+
+    @abstractmethod
+    def on_not_a_photoset(self, path: Path) -> None:
         pass
 
 
@@ -83,6 +88,16 @@ class TyperChecksReporter(ChecksReporter):
     def on_photoset_failure(self, photoset: Photoset, problems: List[Problem]) -> None:
         typer.echo(typer.style("─" * 50, fg=typer.colors.BRIGHT_BLACK))
         typer.secho(f"  Unable to move {photoset.name}\n", fg=typer.colors.RED, bold=True)
+
+    def on_not_a_photoset(self, path: Path) -> None:
+        header = (
+            f"\n{typer.style(path.name, bold=True)}"
+            f"  {self._ARROW}  "
+            f"{typer.style('skipped', fg=typer.colors.YELLOW)}"
+        )
+        typer.echo(header)
+        typer.echo(typer.style("─" * 50, fg=typer.colors.BRIGHT_BLACK))
+        typer.secho(f"  {self._FAIL}  Not a photoset\n", fg=typer.colors.RED)
 
 
 # endregion
