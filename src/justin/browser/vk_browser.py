@@ -26,6 +26,7 @@ from justin.browser.event_creation.event_creation_schema import EventCreationSch
 
 class VKBrowser:
     _BROWSER_DATA_DIR = Path.home() / ".justin" / "browser_data"
+    _BROWSER_VERSION = "152"
     _TIMEOUT = 0.5 * 60
     ERROR_TITLE = "Error"
 
@@ -36,6 +37,7 @@ class VKBrowser:
         никто не решит. Поэтому create_event поднимает браузер видимым.
         """
         options = webdriver.ChromeOptions()
+        options.browser_version = self._BROWSER_VERSION
         options.add_argument(f"--user-data-dir={self._BROWSER_DATA_DIR}")
         options.add_argument("--no-first-run")
         options.add_argument("--no-default-browser-check")
@@ -48,7 +50,9 @@ class VKBrowser:
 
         logging.getLogger("selenium").setLevel(logging.DEBUG)
 
+        print(f"Starting Chrome {self._BROWSER_VERSION}: first run downloads it, ~190 MB...")
         self._driver = webdriver.Chrome(options=options)
+        print(f"Chrome {self._driver.capabilities['browserVersion']} started.")
         self._browser_pids = self._spawned_browser_pids()
 
     def _spawned_browser_pids(self) -> list[int]:
