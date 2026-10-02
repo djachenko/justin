@@ -16,7 +16,7 @@ from justin.browser.shared.page import content_rendered
 from justin.browser.shared.save_button import click_save
 
 
-def _value_of(element) -> str:
+def _value_of(element: WebElement) -> str:
     """Selenium отдаёт None, когда атрибута нет.
 
     Для нас это такая же непринятая настройка, как и неверное значение, — иначе
@@ -30,7 +30,7 @@ def _value_of(element) -> str:
     return value
 
 
-def _clear_and_type(driver: WebDriver, el, value: str) -> None:
+def _clear_and_type(driver: WebDriver, el: WebElement, value: str) -> None:
     driver.execute_script("arguments[0].value = ''", el)
     el.send_keys(value)
 
@@ -61,12 +61,16 @@ _DROPDOWN_ITEM = by_css("[class*='dropdown'] li")
 _CALENDAR = by_xpath("ancestor::*[contains(@class, 'datepicker_container')][1]")
 
 
-def _visible_cells(calendar) -> list:
+def _classes_of(element: WebElement) -> str:
+    return element.get_attribute("class") or ""
+
+
+def _visible_cells(calendar: WebElement) -> list[WebElement]:
     """Months and days share the td.day class — only one set is visible at a time."""
     return [el for el in calendar.find_elements(*_DAY) if el.is_displayed()]
 
 
-def _click_arrow(calendar, direction: str) -> None:
+def _click_arrow(calendar: WebElement, direction: str) -> None:
     """Day and month modes each carry their own arrows — the hidden ones have no click area."""
     arrows = [el for el in calendar.find_elements(*by_css(f"a.arr.{direction}"))
               if el.is_displayed()]
@@ -77,7 +81,7 @@ def _click_arrow(calendar, direction: str) -> None:
     arrows[0].click()
 
 
-def _pick_year_and_month(driver: WebDriver, wait: WebDriverWait, calendar, dt: datetime) -> None:
+def _pick_year_and_month(driver: WebDriver, wait: WebDriverWait, calendar: WebElement, dt: datetime) -> None:
     """Month names are localised — the year is read as a number, the month picked by position."""
     calendar.find_element(*_MONTH_MODE).click()
     wait.until(lambda _: len(_visible_cells(calendar)) == 12)
@@ -108,7 +112,7 @@ def _pick_year_and_month(driver: WebDriver, wait: WebDriverWait, calendar, dt: d
     wait.until(lambda _: len(_visible_cells(calendar)) > 12)
 
 
-def _pick_date(driver: WebDriver, wait: WebDriverWait, date_el, dt: datetime) -> None:
+def _pick_date(driver: WebDriver, wait: WebDriverWait, date_el: WebElement, dt: datetime) -> None:
     """The date field is readonly — the value can only be set through the datepicker."""
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", date_el)
 
@@ -123,8 +127,8 @@ def _pick_date(driver: WebDriver, wait: WebDriverWait, date_el, dt: datetime) ->
     _pick_year_and_month(driver, wait, calendar, dt)
 
     days = [el for el in _visible_cells(calendar)
-            if "prev_month_day" not in el.get_attribute("class")
-            and "next_month_day" not in el.get_attribute("class")
+            if "prev_month_day" not in _classes_of(el)
+            and "next_month_day" not in _classes_of(el)
             and el.text.strip() == str(dt.day)]
 
     if not days:
@@ -135,7 +139,7 @@ def _pick_date(driver: WebDriver, wait: WebDriverWait, date_el, dt: datetime) ->
     pause(AFTER_ACTION)
 
 
-def _pick_from_selector(driver: WebDriver, wait: WebDriverWait, selector_input, value: int) -> None:
+def _pick_from_selector(driver: WebDriver, wait: WebDriverWait, selector_input: WebElement, value: int) -> None:
     """Hours and minutes are readonly VK selectors — the value is picked from a dropdown."""
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", selector_input)
 
@@ -143,7 +147,7 @@ def _pick_from_selector(driver: WebDriver, wait: WebDriverWait, selector_input, 
 
     selector_input.click()
 
-    def option(_) -> WebElement | None:
+    def option(_: WebDriver) -> WebElement | None:
         items = [el for el in driver.find_elements(*_DROPDOWN_ITEM)
                  if el.is_displayed() and el.text.strip().isdigit()
                  and int(el.text.strip()) == value]
@@ -192,7 +196,7 @@ def _visible_selectors(driver: WebDriver) -> list:
     return [el for el in driver.find_elements(*_SELECTOR_INPUT) if el.is_displayed()]
 
 
-def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field, label: str) -> None:
+def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field: WebElement, label: str) -> None:
     """The selector opens a result_list — options carry no ids, only their labels."""
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", field)
 
@@ -200,7 +204,7 @@ def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field, label:
 
     field.click()
 
-    def option(_) -> WebElement | None:
+    def option(_: WebDriver) -> WebElement | None:
         items = [el for el in driver.find_elements(*_RESULT_ITEM)
                  if el.is_displayed() and el.text.strip() == label]
 
@@ -241,7 +245,7 @@ def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None
 
     wrap.click()
 
-    def items(_) -> list[WebElement] | None:
+    def items(_: WebDriver) -> list[WebElement] | None:
         visible = [el for el in driver.find_elements(*_ACCESS_ITEMS) if el.is_displayed()]
 
         if len(visible) <= expected:

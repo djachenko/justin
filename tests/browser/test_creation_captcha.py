@@ -37,7 +37,7 @@ def test_no_captcha_when_action_went_through(monkeypatch) -> None:
 
 def test_pace_zero_skips_sleep(monkeypatch) -> None:
     """PACE = 0 — прогон без задержек; ручкой же можно и замедлить всё разом."""
-    slept = []
+    slept: list[float] = []
     monkeypatch.setattr(pacing.time, "sleep", slept.append)
 
     monkeypatch.setattr(pacing, "PACE", 0)
