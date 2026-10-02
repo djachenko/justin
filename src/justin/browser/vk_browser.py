@@ -27,6 +27,7 @@ from justin.browser.event_creation.event_creation_schema import EventCreationSch
 class VKBrowser:
     _BROWSER_DATA_DIR = Path.home() / ".justin" / "browser_data"
     _BROWSER_VERSION = "152"
+    _WINDOW_SIZE = "1440,900"
     _TIMEOUT = 0.5 * 60
     ERROR_TITLE = "Error"
 
@@ -39,6 +40,7 @@ class VKBrowser:
         options = webdriver.ChromeOptions()
         options.browser_version = self._BROWSER_VERSION
         options.add_argument(f"--user-data-dir={self._BROWSER_DATA_DIR}")
+        options.add_argument(f"--window-size={self._WINDOW_SIZE}")
         options.add_argument("--no-first-run")
         options.add_argument("--no-default-browser-check")
 
