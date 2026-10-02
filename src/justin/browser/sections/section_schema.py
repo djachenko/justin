@@ -53,7 +53,7 @@ def _wait_for_state(driver: WebDriver, test_id: str, expected: bool) -> None:
     The element is looked up again on every poll: the list re-renders around a switch,
     so any reference held across the click goes stale.
     """
-    def applied(_) -> bool:
+    def applied(_: WebDriver) -> bool:
         try:
             return _switch_state(_find(driver, test_id)) == expected
         except StaleElementReferenceException:

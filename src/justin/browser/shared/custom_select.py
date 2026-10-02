@@ -1,5 +1,6 @@
 """VKUI CustomSelect: a readonly input backed by a hidden native select."""
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.shared.elements import by_css, found
@@ -11,7 +12,7 @@ def option_by_value(value: str) -> str:
     return f"[role='option'][id$='-{value}']"
 
 
-def set_custom_select(driver: WebDriver, wait: WebDriverWait, holder, value: str) -> None:
+def set_custom_select(driver: WebDriver, wait: WebDriverWait, holder: WebElement, value: str) -> None:
     """Open the select, pick the option carrying value and check the input took its label."""
     driver.execute_script("arguments[0].click()", holder)
 
@@ -29,7 +30,7 @@ def set_custom_select(driver: WebDriver, wait: WebDriverWait, holder, value: str
 
     pause(AFTER_ACTION)
 
-    shown = holder.get_attribute("value").strip()
+    shown = (holder.get_attribute("value") or "").strip()
 
     if shown != label:
         raise ValueError(f"Option not applied: select shows {shown!r}, expected {label!r}")

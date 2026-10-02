@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.invite_link.invite_link_settings import InviteLinkSettings
@@ -28,7 +29,7 @@ def _links(driver: WebDriver) -> set[str]:
     }
 
 
-def _set_select(driver: WebDriver, wait: WebDriverWait, modal, position: int, value: str) -> None:
+def _set_select(driver: WebDriver, wait: WebDriverWait, modal: WebElement, position: int, value: str) -> None:
     """The modal selects carry no testid — they are told apart by their order."""
     holder = modal.find_elements(*_SELECT_HOLDER)[position]
     set_custom_select(driver, wait, holder, value)

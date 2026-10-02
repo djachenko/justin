@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 
 import pytest
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from justin.browser.event_creation.event_creation_schema import EventCreationSchema
@@ -33,12 +35,12 @@ def browser():
 
 
 @pytest.fixture(scope="module")
-def driver(browser: VKBrowser):
+def driver(browser: VKBrowser) -> WebDriver:
     return browser.driver
 
 
 @pytest.fixture
-def wait(browser: VKBrowser):
+def wait(browser: VKBrowser) -> WebDriverWait:
     return browser.new_wait()
 
 
@@ -54,7 +56,7 @@ def _step1() -> EventStep1Settings:
     )
 
 
-def _open_wizard(driver, wait) -> EventCreationSchema:
+def _open_wizard(driver: WebDriver, wait: WebDriverWait) -> EventCreationSchema:
     schema = EventCreationSchema()
     driver.get(schema._URL)
     iframe = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, schema._IFRAME_CSS)))
@@ -62,7 +64,7 @@ def _open_wizard(driver, wait) -> EventCreationSchema:
     return schema
 
 
-def _close(driver) -> None:
+def _close(driver: WebDriver) -> None:
     driver.switch_to.default_content()
     driver.get("about:blank")
 
@@ -70,42 +72,42 @@ def _close(driver) -> None:
 # --- step 1 smoke tests ---
 
 @pytest.mark.integration
-def test_step1_title(driver, wait) -> None:
+def test_step1_title(driver: WebDriver, wait: WebDriverWait) -> None:
     schema = _open_wizard(driver, wait)
     schema.step1.title.set_value("Smoke test title", driver, wait)
     _close(driver)
 
 
 @pytest.mark.integration
-def test_step1_is_closed(driver, wait) -> None:
+def test_step1_is_closed(driver: WebDriver, wait: WebDriverWait) -> None:
     schema = _open_wizard(driver, wait)
     schema.step1.is_closed.set_value(True, driver, wait)
     _close(driver)
 
 
 @pytest.mark.integration
-def test_step1_start_date(driver, wait) -> None:
+def test_step1_start_date(driver: WebDriver, wait: WebDriverWait) -> None:
     schema = _open_wizard(driver, wait)
     schema.step1.start_dt.set_value(datetime(2026, 6, 15, 18, 0), driver, wait)
     _close(driver)
 
 
 @pytest.mark.integration
-def test_step1_end_date(driver, wait) -> None:
+def test_step1_end_date(driver: WebDriver, wait: WebDriverWait) -> None:
     schema = _open_wizard(driver, wait)
     schema.step1.end_dt.set_value(datetime(2026, 6, 15, 22, 0), driver, wait)
     _close(driver)
 
 
 @pytest.mark.integration
-def test_step1_organizer(driver, wait) -> None:
+def test_step1_organizer(driver: WebDriver, wait: WebDriverWait) -> None:
     schema = _open_wizard(driver, wait)
     schema.step1.organiser_id.set_value(None, driver, wait)  # None = skip, проверяем что не падает
     _close(driver)
 
 
 @pytest.mark.integration
-def test_step1_full_fill(driver, wait) -> None:
+def test_step1_full_fill(driver: WebDriver, wait: WebDriverWait) -> None:
     schema = _open_wizard(driver, wait)
     schema.step1.fill(_step1(), driver, wait)
     _close(driver)
@@ -113,7 +115,7 @@ def test_step1_full_fill(driver, wait) -> None:
 
 # --- step 2 smoke tests ---
 
-def _navigate_to_step2(driver, wait) -> EventCreationSchema:
+def _navigate_to_step2(driver: WebDriver, wait: WebDriverWait) -> EventCreationSchema:
     schema = _open_wizard(driver, wait)
     schema.step1.fill(_step1(), driver, wait)
     schema.step1.submit(driver, wait)
@@ -122,7 +124,7 @@ def _navigate_to_step2(driver, wait) -> EventCreationSchema:
 
 @pytest.mark.integration
 @pytest.mark.parametrize("category", list(Category))
-def test_step2_category_selectable(driver, wait, category: Category) -> None:
+def test_step2_category_selectable(driver: WebDriver, wait: WebDriverWait, category: Category) -> None:
     schema = _navigate_to_step2(driver, wait)
     schema.step2.fill(EventStep2Settings(category=category), driver, wait)
     _close(driver)

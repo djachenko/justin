@@ -11,6 +11,7 @@ from datetime import datetime
 
 import pytest
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.remote.webdriver import WebDriver
 
 from justin.browser.event_creation.event_creation_schema import EventCreationSchema
 from justin.browser.event_settings.event_settings_schema import _MESSAGES_OFF, _MESSAGES_ON, _MESSAGES_SELECT
@@ -100,7 +101,7 @@ def test_page_selectors_present(browser: VKBrowser, event_id: int, page: str) ->
     url_tmpl, selectors = PAGES[page]
     missing: list[str] = []
 
-    def all_present(driver) -> bool:
+    def all_present(driver: WebDriver) -> bool:
         missing[:] = [s for s in selectors if not driver.find_elements(*by_css(s))]
         return not missing
 
