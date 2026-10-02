@@ -26,7 +26,7 @@ from justin.browser.invite_link.invite_link_schema import (
 from justin.browser.invite_link.invite_link_settings import LinkLifetime, LinkUses
 from justin.browser.shared.save_button import find_save_buttons
 from justin.browser.sections.section_schema import (
-    FilesSchema, MaterialsSchema, MusicSchema,
+    FilesSchema, MaterialsSchema, MusicSchema, SectionSchema,
     PhotosSchema, PostsSchema, TopicsSchema, VideosSchema,
 )
 from justin.browser.vk_browser import VKBrowser
@@ -43,9 +43,13 @@ PAGES = {
             "[id='event_mail']",
         ],
     ),
+    "content_tabs": (
+        "https://vk.com/event{event_id}/settings/content_tabs",
+        ["[data-testid='sections_toggle_reorder']"],
+    ),
     "sections": (
         "https://vk.com/event{event_id}/settings/sections",
-        ["[data-testid='list_enabled']"],
+        ["[data-testid='list_sections']"],
     ),
     "cta": (
         "https://vk.com/event{event_id}/settings/cta",
@@ -84,13 +88,13 @@ PAGES = {
 _NAME_FIELD = by_css("[id='group_edit_name']")
 
 SECTIONS = [
-    PostsSchema("wall"),
-    PhotosSchema("photos"),
-    VideosSchema("videos"),
-    TopicsSchema("discussions"),
-    MusicSchema("audios"),
-    FilesSchema("files"),
-    MaterialsSchema("wiki"),
+    ("content_tabs", PostsSchema("content_tabs_wall_cell")),
+    ("content_tabs", PhotosSchema("content_tabs_photos_cell")),
+    ("content_tabs", VideosSchema("content_tabs_videos_cell")),
+    ("content_tabs", TopicsSchema("content_tabs_discussions_cell")),
+    ("content_tabs", MusicSchema("content_tabs_audios_cell")),
+    ("sections", FilesSchema("files")),
+    ("sections", MaterialsSchema("wiki")),
 ]
 
 
@@ -157,18 +161,15 @@ def test_save_button_present(browser: VKBrowser, event_id: int, page: str) -> No
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("section", SECTIONS, ids=lambda s: s.test_id)
-def test_section_modal_selectors(browser: VKBrowser, event_id: int, section) -> None:
+@pytest.mark.parametrize("page,section", SECTIONS, ids=[s.test_id for _, s in SECTIONS])
+def test_section_modal_selectors(browser: VKBrowser, event_id: int, page: str, section: SectionSchema) -> None:
     """Открывает модалку секции и проверяет тоггл и кнопку сохранения. Не сохраняет."""
     toggle = by_testid(section.enabled.test_id)
-    url = f"https://vk.com/event{event_id}/settings/sections"
+    url = PAGES[page][0].format(event_id=event_id)
 
     with modal(browser, url, inside_modal=toggle) as wait:
-        item = clickable(wait, by_testid(section.test_id))
+        section._open(browser.driver, wait)
 
-        browser.driver.execute_script("arguments[0].click()", item)
-
-        present(wait, toggle)
         present(wait, by_testid("form_modal_save"))
 
 

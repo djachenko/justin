@@ -9,9 +9,9 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.sections.section_settings import (
-    AddAllowed, ContentType, PostsPublishing, SectionSettings,
+    AddAllowed, PostsPublishing, SectionSettings,
 )
-from justin.browser.shared.elements import by_css, by_testid, clickable, found, present
+from justin.browser.shared.elements import by_css, by_testid, by_xpath, found, present
 from justin.browser.shared.pacing import AFTER_ACTION, BETWEEN_FIELDS, pause
 
 _STATE_TIMEOUT = 5
@@ -20,6 +20,7 @@ _MODAL_SETTLE = 1.5  # модалка секции закрывается с а�
 _MODAL_SAVE = by_testid("form_modal_save")
 _DROPDOWN_ITEM = by_testid("dropdownactionsheet-item")
 _SWITCH = by_css("[role='switch']")
+_TITLE = by_xpath(".//span[normalize-space()]")
 
 
 def _find(driver: WebDriver, test_id: str) -> WebElement:
@@ -145,9 +146,14 @@ class SectionSchema:
         pause(_MODAL_SETTLE)
 
     def _open(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        item = clickable(wait, by_testid(self.test_id))
+        """The modal opens from the section title.
 
-        driver.execute_script("arguments[0].click()", item)
+        On Content tabs the cell is a <label> around the switch: a click on the cell itself
+        flips the switch instead.
+        """
+        item = present(wait, by_testid(self.test_id))
+
+        driver.execute_script("arguments[0].click()", item.find_element(*_TITLE))
 
         present(wait, by_testid(self.enabled.test_id))
 
@@ -171,14 +177,12 @@ class PostsSchema(SectionSchema):
 @dataclass(frozen=True)
 class PhotosSchema(SectionSchema):
     enabled: Toggle = Toggle("form_photos_toggle")
-    content_type: Radio[ContentType] = Radio()
     add_allowed: Radio[AddAllowed] = Radio()
 
 
 @dataclass(frozen=True)
 class VideosSchema(SectionSchema):
     enabled: Toggle = Toggle("form_videos_toggle")
-    content_type: Radio[ContentType] = Radio()
     add_allowed: Radio[AddAllowed] = Radio()
 
 
@@ -191,7 +195,6 @@ class TopicsSchema(SectionSchema):
 @dataclass(frozen=True)
 class MusicSchema(SectionSchema):
     enabled: Toggle = Toggle("form_audios_toggle")
-    content_type: Radio[ContentType] = Radio()
     add_allowed: Radio[AddAllowed] = Radio()
 
 
@@ -214,7 +217,10 @@ class ServicesSchema(SectionSchema):
 
 @dataclass(frozen=True)
 class ListSwitchSchema:
-    """Chats, clips, articles, moments and products switch in the list — no modal, no save."""
+    """Products and clips on Content tabs; chats, articles and moments on Sections.
+
+    They switch right in the list — no modal, no save.
+    """
     test_id: str
 
     def __call__(self, settings: SectionSettings, driver: WebDriver, wait: WebDriverWait) -> None:

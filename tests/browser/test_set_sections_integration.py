@@ -6,7 +6,6 @@ import pytest
 
 from justin.browser.sections.section_settings import (
     AddAllowed,
-    ContentType,
     FilesSettings,
     MaterialsSettings,
     MusicSettings,
@@ -33,20 +32,18 @@ def test_posts(browser: VKBrowser, event_id: int, enabled: bool, publishing: Pos
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("enabled,content_type,add_allowed",
-                         each_choice(BOOLS, list(ContentType), list(AddAllowed)))
-def test_photos(browser: VKBrowser, event_id: int, enabled: bool, content_type: ContentType, add_allowed: AddAllowed) -> None:
+@pytest.mark.parametrize("enabled,add_allowed", each_choice(BOOLS, list(AddAllowed)))
+def test_photos(browser: VKBrowser, event_id: int, enabled: bool, add_allowed: AddAllowed) -> None:
     browser.set_sections(event_id, SectionsConfig(
-        photos=PhotosSettings(enabled=enabled, content_type=content_type, add_allowed=add_allowed)
+        photos=PhotosSettings(enabled=enabled, add_allowed=add_allowed)
     ))
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("enabled,content_type,add_allowed",
-                         each_choice(BOOLS, list(ContentType), list(AddAllowed)))
-def test_videos(browser: VKBrowser, event_id: int, enabled: bool, content_type: ContentType, add_allowed: AddAllowed) -> None:
+@pytest.mark.parametrize("enabled,add_allowed", each_choice(BOOLS, list(AddAllowed)))
+def test_videos(browser: VKBrowser, event_id: int, enabled: bool, add_allowed: AddAllowed) -> None:
     browser.set_sections(event_id, SectionsConfig(
-        videos=VideosSettings(enabled=enabled, content_type=content_type, add_allowed=add_allowed)
+        videos=VideosSettings(enabled=enabled, add_allowed=add_allowed)
     ))
 
 
@@ -59,11 +56,10 @@ def test_topics(browser: VKBrowser, event_id: int, enabled: bool, add_allowed: A
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("enabled,content_type,add_allowed",
-                         each_choice(BOOLS, list(ContentType), list(AddAllowed)))
-def test_music(browser: VKBrowser, event_id: int, enabled: bool, content_type: ContentType, add_allowed: AddAllowed) -> None:
+@pytest.mark.parametrize("enabled,add_allowed", each_choice(BOOLS, list(AddAllowed)))
+def test_music(browser: VKBrowser, event_id: int, enabled: bool, add_allowed: AddAllowed) -> None:
     browser.set_sections(event_id, SectionsConfig(
-        music=MusicSettings(enabled=enabled, content_type=content_type, add_allowed=add_allowed)
+        music=MusicSettings(enabled=enabled, add_allowed=add_allowed)
     ))
 
 
