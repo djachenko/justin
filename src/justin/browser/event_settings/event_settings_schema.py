@@ -14,12 +14,12 @@ from justin.browser.event_settings.event_settings_settings import (
 )
 from justin.browser.event_setup.event_setup_schema import EventSetupSchema
 from justin.browser.sections.section_schema import (
-    FilesSchema, ListSwitchSchema, MaterialsSchema, MusicSchema,
-    PhotosSchema, PostsSchema, ServicesSchema, TopicsSchema, VideosSchema,
+    FilesSchema, ListSwitchSchema, MaterialsSchema, MusicSchema, PhotosSchema,
+    PostsSchema, SectionSchema, ServicesSchema, TopicsSchema, VideosSchema,
 )
 from justin.browser.sections.section_settings import MainSection, SectionsConfig
 from justin.browser.shared.custom_select import set_custom_select
-from justin.browser.shared.elements import by_css, by_testid, clickable, present
+from justin.browser.shared.elements import by_css, by_testid, present
 from justin.browser.shared.pacing import AFTER_ACTION, PAGE_SETTLE, pause, varied
 from justin.browser.shared.page import wait_for_content
 from justin.browser.shared.save_button import click_save, click_save_if_present
@@ -28,8 +28,13 @@ _MESSAGES_SELECT = "settings_messages_enabled"
 _MESSAGES_ON = "1"
 _MESSAGES_OFF = "0"
 
-_SECTIONS_LIST = by_testid("list_enabled")
+_CONTENT_TABS_URL = "https://vk.com/event{event_id}/settings/content_tabs"
+_SECTIONS_URL = "https://vk.com/event{event_id}/settings/sections"
+
+_SECTIONS_LIST = by_testid("list_sections")
 _REORDER_TOGGLE = by_testid("sections_toggle_reorder")
+_REORDER_LIST = by_css("[role='main'] [role='list']")  # появляется только в режиме перестановки
+_TAB_CELLS = by_css("[data-testid^='content_tabs_'][data-testid$='_cell']")
 _MODAL_SAVE = by_testid("form_modal_save")
 _DRAG_HANDLE = by_css(".vkuiCellDragger__host")
 _DIALOG = by_css("[role='dialog']")
@@ -43,26 +48,24 @@ _DRAG_STEP = 0.08
 _DRAG_STEPS = 10
 _NUDGE = 3  # первый сдвиг на пиксели, без него перетаскивание не начинается
 
-# Секции с модалкой: атрибут SectionsConfig → схема. Порядок — порядок применения.
-_MODAL_SECTIONS: list[tuple[str, PostsSchema | PhotosSchema | VideosSchema | TopicsSchema
-                            | MusicSchema | FilesSchema | MaterialsSchema | ServicesSchema]] = [
-    ("posts", PostsSchema("wall")),
-    ("photos", PhotosSchema("photos")),
-    ("videos", VideosSchema("videos")),
-    ("topics", TopicsSchema("discussions")),
-    ("music", MusicSchema("audios")),
-    ("files", FilesSchema("files")),
-    ("materials", MaterialsSchema("wiki")),
-    ("services", ServicesSchema("services")),
+# Атрибут SectionsConfig → схема, по страницам. Порядок — порядок применения.
+_CONTENT_TABS: list[tuple[str, SectionSchema | ListSwitchSchema]] = [
+    ("posts", PostsSchema("content_tabs_wall_cell")),
+    ("photos", PhotosSchema("content_tabs_photos_cell")),
+    ("videos", VideosSchema("content_tabs_videos_cell")),
+    ("topics", TopicsSchema("content_tabs_discussions_cell")),
+    ("music", MusicSchema("content_tabs_audios_cell")),
+    ("services", ServicesSchema("content_tabs_services_cell")),
+    ("products", ListSwitchSchema("content_tabs_market_switch")),
+    ("clips", ListSwitchSchema("content_tabs_short_videos_switch")),
 ]
 
-# Секции, которые переключаются прямо в списке, без модалки.
-_LIST_SECTIONS: list[tuple[str, ListSwitchSchema]] = [
-    ("chats", ListSwitchSchema("chats")),
-    ("clips", ListSwitchSchema("short_videos")),
-    ("articles", ListSwitchSchema("articles")),
-    ("moments", ListSwitchSchema("narratives")),
-    ("products", ListSwitchSchema("market")),
+_SECTIONS: list[tuple[str, SectionSchema | ListSwitchSchema]] = [
+    ("files", FilesSchema("files")),
+    ("materials", MaterialsSchema("wiki")),
+    ("chats", ListSwitchSchema("chats_switch")),
+    ("articles", ListSwitchSchema("articles_switch")),
+    ("moments", ListSwitchSchema("narratives_switch")),
 ]
 
 
@@ -117,8 +120,8 @@ def _label_of(cell: WebElement) -> str:
     return cell.text.strip().splitlines()[0]
 
 
-def _enabled_cells(driver: WebDriver) -> list[WebElement]:
-    section_list = driver.find_element(*_SECTIONS_LIST)
+def _reorder_cells(driver: WebDriver) -> list[WebElement]:
+    section_list = driver.find_element(*_REORDER_LIST)
     children = driver.execute_script("return Array.from(arguments[0].children)", section_list)
 
     return [cell for cell in children if cell.text.strip()]
@@ -166,28 +169,43 @@ def _confirm_reorder(driver: WebDriver) -> None:
     pause(PAGE_SETTLE)
 
 
-def _check_first(driver: WebDriver, label: str, stage: str) -> None:
-    first_label = _label_of(_enabled_cells(driver)[0])
-
-    if first_label != label:
-        raise ValueError(f"Main section not applied {stage}: list starts with {first_label!r}, "
+def _check_first(labels: list[str], label: str, stage: str) -> None:
+    if labels[0] != label:
+        raise ValueError(f"Main section not applied {stage}: list starts with {labels[0]!r}, "
                          f"expected {label!r}")
 
 
 def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
                       section: MainSection) -> None:
-    """The main block is whatever sits first, so the section is dragged to the top of the list."""
-    label = _label_of(driver.find_element(*by_testid(section.value)))
+    """The main block is whatever tab sits first, so the tab is dragged to the top of the list.
 
-    clickable(wait, _REORDER_TOGGLE).click()
+    Not every enabled tab can be moved — only those the reorder list offers.
+    """
+    url = _CONTENT_TABS_URL.format(event_id=event_id)
+
+    driver.get(url)
+
+    label = _label_of(present(wait, by_testid(f"content_tabs_{section.value}_cell")))
+
+    toggle = present(wait, _REORDER_TOGGLE)
+
+    # VK выключает перестановку, когда двигать нечего — в списке меньше двух вкладок.
+    if not toggle.is_enabled():
+        print(f"    [main] nothing to reorder, {label!r} stays where it is")
+
+        return
+
+    toggle.click()
 
     pause(_REORDER_SETTLE)
 
-    cells = _enabled_cells(driver)
+    cells = _reorder_cells(driver)
+    movable = [_label_of(cell) for cell in cells]
     found = first(enumerate(cells), key=lambda pair: _label_of(pair[1]) == label)
 
     if found is None:
-        raise NoSuchElementException(f"Section {label!r} is not enabled, cannot make it main")
+        raise NoSuchElementException(f"Tab {label!r} is not in the reorder list {movable}, "
+                                     f"cannot make it main")
 
     position, cell = found
 
@@ -195,7 +213,7 @@ def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
         _drag_to_top(driver, cell, position)
 
         # Перетаскивание могло сорваться молча — проверяем до того, как сохранять порядок.
-        _check_first(driver, label, "after drag")
+        _check_first([_label_of(cell) for cell in _reorder_cells(driver)], label, "after drag")
 
     driver.find_element(*_REORDER_TOGGLE).click()
 
@@ -203,13 +221,16 @@ def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
 
     _confirm_reorder(driver)
 
-    driver.get(f"https://vk.com/event{event_id}/settings/sections")
+    driver.get(url)
 
-    present(wait, _SECTIONS_LIST)
+    present(wait, _REORDER_TOGGLE)
 
     pause(PAGE_SETTLE)
 
-    _check_first(driver, label, "after save")
+    # Вне режима перестановки списка нет — порядок читается по ячейкам вкладок.
+    shown = [_label_of(cell) for cell in driver.find_elements(*_TAB_CELLS)]
+
+    _check_first([shown_label for shown_label in shown if shown_label in movable], label, "after save")
 
 
 @dataclass(frozen=True)
@@ -247,21 +268,26 @@ class EventSettingsSchema:
     @staticmethod
     def _apply_sections(event_id: int, config: SectionsConfig,
                         driver: WebDriver, wait: WebDriverWait) -> None:
-        driver.get(f"https://vk.com/event{event_id}/settings/sections")
+        for url, ready, schemas in [
+            (_CONTENT_TABS_URL, _REORDER_TOGGLE, _CONTENT_TABS),
+            (_SECTIONS_URL, _SECTIONS_LIST, _SECTIONS),
+        ]:
+            pending = [(name, schema, getattr(config, name)) for name, schema in schemas
+                       if getattr(config, name) is not None]
 
-        present(wait, _SECTIONS_LIST)
-
-        pause(AFTER_ACTION)
-
-        for name, schema in [*_MODAL_SECTIONS, *_LIST_SECTIONS]:
-            settings = getattr(config, name)
-
-            if settings is None:
+            if not pending:
                 continue
 
-            print(f"    [{name}] {settings}")
+            driver.get(url.format(event_id=event_id))
 
-            schema(settings, driver, wait)
+            present(wait, ready)
+
+            pause(AFTER_ACTION)
+
+            for name, schema, settings in pending:
+                print(f"    [{name}] {settings}")
+
+                schema(settings, driver, wait)
 
         if config.main_section is not None:
             print(f"    [main] {config.main_section.name}")

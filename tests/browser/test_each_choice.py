@@ -1,18 +1,21 @@
 """Метод уникальных значений: покрытие сохраняется, длина падает до самого длинного списка."""
+from typing import Any
+
 import pytest
 
-from justin.browser.sections.section_settings import AddAllowed, ContentType
+from justin.browser.sections.section_settings import AddAllowed
 from tests.browser.each_choice import each_choice
 
 BOOLS = [True, False]
+THREE = ["a", "b", "c"]
 
 
 def test_length_is_the_longest_list() -> None:
-    assert len(each_choice(BOOLS, list(ContentType), list(AddAllowed))) == 3
+    assert len(each_choice(BOOLS, THREE, list(AddAllowed))) == 3
 
 
 def test_every_value_appears() -> None:
-    fields = [BOOLS, list(ContentType), list(AddAllowed)]
+    fields: list[list[Any]] = [BOOLS, THREE, list(AddAllowed)]
     rows = each_choice(*fields)
 
     for position, values in enumerate(fields):

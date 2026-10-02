@@ -7,12 +7,6 @@ class PostsPublishing(Enum):
     ADMINS_AND_EDITORS = "Administrators and editors"
 
 
-class ContentType(Enum):
-    ITEMS = "items"
-    ITEMS_AND_ALBUMS = "items_and_albums"
-    ALBUMS = "albums"
-
-
 class AddAllowed(Enum):
     MEMBERS = "members"
     ADMINS_AND_EDITORS = "admins_and_editors"
@@ -33,14 +27,12 @@ class PostsSettings(SectionSettings):
 @dataclass
 class PhotosSettings(SectionSettings):
     enabled: bool = True
-    content_type: ContentType = ContentType.ITEMS
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
 @dataclass
 class VideosSettings(SectionSettings):
     enabled: bool = True
-    content_type: ContentType = ContentType.ITEMS
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
@@ -53,7 +45,6 @@ class TopicsSettings(SectionSettings):
 @dataclass
 class MusicSettings(SectionSettings):
     enabled: bool = False
-    content_type: ContentType = ContentType.ITEMS
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
@@ -101,19 +92,13 @@ class ProductsSettings(SectionSettings):
 
 
 class MainSection(str, Enum):
-    """The main block is the first section in the enabled list — set by reordering."""
+    """The main block is the first tab on the Content tabs page — set by reordering."""
     POSTS = "wall"
     PHOTOS = "photos"
     VIDEOS = "videos"
     TOPICS = "discussions"
     MUSIC = "audios"
-    FILES = "files"
-    MATERIALS = "wiki"
     SERVICES = "services"
-    CHATS = "chats"
-    CLIPS = "short_videos"
-    ARTICLES = "articles"
-    MOMENTS = "narratives"
     PRODUCTS = "market"
 
 
