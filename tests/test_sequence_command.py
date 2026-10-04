@@ -60,6 +60,19 @@ def test_orders_by_exif_date_not_by_name(tmp_path: Path) -> None:
     assert seconds_by_name(tmp_path) == {"0000.jpg": 0, "0001.jpg": 1, "0002.jpg": 2}
 
 
+def test_orders_by_name_without_exif(tmp_path: Path) -> None:
+    for name in ("c", "a", "b"):
+        (tmp_path / f"{name}.jpg").write_text(name)
+
+    run_sequence(tmp_path)
+
+    assert {path.name: path.read_text() for path in tmp_path.iterdir()} == {
+        "0000.jpg": "a",
+        "0001.jpg": "b",
+        "0002.jpg": "c",
+    }
+
+
 def test_starts_from_given_number(tmp_path: Path) -> None:
     make_series(tmp_path, 2)
 

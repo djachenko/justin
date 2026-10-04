@@ -29,10 +29,9 @@ keywords = ["photo", "processing", "face-recognition", "vk"]
 # Они должны быть доступны в репозитории.
 dependencies = [
     "pyvko>=0.1.11",
-    "justin_utils>=0.0.1",
+    "justin_utils>=0.4.0",
     "Pillow",
     "lazy-object-proxy",
-    "exif",
     "google-api-python-client",
     "google-auth-oauthlib",
     "frozendict",
@@ -102,7 +101,6 @@ module = [
     "justin.shared.metafiles.metafile",
     "justin.shared.metafiles.migrations",
     "justin.shared.metafiles.readwriters",
-    "justin.shared.models.exif",
     "justin.shared.models.photoset",
     "justin.shared.models.photoset_migration",
     "justin.shared.models.sources",
