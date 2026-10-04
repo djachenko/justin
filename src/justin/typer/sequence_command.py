@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Annotated, List, Iterable
+from uuid import uuid4
 
 import typer
 from typer import Typer, Argument
@@ -28,14 +29,19 @@ class SequenceCommand(PatternCommand):
         files = exif_sorted(folder.files)
         files = [file.path for file in files]
 
+        renames = []
+
         for index, file in enumerate(files, start=self.__start):
             new_stem = f"{index:04}"
 
             if self.__prefix:
                 new_stem = f"{self.__prefix}_{new_stem}"
 
-            new_path = file.with_stem(new_stem)
-            file.rename(new_path)
+            temp_path = file.rename(file.with_stem(uuid4().hex))
+            renames.append((temp_path, file.with_stem(new_stem)))
+
+        for temp_path, new_path in renames:
+            temp_path.rename(new_path)
 
 
 app = Typer()
