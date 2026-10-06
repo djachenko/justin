@@ -2,6 +2,44 @@
 
 <!-- version list -->
 
+## v0.2.3 (2026-10-06)
+
+### Bug Fixes
+
+- Raise requires-python to 3.11 to match StrEnum and justin_utils
+  ([`4bf00f4`](https://github.com/djachenko/justin/commit/4bf00f48615e701b2b09413b40929d8cce05df25))
+
+- Rename in two passes so sequence never overwrites unprocessed files
+  ([`c3516f6`](https://github.com/djachenko/justin/commit/c3516f694922b1a990dd2e1bcbc728e428860455))
+
+### Build System
+
+- Pin ruff to 0.15.x, 0.16 brings new rules
+  ([`d9cf0e4`](https://github.com/djachenko/justin/commit/d9cf0e430418c8e1e8972f0da6187abac2800253))
+
+- Require pyvko 0.1.14 with declared runtime dependencies
+  ([`86726cb`](https://github.com/djachenko/justin/commit/86726cb378942590c93ff8516e0f546c1c7397d2))
+
+- Require pyvko 0.1.15 that imports on Python < 3.14
+  ([`d445cbf`](https://github.com/djachenko/justin/commit/d445cbf9e2fd5a1b00e39e93549edebfae2be98b))
+
+### Chores
+
+- Add DECISIONS.md to repo root
+  ([`e73dc26`](https://github.com/djachenko/justin/commit/e73dc2685c99c624d7357575eae50f8b901cd833))
+
+- Remove skills section from CLAUDE.md
+  ([`0f8df43`](https://github.com/djachenko/justin/commit/0f8df43fd373818309f748d1104569e218a6e227))
+
+- Remove VK browser decisions from public DECISIONS.md
+  ([`c378469`](https://github.com/djachenko/justin/commit/c3784691b2c2cf6e6edea3f63221f26916bb3a59))
+
+### Refactoring
+
+- Switch sequence to justin_utils.exif, drop local exif module
+  ([`4c2add2`](https://github.com/djachenko/justin/commit/4c2add22024aa580cec0aceddb0c67ca59234548))
+
+
 ## v0.2.2 (2026-07-08)
 
 ### Bug Fixes
