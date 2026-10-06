@@ -2,6 +2,29 @@
 
 <!-- version list -->
 
+## v0.3.0 (2026-10-06)
+
+### Bug Fixes
+
+- Resolve mypy errors in fix_metafile command
+  ([`73df96c`](https://github.com/djachenko/justin/commit/73df96cc839f893aca7202b75179735fadda3635))
+
+### Code Style
+
+- Clean up rich output whitespace, add handle_common stub
+  ([`9613a39`](https://github.com/djachenko/justin/commit/9613a397e88a5d356f68c69b5c5be1441a296177))
+
+### Features
+
+- Add fix_metafile output layer (plain + rich)
+  ([`c6aaaab`](https://github.com/djachenko/justin/commit/c6aaaab55c83beae0efe2025c1f09f677969ab7d))
+
+### Refactoring
+
+- Migrate fix_metafile_action to Typer command
+  ([`2a4e445`](https://github.com/djachenko/justin/commit/2a4e4457537bcc09dcbf539cf06a785a26f07b35))
+
+
 ## v0.2.3 (2026-10-06)
 
 ### Bug Fixes
