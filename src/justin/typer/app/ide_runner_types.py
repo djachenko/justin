@@ -8,6 +8,7 @@ class Commands(str, Enum):
     CHECK_RATIOS = "check_ratios"
     DEVELOP = "develop"
     FIX_METAFILE = "fix_metafile"
+    GROUP = "group"
     LOCAL_SYNC = "local_sync"
     MAKE_GIF = "make_gif"
     MOVE = "move"
