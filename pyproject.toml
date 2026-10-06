@@ -25,7 +25,7 @@ keywords = ["photo", "processing", "face-recognition", "vk"]
 # ВАЖНО: Здесь указываются зависимости как для публикации на PyPI.
 # Они должны быть доступны в репозитории.
 dependencies = [
-    "pyvko>=0.1.14",
+    "pyvko>=0.1.15",
     "justin_utils>=0.4.0",
     "Pillow",
     "lazy-object-proxy",
