@@ -14,7 +14,8 @@ from justin.typer.base_commands.pattern_command import Extra
 from justin.typer.fix_metafile_output import FixMetafileOutput, make_fix_metafile_output
 from justin_utils.filesystem import Folder
 from justin_utils.util import bfs
-from pyvko.aspects.events import Events
+from pyvko.aspects.events import Event, Events
+from pyvko.aspects.groups import Group
 from pyvko.aspects.posts import Posts
 
 
@@ -25,7 +26,7 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
     def __init__(self, context, patterns, output: FixMetafileOutput) -> None:
         super().__init__(context, patterns)
 
-        self.__cache = {}
+        self.__cache: dict[int, tuple[set[int], set[int]]] = {}
         self.__output = output
 
     def __warmup_cache(self, group: Posts) -> None:
@@ -95,16 +96,17 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
         if NoPostMetafile.has(timelapse_folder):
             return
 
-        if GroupMetafile.has(timelapse_folder):
-            group_id = GroupMetafile.get(timelapse_folder).group_id
-            group = self.context.pyvko.get(str(group_id))
+        if timelapse_metafile := GroupMetafile.get(timelapse_folder):
+            group_id = str(timelapse_metafile.group_id)
+            group = self.context.pyvko.get(group_id)
         else:
             root = timelapse_folder.parent
             group_ids = []
 
             def collect_group_ids(folder: Folder) -> List[Folder]:
-                if GroupMetafile.has(folder):
-                    group_ids.append(GroupMetafile.get(folder).group_id)
+                if group_metafile := GroupMetafile.get(folder):
+
+                    group_ids.append(group_metafile.group_id)
 
                     return []
                 else:
@@ -113,6 +115,7 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
             bfs(root, collect_group_ids)
 
             communities = [self.context.pyvko.get(group_id) for group_id in group_ids]
+            # noinspection PyUnresolvedReferences
             names_mapping = {community.name: community for community in communities}
             other = "Other community"
             no_post = "Wasn't published"
@@ -128,6 +131,8 @@ class FixMetafileCommand(DestinationsAwareCommand, EventUtils):
                 return
             else:
                 group = names_mapping[name]
+
+        assert isinstance(group, Group | Event)
 
         self.__fix_group(timelapse_folder, group)
         self.__fix_posts(timelapse_folder, extra[FixMetafileCommand.__ROOT_KEY], group)
@@ -211,6 +216,6 @@ app = Typer()
 @app.command()
 def fix_metafile(
         context: Annotated[typer.Context, Argument()],
-        pattern: Annotated[List[Path], Argument()] = (Path.cwd(),)
+        pattern: Annotated[List[Path], Argument()] = (Path.cwd(),)  # type: ignore[assignment]
 ) -> None:
     FixMetafileCommand(context.obj, pattern, make_fix_metafile_output()).run()
