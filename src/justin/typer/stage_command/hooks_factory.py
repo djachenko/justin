@@ -2,6 +2,7 @@ from functools import cached_property
 
 from justin.typer.stage_command.abstracts.hook import Hook
 from justin.typer.stage_command.hooks.candidates import CandidatesHook
+from justin.typer.stage_command.hooks.edited import EditedHook
 from justin.typer.stage_command.hooks.progress import ProgressHook
 
 
@@ -13,3 +14,7 @@ class HooksFactory:
     @cached_property
     def candidates(self) -> Hook:
         return CandidatesHook()
+
+    @cached_property
+    def edited(self) -> Hook:
+        return EditedHook()
