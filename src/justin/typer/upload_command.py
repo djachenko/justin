@@ -117,7 +117,7 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
         set_name = extra[UploadCommand.SET_NAME]
 
         if part.name != set_name:
-            set_name = set_name + "/" + part.name
+            set_name = set_name + "." + part.name
 
         print(f"Scheduling {set_name}... ")
 
@@ -452,18 +452,10 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
             })
 
         self.context.cullen_path.mkdir(parents=True, exist_ok=True)
-        cullen_json_path = self.context.cullen_path / f"{set_name}.json"
+        cullen_json_path = self.context.cullen_path / f"{album_name}.json"
 
         with cullen_json_path.open(mode="w") as cullen_json:
             json.dump(links_mapping, cullen_json, indent=4)
-
-        current_jsons = [item for item in self.context.cullen_path.iterdir() if item.is_file() and item.suffix == ".json" and item.stem != "index"]
-        current_jsons = [item.name for item in current_jsons]
-        current_jsons.sort()
-
-        with (self.context.cullen_path / "index.json").open(mode="w") as index_json:
-            json.dump(current_jsons, index_json, indent=4)
-
 
 
     # endregion upload strategies
