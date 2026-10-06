@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Annotated, List, Iterable
+from uuid import uuid4
 
 import typer
 from typer import Typer, Argument
@@ -7,7 +8,7 @@ from typer import Typer, Argument
 from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
 from justin_utils.filesystem import Folder
-from justin.shared.models.exif import exif_sorted
+from justin_utils.exif import exif_sorted
 from justin.typer.base_commands.pattern_command import PatternCommand
 
 
@@ -25,8 +26,9 @@ class SequenceCommand(PatternCommand):
         self.__start = start
     
     def run_for_folder(self, folder: Folder, extra: Extra) -> None:
-        files = exif_sorted(folder.files)
-        files = [file.path for file in files]
+        files = exif_sorted(file.path for file in folder.files)
+
+        renames = []
 
         for index, file in enumerate(files, start=self.__start):
             new_stem = f"{index:04}"
@@ -34,8 +36,11 @@ class SequenceCommand(PatternCommand):
             if self.__prefix:
                 new_stem = f"{self.__prefix}_{new_stem}"
 
-            new_path = file.with_stem(new_stem)
-            file.rename(new_path)
+            temp_path = file.rename(file.with_stem(uuid4().hex))
+            renames.append((temp_path, file.with_stem(new_stem)))
+
+        for temp_path, new_path in renames:
+            temp_path.rename(new_path)
 
 
 app = Typer()

@@ -7,7 +7,7 @@ name = "justin"
 version = "0.2.2"
 description = "Photo processing and management tool"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 authors = [
     { name = "Harry Djachenko", email = "i.s.djachenko@gmail.com" }
 ]
@@ -15,9 +15,6 @@ license = { text = "MIT" }
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -28,11 +25,10 @@ keywords = ["photo", "processing", "face-recognition", "vk"]
 # ВАЖНО: Здесь указываются зависимости как для публикации на PyPI.
 # Они должны быть доступны в репозитории.
 dependencies = [
-    "pyvko>=0.1.11",
-    "justin_utils>=0.0.1",
+    "pyvko>=0.1.15",
+    "justin_utils>=0.4.0",
     "Pillow",
     "lazy-object-proxy",
-    "exif",
     "google-api-python-client",
     "google-auth-oauthlib",
     "frozendict",
@@ -45,7 +41,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "mypy>=1.0",
-    "ruff>=0.1.0",
+    "ruff>=0.15,<0.16",
     "black>=23.0",
 ]
 server = [
@@ -56,7 +52,7 @@ server = [
 ]
 test = [
     "pytest",
-    "ruff",
+    "ruff>=0.15,<0.16",
     "mypy",
 ]
 release = [
@@ -102,7 +98,6 @@ module = [
     "justin.shared.metafiles.metafile",
     "justin.shared.metafiles.migrations",
     "justin.shared.metafiles.readwriters",
-    "justin.shared.models.exif",
     "justin.shared.models.photoset",
     "justin.shared.models.photoset_migration",
     "justin.shared.models.sources",
