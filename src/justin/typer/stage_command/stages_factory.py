@@ -69,6 +69,7 @@ class StagesFactory:
             ],
             hooks=[
                 self.__hooks_factory.progress,
+                self.__hooks_factory.edited,
                 self.__hooks_factory.candidates,
             ],
         )
