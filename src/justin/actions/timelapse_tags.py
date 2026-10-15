@@ -5,14 +5,14 @@ class Tag(StrEnum):
     # ── project panel ─────────────────────────────────────────────────────────
     Project                      = "Project"                       # graph root: the only top-level chunk without an id
     RootProjectItem              = "RootProjectItem"               # root of the project panel tree
-    BinProjectItem               = "BinProjectItem"                # bin listing clips via <Item ObjectURef>
+    BinProjectItem               = "BinProjectItem"                # folder in the panel (from a folder import), listing clips via <Item ObjectURef>
 
     # ── clip hierarchy ────────────────────────────────────────────────────────
     ClipProjectItem              = "ClipProjectItem"               # clip's entry in the project panel
-    MasterClip                   = "MasterClip"                    # container grouping video+audio sides of one file
+    MasterClip                   = "MasterClip"                    # project material (a file or a sequence) grouping its video+audio sides
     AudioClip                    = "AudioClip"                     # audio half of a master clip
     VideoClip                    = "VideoClip"                     # video half of a master clip
-    SubClip                      = "SubClip"                       # timeline slot playing a portion of a master clip
+    SubClip                      = "SubClip"                       # which master clip a slot plays, under what name; the range is in its clip
 
     # ── role tags ─────────────────────────────────────────────────────────────
     # Not a type: names the role a pointer plays, and resolves to either half.
@@ -22,11 +22,11 @@ class Tag(StrEnum):
     Media                        = "Media"                         # file reference — path, streams, codec info
     AudioStream                  = "AudioStream"                   # audio stream within the media file
     VideoStream                  = "VideoStream"                   # video stream within the media file
-    AudioMediaSource             = "AudioMediaSource"              # raw audio data source for an audio stream
-    VideoMediaSource             = "VideoMediaSource"              # raw video data source for a video stream
+    AudioMediaSource             = "AudioMediaSource"              # audio side of a media file: clips → it → Media
+    VideoMediaSource             = "VideoMediaSource"              # video side of a media file: clips → it → Media
 
     # ── clip metadata ─────────────────────────────────────────────────────────
-    Markers                      = "Markers"                       # in/out markers attached to a clip
+    Markers                      = "Markers"                       # in/out markers; one block can be shared by several clips
     ClipLoggingInfo              = "ClipLoggingInfo"               # logging metadata (scene, shot, description)
     SecondaryContent             = "SecondaryContent"              # supplementary clip data (waveform cache path, etc.)
 
@@ -40,5 +40,5 @@ class Tag(StrEnum):
     Sequence                     = "Sequence"                      # the timeline itself
     VideoClipTrack               = "VideoClipTrack"                # video track holding frames and cover
     AudioClipTrack               = "AudioClipTrack"                # audio track holding sounds
-    AudioClipTrackItem           = "AudioClipTrackItem"            # slot on the audio track referencing an audio clip
-    VideoClipTrackItem           = "VideoClipTrackItem"            # slot on the video track referencing a video clip
+    AudioClipTrackItem           = "AudioClipTrackItem"            # slot on the audio track: position, effects, <SubClip> pointer
+    VideoClipTrackItem           = "VideoClipTrackItem"            # slot on the video track: position, effects, <SubClip> pointer
