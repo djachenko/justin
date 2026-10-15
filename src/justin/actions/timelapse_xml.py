@@ -160,6 +160,26 @@ class Xml:
 
         return self
 
+    def remove_unreachable(self) -> Self:
+        """
+        Remove every top-level chunk the project can no longer reach.
+
+        Premiere saves a graph with one root — the ``Project`` chunk, the only one
+        without an id — and every other chunk reachable from it by pointers.
+        remove_dangling_refs only drops chunks whose own pointer broke; a chunk
+        nothing points at any more (a removed cover's Markers, the SubClip of a
+        sound that stays in the panel only) has no broken pointer and survives it.
+        This walks pointers from the root and removes whatever it doesn't reach.
+
+        Every tag counts as a target of a numeric pointer: a number shared by two
+        classes keeps both chunks alive, which errs on the side of keeping.
+        """
+        blocks = self.toplevel_blocks()
+        reached = blocks.reachable_cluster(blocks.by_tag(Tag.Project), {block.tag for block in blocks})
+        reached_starts = {block.start for block in reached}
+
+        return self.remove_blocks_by_positions([block.span for block in blocks if block.start not in reached_starts])
+
     def toplevel_blocks(self) -> Blocks:
         """Break the project text into its top-level chunks.
 
