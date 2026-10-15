@@ -3,6 +3,7 @@ from enum import StrEnum
 
 class Tag(StrEnum):
     # ── project panel ─────────────────────────────────────────────────────────
+    Project                      = "Project"                       # graph root: the only top-level chunk without an id
     RootProjectItem              = "RootProjectItem"               # root of the project panel tree
     BinProjectItem               = "BinProjectItem"                # bin listing clips via <Item ObjectURef>
 
