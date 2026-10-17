@@ -122,11 +122,8 @@ def generate(timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] 
 # scenario matrix — every combination must produce an openable project
 # --------------------------------------------------------------------------- #
 
-# The format axis is not cosmetic: an mp3 is realized by stripping the template's
-# video half (AudioSound.adapt), an mp4 keeps it (VideoSound). Only the mp3 side
-# used to be generated here, so the whole video-keeping path went through no
-# project-level check at all — and the mixed pool puts both in one document, where
-# their id-spaces have to stay apart.
+# mp3 strips the template's video half (AudioSound), mp4 keeps it (VideoSound);
+# the mixed pool checks both id-spaces stay apart in one document.
 @pytest.mark.parametrize("pool", [("alpha.mp3", "beta.mp3"), ("alpha.mp3", "song.mp4")],
                          ids=["audio_only", "mixed_formats"])
 @pytest.mark.parametrize("n_sounds", [0, 1, 2])
@@ -160,8 +157,7 @@ def test_partial_timeline_selection_keeps_only_chosen_sound(tmp_path):
 
     assert track_item_count(xml) == 1
     assert {"alpha.mp3", "beta.mp3"} <= panel_item_names(xml)
-    # The single track item must be beta, not alpha. Read it off the document:
-    # slot → its SubClip → the file the SubClip names.
+    # slot → SubClip → file name
     document = Document(Xml(xml).toplevel_blocks())
     names = [slot.subclip.name for slot in document.of_type(AudioClipTrackItem)]
 
@@ -177,16 +173,13 @@ def test_timeline_sounds_are_laid_out_sequentially(tmp_path):
 
     ends = [int(e) for e in re.findall(r"<End>(\d+)</End>", _audio_track_items_region(xml))]
     starts = [int(s) for s in re.findall(r"<Start>(\d+)</Start>", _audio_track_items_region(xml))]
-    # First clip ends at its own duration; second starts there and ends after both.
     assert alpha_dur in ends
-    assert alpha_dur in starts  # second clip starts where the first ended
+    assert alpha_dur in starts
     assert alpha_dur + beta_dur in ends
 
 
 def test_layout_skips_a_slot_the_document_does_not_have(tmp_path):
-    # The layout resolves each slot id through the model. An id that names nothing
-    # must be stepped over, not crash and not shift the sounds that do resolve:
-    # a half-laid-out timeline is worse than a missing clip.
+    # An unknown slot id is skipped without shifting the slots that resolve.
     timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3",))
     sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
     out = timelapse_dir / "out.prproj"
@@ -200,7 +193,7 @@ def test_layout_skips_a_slot_the_document_does_not_have(tmp_path):
 
     laid_out = Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
 
-    # The real slot was still laid out — and from tick 0, as the first of the pair.
+    # The real slot starts at tick 0.
     assert f"<End>{ghost.duration_ticks}</End>" in laid_out.block.text
     assert "<Start>" not in laid_out.block.text
 
@@ -238,9 +231,7 @@ def test_reproduces_sample_template_structure(tmp_path):
 # --------------------------------------------------------------------------- #
 
 def test_clone_introduces_no_new_classids(tmp_path):
-    # The clone bug regenerated ClassIDs (they are uuids), so a clone's blocks
-    # carried ClassIDs found nowhere else and Premiere refused to open the file.
-    # Guard: every ClassID in the output already exists in the template.
+    # Clones must reuse template ClassIDs: fresh ones make Premiere reject the file.
     timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
     xml = generate(timelapse_dir, timeline_sounds=["alpha", "beta"])
 
@@ -249,7 +240,6 @@ def test_clone_introduces_no_new_classids(tmp_path):
     output_classids = set(re.findall(r'ClassID="([^"]+)"', xml))
 
     assert output_classids <= template_classids
-    # ...while object identities are fresh (no duplicate uuids).
     assert not duplicate_uuids(xml)
 
 
