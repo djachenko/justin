@@ -89,7 +89,7 @@ class Xml:
         It also tidies the two lists that name clips by pointer — the project's clip
         list (``<Items>``) and each track's clip list (``<TrackItems>``).
         """
-        for _ in range(10):
+        while True:
             # Collect all ids/uuids that actually exist right now.
             live_uids = set(re.findall(TimelapseRe.OBJECT_UID, self._xml))
             live_ids = set(re.findall(TimelapseRe.OBJECT_ID, self._xml))
