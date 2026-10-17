@@ -12,8 +12,6 @@ tested in test_timelapse_model.
 import re
 import uuid
 
-import pytest
-
 from justin.actions.timelapse_xml import Xml
 from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 
@@ -23,12 +21,6 @@ from justin.actions.timelapse_xml_ops import TimelapseXmlOps
 # --------------------------------------------------------------------------- #
 
 class TestQueries:
-    def test_block_uid_found(self):
-        assert TimelapseXmlOps.block_uid('<Foo ObjectUID="abc-123" ClassID="x"/>') == "abc-123"
-
-    def test_block_uid_missing(self):
-        assert TimelapseXmlOps.block_uid("<Foo ObjectID=\"5\"/>") is None
-
     def test_clip_project_item_uid_found(self):
         text = '\t<ClipProjectItem ObjectUID="panel-uid" Version="1">'
         assert TimelapseXmlOps.clip_project_item_uid(text) == "panel-uid"

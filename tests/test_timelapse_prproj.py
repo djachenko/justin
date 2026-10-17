@@ -20,8 +20,9 @@ import pytest
 
 from justin.actions.timelapse_model import AudioClipTrackItem, Document
 from justin.actions.timelapse_prproj import (
-    TimelapseSchema,
+    _lay_out_timeline,
     _resolve_timeline_sounds,
+    build_prproj,
     generate_prproj,
     _TEMPLATE_DATA,
 )
@@ -114,7 +115,7 @@ def generate(timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] 
     sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
     settings = TimelapseSettings(fps=fps, timeline_sounds=timeline_sounds or [])
     out = timelapse_dir / "out.prproj"
-    TimelapseSchema()(out, sources, settings)
+    build_prproj(out, sources, settings)
     return read_project(out)
 
 
@@ -183,13 +184,13 @@ def test_layout_skips_a_slot_the_document_does_not_have(tmp_path):
     timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3",))
     sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
     out = timelapse_dir / "out.prproj"
-    TimelapseSchema()(out, sources, TimelapseSettings(timeline_sounds=["alpha.mp3"]))
+    build_prproj(out, sources, TimelapseSettings(timeline_sounds=["alpha.mp3"]))
 
     xml = Xml(read_project(out))
     slot = Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
     ghost = Sound.from_path(Path("ghost.mp3"))
 
-    TimelapseSchema._lay_out_timeline(xml, [("999999", ghost), (slot.identity, ghost)])
+    _lay_out_timeline(xml,[("999999", ghost), (slot.identity, ghost)])
 
     laid_out = Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
 
