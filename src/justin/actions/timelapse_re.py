@@ -146,14 +146,6 @@ class TimelapseRe:
     #   "/>                        — closing quote + self-closing tag
     VIDEO_STREAM_REF = r'<VideoStream ObjectRef="(\d+)"/>'
 
-    # The AudioStream pointer inside a Media block. Every sound has one (mp4 and
-    # audio-only alike); only the VideoStream half is optional.
-    # → media graph
-    #   <AudioStream ObjectRef="   — tag name + attribute prefix
-    #   (\d+)                      — capture: the AudioStream block's id
-    #   "/>                        — closing quote + self-closing tag
-    AUDIO_STREAM_REF = r'<AudioStream ObjectRef="(\d+)"/>'
-
     # The Name element in any block (typically a SubClip carries the filename here).
     # → SubClip
     #   <Name>      — opening tag

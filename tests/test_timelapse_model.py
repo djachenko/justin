@@ -10,6 +10,8 @@ The last test checks the hardcoded ``ClassID`` constants against the real
 template, so a wrong or stale uuid cannot pass silently.
 """
 
+import re
+
 import pytest
 
 from justin.actions import timelapse_model as model
@@ -34,6 +36,7 @@ from justin.actions.timelapse_model import (
     VideoStream,
 )
 from justin.actions.timelapse_prproj import _TEMPLATE_DATA
+from justin.actions.timelapse_re import TimelapseRe
 from justin.actions.timelapse_xml import Xml
 
 
@@ -149,7 +152,7 @@ class TestAccessors:
         obj = list(doc)[0]
 
         assert obj.refs == {"56"}
-        assert obj.urefs == {uid}
+        assert re.findall(TimelapseRe.OBJECT_UREF, obj.block.text) == [uid]
 
     def test_refs_collects_every_pointer_once(self):
         doc = build(block(
@@ -159,12 +162,10 @@ class TestAccessors:
 
         assert list(doc)[0].refs == {"7", "9"}
 
-    def test_no_pointers_gives_empty_sets(self):
+    def test_no_pointers_gives_empty_set(self):
         doc = build(block("AudioClip", AUDIO_CLIP, "5"))
-        obj = list(doc)[0]
 
-        assert obj.refs == set()
-        assert obj.urefs == set()
+        assert list(doc)[0].refs == set()
 
     def test_parse_dispatches_a_lone_block(self):
         # Document goes through parse, but the entry point is public on its own.
@@ -193,14 +194,6 @@ class TestLookup:
         assert doc.by_ref(AudioClip, "999") is None
         assert doc.by_ref(AudioClip, None) is None
 
-    def test_by_uref_needs_no_class(self):
-        uid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-        doc = build(block("MasterClip", MASTER_CLIP, uid, "<Name>master</Name>"))
-
-        assert doc.by_uref(uid).name == "master"
-        assert doc.by_uref("no-such-uid") is None
-        assert doc.by_uref(None) is None  # an absent pointer resolves to nothing, like by_ref
-
     def test_of_type_filters(self):
         doc = build(
             block("AudioClip", AUDIO_CLIP, "1"),
@@ -221,17 +214,15 @@ class TestEdges:
 
         assert doc.of_type(AudioClipTrackItem)[0].subclip.identity == "104"
 
-    def test_media_streams_split(self):
+    def test_media_video_stream_resolves(self):
         uid = "cccccccc-dddd-eeee-ffff-000000000000"
         doc = build(
             block("Media", Media.CLASS.uuid, uid, '<VideoStream ObjectRef="73"/><AudioStream ObjectRef="80"/>'),
             block("VideoStream", VideoStream.CLASS.uuid, "73"),
             block("AudioStream", AudioStream.CLASS.uuid, "80"),
         )
-        media = doc.of_type(Media)[0]
 
-        assert media.video_stream.identity == "73"
-        assert media.audio_stream.identity == "80"
+        assert doc.of_type(Media)[0].video_stream.identity == "73"
 
     def test_edge_is_none_when_pointer_absent(self):
         # A media with no video stream (audio-only) — the edge simply finds nothing.
@@ -517,25 +508,17 @@ class TestAgainstRealTemplate:
 
         assert types == {VideoClip, AudioClip}
 
-    def test_sound_media_carries_both_streams(self):
+    def test_sound_media_carries_a_video_stream(self):
         doc = self.document()
         sound_media = next(md for md in doc.of_type(Media) if "TMPL_SOUND" in md.block.text)
 
         assert isinstance(sound_media.video_stream, VideoStream)
-        assert isinstance(sound_media.audio_stream, AudioStream)
-
-    def test_frames_media_has_no_audio(self):
-        # An image sequence has a picture stream but no sound.
-        doc = self.document()
-        frames_media = next(md for md in doc.of_type(Media) if "TMPL_SOUND" not in md.block.text)
-
-        assert frames_media.audio_stream is None
 
     def test_every_block_parses(self):
-        doc = self.document()
+        objects = list(self.document())
 
-        assert len(doc) > 0
-        assert all(isinstance(o, PremiereObject) for o in doc)
+        assert objects
+        assert all(isinstance(o, PremiereObject) for o in objects)
 
     def test_hardcoded_class_ids_match_the_template(self):
         # Guards against a mistyped or stale ClassID constant: for every modelled
@@ -580,12 +563,12 @@ class TestAgainstRealTemplate:
     def test_video_stream_pointer_is_removed_from_the_real_media(self):
         # The sound's media — the only one carrying both halves.
         doc = self.document()
-        media = next(m for m in doc.of_type(Media) if m.video_stream and m.audio_stream)
+        media = next(m for m in doc.of_type(Media) if m.video_stream and "<AudioStream " in m.block.text)
 
         text = media.without_video_stream(media.video_stream).text
 
         assert f'<VideoStream ObjectRef="{media.video_stream.block.id}"/>' not in text
-        assert f'<AudioStream ObjectRef="{media.audio_stream.block.id}"/>' in text
+        assert "<AudioStream ObjectRef=" in text
 
     def test_registry_covers_every_modelled_class_once(self):
         registry = PremiereObject._BY_CLASS_UUID
