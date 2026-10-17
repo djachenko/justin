@@ -22,15 +22,6 @@ class TimelapseXmlOps:
     # -----------------------------------------------------------------------
 
     @staticmethod
-    def block_uid(text: str) -> str | None:
-        """
-        The ObjectUID of a block — a globally-unique UUID that identifies this specific
-        instance. Used for ClipProjectItem blocks: we read the template panel entry's UID
-        so we know where to anchor the new entries in the panel list.
-        """
-        return search_group(TimelapseRe.OBJECT_UID, text)
-
-    @staticmethod
     def clip_project_item_uid(text: str) -> str | None:
         """
         The UUID of a ClipProjectItem inside a cloned block cluster.

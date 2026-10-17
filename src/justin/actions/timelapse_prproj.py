@@ -34,12 +34,12 @@ finds where each block starts and ends in the raw text, and we cut blocks out or
 splice them back in with ordinary string slicing.
 """
 
-from dataclasses import dataclass
 from importlib.resources import files as _resource_files
 from pathlib import Path
 
 from justin.actions.timelapse_block import Edit
 from justin.actions.timelapse_model import AudioClipTrackItem, Document
+from justin.actions.timelapse_re import TimelapseRe, search_group
 from justin.actions.timelapse_settings import TimelapseSettings
 from justin.actions.timelapse_sound import Sound
 from justin.actions.timelapse_sources import TimelapseSources
@@ -56,7 +56,7 @@ _TEMPLATE_DATA: bytes = (
 )
 
 # Placeholder strings baked into the template live in TimelapseTemplate; each
-# _actualize_* method (and Sound.replace_name) swaps them for real values.
+# _actualize_* function (and Sound.replace_name) swaps them for real values.
 
 # Numeric values baked into the template (106 frames at 10 fps + 1 cover frame).
 _TMPL_FPS_TICKS  = timelapse_ticks.ticks_per_frame(10)
@@ -84,257 +84,247 @@ def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) ->
 
 
 
-@dataclass(frozen=True)
-class TimelapseSchema:
+def build_prproj(
+    output_path: Path,
+    sources: TimelapseSources,
+    settings: TimelapseSettings = TimelapseSettings(),
+) -> Path:
+    timeline_sounds = _resolve_timeline_sounds(sources.sounds, settings.timeline_sounds)
 
-    def __call__(
-        self,
-        output_path: Path,
-        sources: TimelapseSources,
-        settings: TimelapseSettings = TimelapseSettings(),
-    ) -> Path:
-        sounds = sources.sounds or []
-        timeline_sounds = _resolve_timeline_sounds(sounds, settings.timeline_sounds)
+    frame_count = sources.frames_count
+    first_frame = sources.first_frame.name
 
-        frame_count = sources.frames_count
-        first_frame = sources.first_frame.name
+    ticks_per_frame = timelapse_ticks.ticks_per_frame(settings.fps)
+    image_sequence_duration = frame_count * ticks_per_frame
 
-        ticks_per_frame = timelapse_ticks.ticks_per_frame(settings.fps)
-        image_sequence_duration = frame_count * ticks_per_frame
+    # The cover occupies one extra frame at the start of the sequence.
+    sequence_duration = image_sequence_duration
 
-        # The cover occupies one extra frame at the start of the sequence.
-        sequence_duration = frame_count * ticks_per_frame
+    if sources.cover:
+        sequence_duration += ticks_per_frame
 
-        if sources.cover:
-            sequence_duration += ticks_per_frame
+    xml = Xml.from_gzip_bytes(_TEMPLATE_DATA)
 
-        xml = Xml.from_gzip_bytes(_TEMPLATE_DATA)
+    _actualize_paths(xml, sources.name, first_frame) # paths to actual files
+    _actualize_ticks(xml, ticks_per_frame, image_sequence_duration, sequence_duration) # fps and durations
+    TimelapseXmlOps.clear_audio_cache_paths(xml) # drop caches (they will be regenerated anyway)
 
-        self._actualize_paths(xml, sources.name, first_frame) # paths to actual files
-        self._actualize_ticks(xml, ticks_per_frame, image_sequence_duration, sequence_duration) # fps and durations
-        self._clear_audio_caches(xml) # drop caches (they will be regenerated anyway)
+    if not sources.sounds:
+        _remove_sound(xml)
+    else:
+        template_slot_id, timeline_slots = _place_in_panel(xml, sources.sounds, {sound.name for sound in timeline_sounds})
 
-        if not sounds:
-            self._remove_sound(xml)
+        _place_on_timeline(xml, template_slot_id, timeline_slots)
+
+    if not sources.cover:
+        _remove_cover(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
+
+    xml.remove_dangling_refs()
+    xml.to_prproj(output_path)
+
+    return output_path
+
+
+def _actualize_paths(xml: Xml, name: str, first_frame: str) -> None:
+    # Premiere uses relative paths (./frames/, ./sound/) to locate media,
+    # so we only need to swap the per-filename placeholders and the project name.
+    xml.replace(TimelapseTemplate.FIRST_FRAME, first_frame)
+    xml.replace(TimelapseTemplate.PHOTOSET, name)
+
+
+def _actualize_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
+    for tag in _FPS_TICKS_TAGS:
+        xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
+
+    # End of the frames clip on the timeline: it sits right after the cover
+    # frame, so in the template this is the whole sequence (cover + all frames).
+    # With no cover, _remove_cover pulls it back to image_sequence_duration.
+    xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{sequence_duration}</End>")
+
+    for tag in _FRAMES_DUR_TAGS:
+        xml.replace(f"<{tag}>{_TMPL_FRAMES_DUR}</{tag}>", f"<{tag}>{image_sequence_duration}</{tag}>")
+
+
+def _remove_sound(xml: Xml) -> None:
+    """Remove the template's sound completely (this timelapse has none)."""
+    sound_blocks = xml.toplevel_blocks().containing(TimelapseTemplate.SOUND_NAME)
+
+    xml.remove_blocks_by_positions([b.span for b in sound_blocks])
+
+
+def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> tuple[str | None, list[tuple[str, Sound]]]:
+    """
+    Realize every sound from the template and put it in the project panel.
+
+    The template carries one sound as a full cluster: a project-panel clip plus a
+    timeline slot fused to it (the slot shares the clip's audio media). We split it
+    once — ``panel_template`` (the panel clip) and the full ``template`` (clip +
+    slot). A sound wanted on the timeline is realized from the full template (its
+    slot co-clones, so it stays wired to the clip for free); a panel-only sound
+    from ``panel_template``.
+
+    Two phases: **realize** — each Sound renames + adapts its own section, in the
+    template's ids; **integrate** — assign each a fresh, non-clashing id-space,
+    splice them in, register them in the panel. Returns the template slot id and
+    the new slots as ``(slot id, sound)`` pairs, which is all the timeline needs.
+    """
+    blocks = xml.toplevel_blocks()
+    panel_roots = blocks.containing(TimelapseTemplate.SOUND_NAME)
+    timeline_roots = blocks.by_tag(Tag.AudioClipTrackItem)
+
+    panel_template = blocks.reachable_cluster(panel_roots, _CLIP_MEDIA_TYPES)          # panel clip only
+    timeline_template = blocks.reachable_cluster(panel_roots + timeline_roots, _CLIP_MEDIA_TYPES)        # + its timeline slot
+
+    # Anchors: the template's own panel uid and slot id. Read them now, because
+    # the template blocks are deleted at the end of this function. The <Item>/
+    # <TrackItem> lines naming them sit outside the cluster and survive, so
+    # afterwards we can still find them and splice the clones in right after.
+
+
+    if template_panel := panel_template.by_tag(Tag.ClipProjectItem).first():
+        template_panel_uid = search_group(TimelapseRe.OBJECT_UID, template_panel.text)
+    else:
+        template_panel_uid = None
+
+    if template_slot := timeline_template.by_tag(Tag.AudioClipTrackItem).first():
+        template_slot_id = template_slot.id
+    else:
+        template_slot_id = None
+
+    insert_at = max(block.end for block in timeline_template)
+    max_id = xml.max_object_id()
+
+    # realize: template → each sound's own section (renamed + adapted, template ids)
+    new_sound_sections: list[str] = []
+
+    for sound in sounds:
+        if sound.name in timeline_names:
+            source = timeline_template
         else:
-            template_slot_id, timeline_slots = self._place_in_panel(xml, sounds, {sound.name for sound in timeline_sounds})
+            source = panel_template
 
-            self._place_on_timeline(xml, template_slot_id, timeline_slots)
+        new_sound_sections.append(sound.adapt(str(source)))
 
-        if not sources.cover:
-            self._remove_cover(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
+    # integrate: fresh ids, splice in, collect what's registrable
+    clones = ""
+    panel_uids: list[str] = []
+    timeline_slots: list[tuple[str, Sound]] = []
 
-        xml.remove_dangling_refs()
-        xml.to_prproj(output_path)
+    for n, (sound, section) in enumerate(zip(sounds, new_sound_sections), start=1):
+        section = TimelapseXmlOps.recount_ids(section, (max_id + 1) * n)
+        clones += section
 
-        return output_path
+        if uid := TimelapseXmlOps.clip_project_item_uid(section):
+            panel_uids.append(uid)
 
-    @staticmethod
-    def _actualize_paths(xml: Xml, name: str, first_frame: str) -> None:
-        # Premiere uses relative paths (./frames/, ./sound/) to locate media,
-        # so we only need to swap the per-filename placeholders and the project name.
-        xml.replace(f"./frames/{TimelapseTemplate.FIRST_FRAME}", f"./frames/{first_frame}")
-        xml.replace(TimelapseTemplate.FIRST_FRAME, first_frame)
-        xml.replace(TimelapseTemplate.PHOTOSET, name)
+        # Only full-template (timeline) sections carry a slot; panel-only ones don't.
+        # Keep the slot paired with the sound it was realized from: that pairing is
+        # exactly what the layout needs, and it is known here for free.
+        if slot_id := TimelapseXmlOps.audio_clip_track_item_id(section):
+            timeline_slots.append((slot_id, sound))
 
-    @staticmethod
-    def _actualize_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
-        for tag in _FPS_TICKS_TAGS:
-            xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
+    xml.insert(insert_at, clones)
+    xml.remove_blocks_by_positions([block.span for block in timeline_template])
 
-        # End of the frames clip on the timeline: it sits right after the cover
-        # frame, so in the template this is the whole sequence (cover + all frames).
-        # With no cover, _remove_cover pulls it back to image_sequence_duration.
-        xml.replace(f"<End>{_TMPL_SEQ_DUR}</End>", f"<End>{sequence_duration}</End>")
+    _register_in_panel(xml, template_panel_uid, panel_uids)
 
-        for tag in _FRAMES_DUR_TAGS:
-            xml.replace(f"<{tag}>{_TMPL_FRAMES_DUR}</{tag}>", f"<{tag}>{image_sequence_duration}</{tag}>")
-
-    @staticmethod
-    def _clear_audio_caches(xml: Xml) -> None:
-        TimelapseXmlOps.clear_audio_cache_paths(xml)
-
-    @staticmethod
-    def _remove_sound(xml: Xml) -> None:
-        """Remove the template's sound completely (this timelapse has none)."""
-        sound_blocks = xml.toplevel_blocks().containing(TimelapseTemplate.SOUND_NAME)
-
-        xml.remove_blocks_by_positions([b.span for b in sound_blocks])
-
-    @staticmethod
-    def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> tuple[str | None, list[tuple[str, Sound]]]:
-        """
-        Realize every sound from the template and put it in the project panel.
-
-        The template carries one sound as a full cluster: a project-panel clip plus a
-        timeline slot fused to it (the slot shares the clip's audio media). We split it
-        once — ``panel_template`` (the panel clip) and the full ``template`` (clip +
-        slot). A sound wanted on the timeline is realized from the full template (its
-        slot co-clones, so it stays wired to the clip for free); a panel-only sound
-        from ``panel_template``.
-
-        Two phases: **realize** — each Sound renames + adapts its own section, in the
-        template's ids; **integrate** — assign each a fresh, non-clashing id-space,
-        splice them in, register them in the panel. Returns the template slot id and
-        the new slots as ``(slot id, sound)`` pairs, which is all the timeline needs.
-        """
-        blocks = xml.toplevel_blocks()
-        panel_roots = blocks.containing(TimelapseTemplate.SOUND_NAME)
-        timeline_roots = blocks.by_tag(Tag.AudioClipTrackItem)
-
-        panel_template = blocks.reachable_cluster(panel_roots, _CLIP_MEDIA_TYPES)          # panel clip only
-        timeline_template = blocks.reachable_cluster(panel_roots + timeline_roots, _CLIP_MEDIA_TYPES)        # + its timeline slot
-
-        # Anchors: the template's own panel uid and slot id. Read them now, because
-        # the template blocks are deleted at the end of this method. The <Item>/
-        # <TrackItem> lines naming them sit outside the cluster and survive, so
-        # afterwards we can still find them and splice the clones in right after.
+    return template_slot_id, timeline_slots
 
 
-        if template_panel := panel_template.by_tag(Tag.ClipProjectItem).first():
-            template_panel_uid = TimelapseXmlOps.block_uid(template_panel.text)
-        else:
-            template_panel_uid = None
+def _place_on_timeline(xml: Xml, template_slot_id: str | None, timeline_slots: list[tuple[str, Sound]]) -> None:
+    """
+    Put the chosen sounds on the audio track: register their slots, then lay out.
 
-        if template_slot := timeline_template.by_tag(Tag.AudioClipTrackItem).first():
-            template_slot_id = template_slot.id
-        else:
-            template_slot_id = None
+    The slots already exist in the document — they co-cloned with their panel clips
+    in ``_place_in_panel``. Here we register them on the track (anchored after the
+    template's own slot) and line them up back-to-back at their real lengths.
 
-        insert_at = max(block.end for block in timeline_template)
-        max_id = xml.max_object_id()
+    With no slots there is simply nothing to do, and both steps below are already
+    empty-safe, so the caller needs no special case.
+    """
+    if template_slot_id and timeline_slots:
+        TimelapseXmlOps.append_track_items_after(xml, template_slot_id, [slot_id for slot_id, _ in timeline_slots])
 
-        # realize: template → each sound's own section (renamed + adapted, template ids)
-        new_sound_sections: list[str] = []
+    _lay_out_timeline(xml, timeline_slots)
 
-        for sound in sounds:
-            if sound.name in timeline_names:
-                source = timeline_template
-            else:
-                source = panel_template
 
-            new_sound_sections.append(sound.adapt(str(source)))
+def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]) -> None:
+    """List the cloned clips in the project panel, right after the template's entry."""
+    if not (template_uid and clone_uids):
+        return
 
-        # integrate: fresh ids, splice in, collect what's registrable
-        clones = ""
-        panel_uids: list[str] = []
-        timeline_slots: list[tuple[str, Sound]] = []
+    anchor_index = xml.find_panel_item_index(template_uid)
 
-        for n, (sound, section) in enumerate(zip(sounds, new_sound_sections), start=1):
-            section = TimelapseXmlOps.recount_ids(section, (max_id + 1) * n)
-            clones += section
+    if anchor_index is None:
+        return
 
-            if uid := TimelapseXmlOps.clip_project_item_uid(section):
-                panel_uids.append(uid)
+    added = "".join(
+        f'\n\t\t\t\t<Item Index="{anchor_index + offset}" ObjectURef="{uid}"/>'
+        for offset, uid in enumerate(clone_uids, start=1)
+    )
 
-            # Only full-template (timeline) sections carry a slot; panel-only ones don't.
-            # Keep the slot paired with the sound it was realized from: that pairing is
-            # exactly what the layout needs, and it is known here for free.
-            if slot_id := TimelapseXmlOps.audio_clip_track_item_id(section):
-                timeline_slots.append((slot_id, sound))
+    xml.replace(
+        f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>',
+        f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>{added}',
+    )
 
-        xml.insert(insert_at, clones)
-        xml.remove_blocks_by_positions([block.span for block in timeline_template])
 
-        TimelapseSchema._register_in_panel(xml, template_panel_uid, panel_uids)
+def _lay_out_timeline(xml: Xml, timeline_slots: list[tuple[str, Sound]]) -> None:
+    """
+    Line the timeline sounds up back-to-back at their real lengths.
 
-        return template_slot_id, timeline_slots
+    Each slot arrives paired with the sound it plays, so there is nothing to look
+    up. Each sound's real length comes from ffprobe. The first sound starts at 0,
+    the next starts where it ended, and so on. For each slot we set two things:
+    where it sits on the track (its Start/End) and how much of the clip plays
+    (the AudioClip's OutPoint, reached through the slot's SubClip). Every edit
+    is worked out up front, then applied from the end of the document backwards
+    so the byte offsets stay valid — which is why the slots cannot be placed one
+    at a time: each edit changes lengths and shifts every offset after it.
+    """
+    document = Document(xml.toplevel_blocks())
 
-    @staticmethod
-    def _place_on_timeline(xml: Xml, template_slot_id: str | None, timeline_slots: list[tuple[str, Sound]]) -> None:
-        """
-        Put the chosen sounds on the audio track: register their slots, then lay out.
+    edits: list[Edit] = []
+    cursor = 0
 
-        The slots already exist in the document — they co-cloned with their panel clips
-        in ``_place_in_panel``. Here we register them on the track (anchored after the
-        template's own slot) and line them up back-to-back at their real lengths.
+    for slot_id, sound in timeline_slots:
+        slot = document.by_ref(AudioClipTrackItem, slot_id)
 
-        With no slots there is simply nothing to do, and both steps below are already
-        empty-safe, so the caller needs no special case.
-        """
-        if template_slot_id and timeline_slots:
-            TimelapseXmlOps.append_track_items_after(xml, template_slot_id, [slot_id for slot_id, _ in timeline_slots])
+        if slot is None:
+            continue
 
-        TimelapseSchema._lay_out_timeline(xml, timeline_slots)
+        duration = sound.duration_ticks
+        end = cursor + duration
 
-    @staticmethod
-    def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]) -> None:
-        """List the cloned clips in the project panel, right after the template's entry."""
-        if not (template_uid and clone_uids):
-            return
+        # Where the clip sits on the track. It always has an end; it gets a
+        # start only once we're past 0 (the first clip has none, matching how
+        # the template stores it).
+        edits.append(slot.placed_at(cursor or None, end))
 
-        anchor_index = xml.find_panel_item_index(template_uid)
+        # How much of the clip plays — the clip reached through the slot's SubClip.
+        if (subclip := slot.subclip) and (clip := subclip.clip) and (trim := clip.trimmed_to(duration)):
+            edits.append(trim)
 
-        if anchor_index is None:
-            return
+        cursor = end
 
-        added = "".join(
-            f'\n\t\t\t\t<Item Index="{anchor_index + offset}" ObjectURef="{uid}"/>'
-            for offset, uid in enumerate(clone_uids, start=1)
-        )
+    xml.replace_ranges(edits)
 
-        xml.replace(
-            f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>',
-            f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>{added}',
-        )
 
-    @staticmethod
-    def _lay_out_timeline(xml: Xml, timeline_slots: list[tuple[str, Sound]]) -> None:
-        """
-        Line the timeline sounds up back-to-back at their real lengths.
+def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
+    """Remove the cover frame and slide the image sequence back to the start."""
+    # Cut the cover's own media chunks (the ones that name cover.jpg). The
+    # rest of the cover's cluster (its VideoClip, its timeline slot, its slot
+    # list entry) then has nothing pointing to it, so remove_dangling_refs
+    # sweeps it away for us.
+    cover_blocks = xml.toplevel_blocks().containing("cover.jpg")
 
-        Each slot arrives paired with the sound it plays, so there is nothing to look
-        up. Each sound's real length comes from ffprobe. The first sound starts at 0,
-        the next starts where it ended, and so on. For each slot we set two things:
-        where it sits on the track (its Start/End) and how much of the clip plays
-        (the AudioClip's OutPoint, reached through the slot's SubClip). Every edit
-        is worked out up front, then applied from the end of the document backwards
-        so the byte offsets stay valid — which is why the slots cannot be placed one
-        at a time: each edit changes lengths and shifts every offset after it.
-        """
-        document = Document(xml.toplevel_blocks())
+    xml.remove_blocks_by_positions([b.span for b in cover_blocks])
+    xml.remove_dangling_refs()
 
-        edits: list[Edit] = []
-        cursor = 0
-
-        for slot_id, sound in timeline_slots:
-            slot = document.by_ref(AudioClipTrackItem, slot_id)
-
-            if slot is None:
-                continue
-
-            duration = sound.duration_ticks
-            end = cursor + duration
-
-            # Where the clip sits on the track. It always has an end; it gets a
-            # start only once we're past 0 (the first clip has none, matching how
-            # the template stores it).
-            edits.append(slot.placed_at(cursor or None, end))
-
-            # How much of the clip plays — the clip reached through the slot's SubClip.
-            if (subclip := slot.subclip) and (clip := subclip.clip) and (trim := clip.trimmed_to(duration)):
-                edits.append(trim)
-
-            cursor = end
-
-        xml.replace_ranges(edits)
-
-    @staticmethod
-    def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
-        """Remove the cover frame and slide the image sequence back to the start."""
-        # Cut the cover's own media chunks (the ones that name cover.jpg). The
-        # rest of the cover's cluster (its VideoClip, its timeline slot, its slot
-        # list entry) then has nothing pointing to it, so remove_dangling_refs
-        # sweeps it away for us.
-        cover_blocks = xml.toplevel_blocks().containing("cover.jpg")
-
-        xml.remove_blocks_by_positions([b.span for b in cover_blocks])
-        xml.remove_dangling_refs()
-
-        # The frames clip used to sit one cover-frame in, from [ticks_per_frame → sequence_duration].
-        # With the cover gone it starts at the very beginning: [0 → image_sequence_duration].
-        xml.replace(f"<Start>{ticks_per_frame}</Start>", "<Start>0</Start>")
-        xml.replace(f"<End>{sequence_duration}</End>", f"<End>{image_sequence_duration}</End>")
+    # The frames clip used to sit one cover-frame in, from [ticks_per_frame → sequence_duration].
+    # With the cover gone it starts at the very beginning: [0 → image_sequence_duration].
+    xml.replace(f"<Start>{ticks_per_frame}</Start>", "<Start>0</Start>")
+    xml.replace(f"<End>{sequence_duration}</End>", f"<End>{image_sequence_duration}</End>")
 
 
 def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = TimelapseSettings()) -> Path:
@@ -350,8 +340,7 @@ def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = Tim
 
         output_path = candidate
 
-    sounds = sources.sounds or []
-    timeline_sounds = _resolve_timeline_sounds(sounds, settings.timeline_sounds)
+    timeline_sounds = _resolve_timeline_sounds(sources.sounds, settings.timeline_sounds)
 
     frames_line = str(sources.frames_count)
 
@@ -362,8 +351,8 @@ def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = Tim
 
     print(f"Photoset:  {sources.name}")
     print(f"Frames:    {frames_line}")
-    print(f"Sounds:    {[s.name for s in sounds]}")
+    print(f"Sounds:    {[s.name for s in sources.sounds]}")
     print(f"FPS:       {settings.fps}")
     print(f"Timeline:  {timeline_line}")
 
-    return TimelapseSchema()(output_path, sources, settings)
+    return build_prproj(output_path, sources, settings)
