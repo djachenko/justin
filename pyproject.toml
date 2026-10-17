@@ -69,9 +69,6 @@ Homepage = "https://github.com/djachenko/justin"
 "Bug Tracker" = "https://github.com/djachenko/justin/issues"
 "Source Code" = "https://github.com/djachenko/justin"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/justin"]
-
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
 branch = "master"
