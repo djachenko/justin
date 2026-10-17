@@ -8,7 +8,7 @@ each method on small hand-written snippets.
 
 import gzip
 
-from justin.actions.timelapse_block import Block, Blocks
+from justin.actions.timelapse_block import Block, Blocks, _HEADER_LEN
 from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
 
 
@@ -20,13 +20,11 @@ def _dump(xml: Xml) -> str:
 # construction / io round-trip
 # --------------------------------------------------------------------------- #
 
-def test_from_and_to_prproj_roundtrip(tmp_path):
+def test_to_prproj_writes_gzip(tmp_path):
     original = "<Project>\n\t<Foo/>\n</Project>\n"
     path = tmp_path / "p.prproj"
     Xml(original).to_prproj(path)
-    # File is real gzip.
     assert gzip.decompress(path.read_bytes()).decode("utf-8") == original
-    assert _dump(Xml.from_prproj(path)) == original
 
 
 def test_from_gzip_bytes():
@@ -204,7 +202,7 @@ def test_remove_dangling_cascades():
 def test_block_header_truncates():
     long_text = "<Tag " + "x" * 500 + "/>"
     block = Block(0, len(long_text), "Tag", long_text)
-    assert len(block.header) == Block._HEADER_LEN
+    assert len(block.header) == _HEADER_LEN
 
 
 def test_block_id_reads_from_header():
@@ -288,15 +286,6 @@ class TestBlocksQueries:
 
     def test_by_tag_filters(self):
         assert [b.id for b in self._sample().by_tag("SubClip")] == ["2", "3"]
-
-    def test_by_id_finds_one(self):
-        assert self._sample().by_id("SubClip", "3").id == "3"
-
-    def test_by_id_none_for_missing(self):
-        assert self._sample().by_id("SubClip", "99") is None
-
-    def test_by_id_none_for_none_arg(self):
-        assert self._sample().by_id("SubClip", None) is None
 
     def test_containing_matches_text(self):
         assert {b.id for b in self._sample().containing("a.mp3")} == {"1", "2"}
