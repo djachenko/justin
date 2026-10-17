@@ -1,5 +1,6 @@
 import subprocess
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import TypeVar
@@ -17,10 +18,9 @@ VIDEO_AS_AUDIO_EXTENSIONS = {".mp4"}
 _T = TypeVar("_T", bound=PremiereObject)
 
 
+@dataclass(frozen=True)
 class Sound(ABC):
-    @property
-    @abstractmethod
-    def path(self) -> Path: ...
+    path: Path
 
     @property
     def name(self) -> str:
@@ -71,13 +71,6 @@ class AudioSound(Sound):
     The template's sound is an mp4, so every clone starts with a video part
     attached. ``adapt`` strips that video half out and returns an audio-only section.
     """
-
-    def __init__(self, path: Path) -> None:
-        self.__path = path
-
-    @property
-    def path(self) -> Path:
-        return self.__path
 
     def adapt(self, section: str) -> str:
         """Rename to this sound's file, then strip the video half the mp4 template carries.
@@ -151,13 +144,6 @@ class VideoSound(Sound):
 
     The template's sound is already an mp4, so no structural changes needed.
     """
-
-    def __init__(self, path: Path) -> None:
-        self.__path = path
-
-    @property
-    def path(self) -> Path:
-        return self.__path
 
     def adapt(self, section: str) -> str:
         return self.replace_name(section)
