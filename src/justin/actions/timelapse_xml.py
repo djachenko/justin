@@ -19,13 +19,6 @@ class Xml:
         return self._xml
 
     @classmethod
-    def from_prproj(cls, path: Path) -> Self:
-        with gzip.open(path, 'rb') as f:
-            xml = f.read().decode('utf-8')
-
-        return cls(xml)
-
-    @classmethod
     def from_gzip_bytes(cls, data: bytes) -> Self:
         return cls(gzip.decompress(data).decode('utf-8'))
 

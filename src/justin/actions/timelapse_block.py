@@ -1,7 +1,13 @@
 import re
-from typing import Iterable, NamedTuple
+from collections.abc import Iterable, Set
+from typing import NamedTuple
 
-from justin.actions.timelapse_re import TimelapseRe
+from justin.actions.timelapse_re import TimelapseRe, search_group
+
+# ObjectID / ObjectUID always sit in the opening tag — the very first line.
+# ~110 chars; 120 comfortably covers the longest opening tags we've seen.
+# Example: \t<MasterClip ObjectID="42" ObjectUID="a1b2c3d4-…" ClassID="be4a3c7e-…">
+_HEADER_LEN = 120
 
 
 class Block(NamedTuple):
@@ -17,21 +23,13 @@ class Block(NamedTuple):
     tag: str
     text: str
 
-    # ObjectID / ObjectUID always sit in the opening tag — the very first line.
-    # ~110 chars; 120 comfortably covers the longest opening tags we've seen.
-    # Example: \t<MasterClip ObjectID="42" ObjectUID="a1b2c3d4-…" ClassID="be4a3c7e-…">
-    _HEADER_LEN = 120
-
     @property
     def header(self) -> str:
-        return self.text[:self._HEADER_LEN]
+        return self.text[:_HEADER_LEN]
 
     @property
     def id(self) -> str | None:
-        if m := re.search(TimelapseRe.OBJECT_ID, self.header):
-            return m.group(1)
-        else:
-            return None
+        return search_group(TimelapseRe.OBJECT_ID, self.header)
 
     @property
     def span(self) -> tuple[int, int]:
@@ -69,24 +67,15 @@ class Blocks(list[Block]):
     def containing(self, marker: str) -> "Blocks":
         return Blocks(block for block in self if marker in block.text)
 
-    def by_id(self, tag: str, block_id: str | None) -> Block | None:
-        if block_id is None:
-            return None
-
-        return next((block for block in self if block.tag == tag and block.id == block_id), None)
-
     def first(self) -> Block | None:
-        if self:
-            return self[0]
-        else:
-            return None
+        return next(iter(self), None)
 
     def __str__(self) -> str:
         """The raw text of these blocks, concatenated in order — a section ready to
         splice into a document (or hand to a Sound to realize)."""
         return "".join(block.text for block in self)
 
-    def reachable_cluster(self, seeds: Iterable[Block], member_tags: set[str]) -> "Blocks":
+    def reachable_cluster(self, seeds: Iterable[Block], member_tags: Set[str]) -> "Blocks":
         """Every block reachable from ``seeds`` by following id/uuid pointers.
 
         A clip isn't one block — it's a cluster wired together by pointers, and
@@ -133,12 +122,12 @@ class Blocks(list[Block]):
             # Uuid pointers: globally unique, so at most one target — but it still
             # has to be a member tag to join the cluster.
             for uref in re.finditer(TimelapseRe.OBJECT_UREF, block.text):
-                target = block_by_uid.get(uref.group(1))
+                uid_target = block_by_uid.get(uref.group(1))
 
-                if target is None or target.tag not in member_tags or target.start in reached:
+                if uid_target is None or uid_target.tag not in member_tags or uid_target.start in reached:
                     continue
 
-                reached[target.start] = target
-                frontier.append(target)
+                reached[uid_target.start] = uid_target
+                frontier.append(uid_target)
 
         return Blocks(sorted(reached.values(), key=lambda block: block.start))
