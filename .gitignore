@@ -5,6 +5,7 @@
 .claude/settings.local.json
 
 *_pycache__*
+.coverage
 
 src/justin/config\.py
 
