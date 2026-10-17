@@ -41,8 +41,8 @@ class Xml:
         """Index of the <Item ObjectURef="uid"/> entry in the project panel's clip list, or None."""
         if m := re.search(TimelapseRe.panel_item(uid), self._xml):
             return int(m.group(1))
-
-        return None
+        else:
+            return None
 
     def replace(self, old: str, new: str) -> None:
         self._xml = self._xml.replace(old, new)
