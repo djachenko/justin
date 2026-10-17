@@ -44,7 +44,10 @@ def timelapse(
         fps: Annotated[float, Option(help="Image sequence FPS")] = 10.0,
         timeline_sound: Annotated[list[str], Option(help="Sound (filename or stem) to lay on the timeline; repeatable. Default: all sounds panel-only")] = [],
 ) -> None:
-    settings = TimelapseSettings(fps=fps, timeline_sounds=timeline_sound)
+    settings = TimelapseSettings(
+        fps=fps,
+        timeline_sounds=timeline_sound
+    )
 
     TimelapseCommand(
         context.obj,
