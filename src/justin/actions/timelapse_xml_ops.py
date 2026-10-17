@@ -63,8 +63,8 @@ class TimelapseXmlOps:
         clip. Those paths belong to the template author's machine. Blanking them tells
         Premiere to regenerate the caches for our sounds instead of trusting stale data.
         """
-        xml.sub(TimelapseRe.CONFORMED_AUDIO_PATH, '<ConformedAudioPath></ConformedAudioPath>')
-        xml.sub(TimelapseRe.PEAK_FILE_PATH, '<PeakFilePath></PeakFilePath>')
+        xml.regex_replace(TimelapseRe.CONFORMED_AUDIO_PATH, '<ConformedAudioPath></ConformedAudioPath>')
+        xml.regex_replace(TimelapseRe.PEAK_FILE_PATH, '<PeakFilePath></PeakFilePath>')
 
     @staticmethod
     def append_track_items_after(xml: Xml, anchor_id: str, new_ids: list[str]) -> None:
@@ -86,7 +86,7 @@ class TimelapseXmlOps:
             )
             return listing.replace(existing[-1].group(0), existing[-1].group(0) + added, 1)
 
-        xml.sub(TimelapseRe.track_items_block(anchor_id), rewrite, count=1, flags=re.DOTALL)
+        xml.regex_replace(TimelapseRe.track_items_block(anchor_id), rewrite, count=1, flags=re.DOTALL)
 
     # -----------------------------------------------------------------------
     # Integration — assign fresh, non-clashing ids to a realized section
