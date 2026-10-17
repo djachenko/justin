@@ -157,11 +157,6 @@ class PremiereObject(ABC):
         """Numeric ids this object points at. Ambiguous without the target's class."""
         return set(re.findall(TimelapseRe.OBJECT_REF, self._block.text))
 
-    @property
-    def urefs(self) -> set[str]:
-        """Uuids this object points at. Unambiguous."""
-        return set(re.findall(TimelapseRe.OBJECT_UREF, self._block.text))
-
     def _ref(self, model_class: type[_T], pattern: str) -> _T | None:
         """Follow a numeric pointer (matched by ``pattern``) to a typed object.
 
@@ -239,28 +234,6 @@ class OpaqueObject(PremiereObject):
             return self._block.id
 
         return search_group(TimelapseRe.OBJECT_UID, self._block.header)
-
-
-# ── panel and timeline containers (uuid identity) ──────────────────────────────
-
-class RootProjectItem(UuidObject):
-    CLASS = PremiereClass("1c307a89-9318-47d7-a583-bf2553736543", Tag.RootProjectItem)
-
-
-class BinProjectItem(UuidObject):
-    CLASS = PremiereClass("dbfd6653-24da-480e-a35e-ba45e9504e4b", Tag.BinProjectItem)
-
-
-class Sequence(UuidObject):
-    CLASS = PremiereClass("6a15d903-8739-11d5-af2d-9b7855ad8974", Tag.Sequence)
-
-
-class VideoClipTrack(UuidObject):
-    CLASS = PremiereClass("f68dcd81-8805-11d5-af2d-9bfa89d4ddd4", Tag.VideoClipTrack)
-
-
-class AudioClipTrack(UuidObject):
-    CLASS = PremiereClass("097f6203-99ae-11d5-84f2-8cf14bde7040", Tag.AudioClipTrack)
 
 
 # ── clip hierarchy ─────────────────────────────────────────────────────────────
@@ -358,8 +331,8 @@ class VideoStream(NumericObject):
     CLASS = PremiereClass("a36e4719-3ec6-4a0c-ab11-8b4aab377aa5", Tag.VideoStream)
 
 
-# Media holds the streams, so it comes after them: its edges name VideoStream /
-# AudioStream directly, which only works once those are defined.
+# Media holds the stream, so it comes after it: its edge names VideoStream
+# directly, which only works once that is defined.
 class Media(UuidObject):
     CLASS = PremiereClass("7a5c103e-f3ac-4391-b6b4-7cc3d2f9a7ff", Tag.Media)
 
@@ -367,12 +340,6 @@ class Media(UuidObject):
     def video_stream(self) -> VideoStream | None:
         """The picture stream, present only while the media is still an mp4."""
         return self._ref(VideoStream, TimelapseRe.VIDEO_STREAM_REF)
-
-    @property
-    def audio_stream(self) -> AudioStream | None:
-        """The sound stream, if the file has one at all — a still or an image
-        sequence is picture-only, and both halves are genuinely optional."""
-        return self._ref(AudioStream, TimelapseRe.AUDIO_STREAM_REF)
 
     def without_video_stream(self, stream: VideoStream) -> Edit:
         """This media, audio-only: the pointer to its picture stream taken out.
@@ -383,42 +350,10 @@ class Media(UuidObject):
         return self._edit(self._without_pointer(Tag.VideoStream, ObjectRef=stream.block.id))
 
 
-class AudioMediaSource(NumericObject):
-    CLASS = PremiereClass("f588da05-fc2a-4fbc-9383-74d653b379e3", Tag.AudioMediaSource)
-
-
-class VideoMediaSource(NumericObject):
-    CLASS = PremiereClass("e64ddf74-8fac-4682-8aa8-0e0ca2248949", Tag.VideoMediaSource)
-
-
-# ── clip metadata and audio processing ─────────────────────────────────────────
+# ── clip metadata ──────────────────────────────────────────────────────────────
 
 class Markers(NumericObject):
     CLASS = PremiereClass("bee50706-b524-416c-9f03-b596ce5f6866", Tag.Markers)
-
-
-class ClipLoggingInfo(NumericObject):
-    CLASS = PremiereClass("77ab7fdd-dcdf-465d-9906-7a330ca1e738", Tag.ClipLoggingInfo)
-
-
-class SecondaryContent(NumericObject):
-    CLASS = PremiereClass("f9d004b5-cb04-4e2f-af6f-64fadc2c4be9", Tag.SecondaryContent)
-
-
-class AudioComponentChain(NumericObject):
-    CLASS = PremiereClass("3cb131d1-d3c0-47ae-a19a-bdf75ea11674", Tag.AudioComponentChain)
-
-
-class ClipChannelSerializer(NumericObject):
-    CLASS = PremiereClass("5c89aa7a-89a6-4483-becd-f2b1def42316", Tag.ClipChannelSerializer)
-
-
-class ClipChannelGroupVectorSerializer(NumericObject):
-    CLASS = PremiereClass("a3127a8c-95d4-456e-a7f5-171b3f922426", Tag.ClipChannelGroupVectorSerializer)
-
-
-class ClipChannelVectorSerializer(NumericObject):
-    CLASS = PremiereClass("333d203b-3a53-4195-8894-fc7523ff3dc7", Tag.ClipChannelVectorSerializer)
 
 
 # ── timeline slots ─────────────────────────────────────────────────────────────
@@ -443,10 +378,6 @@ class AudioClipTrackItem(NumericObject):
             position = f"<End>{end}</End>"
 
         return self._edit(re.sub(TimelapseRe.SLOT_POSITION, position, self._block.text, count=1))
-
-
-class VideoClipTrackItem(NumericObject):
-    CLASS = PremiereClass("368b0406-29e3-4923-9fcd-094fbf9a1089", Tag.VideoClipTrackItem)
 
 
 def parse(block: Block) -> PremiereObject:
@@ -480,9 +411,6 @@ class Document:
     def __iter__(self) -> Iterator[PremiereObject]:
         return iter(self._objects)
 
-    def __len__(self) -> int:
-        return len(self._objects)
-
     def of_type(self, model_class: type[_T]) -> list[_T]:
         return [o for o in self._objects if isinstance(o, model_class)]
 
@@ -502,10 +430,3 @@ class Document:
             raise AmbiguousReference(model_class, object_id, matches)
 
         return matches[0] if matches else None
-
-    def by_uref(self, uid: str | None) -> PremiereObject | None:
-        """Resolve a uuid reference. Globally unique, so no class needed."""
-        if uid is None:
-            return None
-
-        return next((o for o in self._objects if o.identity == uid), None)
