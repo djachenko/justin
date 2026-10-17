@@ -65,7 +65,7 @@ class Xml:
     def insert(self, position: int, text: str) -> None:
         self.replace_range(position, position, text)
 
-    def sub(self, pattern: str, repl, count: int = 0, flags: int = 0) -> None:
+    def regex_replace(self, pattern: str, repl, count: int = 0, flags: int = 0) -> None:
         self._xml = re.sub(pattern, repl, self._xml, count=count, flags=flags)
 
     def remove_blocks_by_positions(self, positions: list[tuple[int, int]]) -> Self:

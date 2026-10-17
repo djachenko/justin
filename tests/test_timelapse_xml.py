@@ -82,9 +82,9 @@ def test_insert():
     assert _dump(xml) == "01____89"
 
 
-def test_sub_with_count():
+def test_regex_replace_with_count():
     xml = Xml("aaa")
-    xml.sub(r"a", "b", count=2)
+    xml.regex_replace(r"a", "b", count=2)
     assert _dump(xml) == "bba"
 
 
