@@ -217,9 +217,7 @@ def _audio_track_items_region(xml: str) -> str:
 # --------------------------------------------------------------------------- #
 
 def test_reproduces_wolfday_template_structure(tmp_path):
-    # The vendored template IS the real wolfday project file (step_12). The
-    # generator must reproduce its block structure from equivalent inputs — this
-    # keeps us honest even though wolfday's live sources aren't in the repo.
+    # The template is the real wolfday project; equivalent inputs must reproduce its structure.
     timelapse_dir = make_timelapse(
         tmp_path, photoset="26.04.17.wolfday",
         n_frames=106, cover=True, sounds=("snejnye_volki.mp4",),
