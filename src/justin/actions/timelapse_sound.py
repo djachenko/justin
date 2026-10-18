@@ -90,12 +90,9 @@ class Sound(ABC):
         """
         return section.replace(TimelapseTemplate.SOUND_NAME, self.name)
 
-    @classmethod
-    def from_path(cls, path: Path) -> "Sound":
+    @staticmethod
+    def from_path(path: Path) -> "Sound":
         """The ``Sound`` subclass matching the file's extension.
-
-        Returns ``Sound``, not ``Self``: the subclass is chosen by the extension, not
-        by the class it is called on.
 
         :param path: the sound file.
         :returns: an ``AudioSound`` or a ``VideoSound`` for the file.
