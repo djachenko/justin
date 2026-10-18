@@ -15,9 +15,9 @@ timeline, 10 fps, with abstract placeholder strings). We open that file's text
 and carefully edit it to describe the timelapse we actually want:
 
   * swap in the right folder paths, frame count, and durations (``_actualize_*``);
-  * realize the template's sound as each real sound (rename + strip the video part
-    for audio-only files like mp3, ``Sound.adapt``), give each a fresh id-space and
-    put it in the project panel (``_place_in_panel``);
+  * copy the template's sound once per real sound, fitted to its format (rename +
+    strip the video part for audio-only files like mp3, ``Sound.adapt``), give each
+    a fresh id-space and put it in the project panel (``_place_in_panel``);
   * put the chosen sounds on the timeline and lay them out (``_place_on_timeline``);
   * throw away the cover frame or the sound entirely if the timelapse has none.
 
@@ -123,6 +123,14 @@ def build_prproj(
     sources: TimelapseSources,
     settings: TimelapseSettings = TimelapseSettings(),
 ) -> Path:
+    """
+    Write a project for ``sources`` to ``output_path`` and return that path.
+
+    Starts from the template and edits it step by step: real paths and timings
+    first, then the sounds (all into the panel, the chosen ones onto the
+    timeline), then the cover is dropped if there is none. A final sweep removes
+    whatever the removals left pointing at nothing. Overwrites ``output_path``.
+    """
     timeline_sounds = _resolve_timeline_sounds(sources.sounds, settings.timeline_sounds)
 
     frame_count = sources.frames_count
@@ -178,13 +186,25 @@ def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) ->
 
 
 def _actualize_paths(xml: Xml, name: str, first_frame: str) -> None:
-    # Premiere uses relative paths (./frames/, ./sound/) to locate media,
-    # so we only need to swap the per-filename placeholders and the project name.
+    """
+    Point the project at this timelapse's files and give it its name.
+
+    Premiere uses relative paths (./frames/, ./sound/) to locate media, so only
+    the per-filename placeholders and the project name need swapping.
+    """
     xml.replace(TimelapseTemplate.FIRST_FRAME, first_frame)
     xml.replace(TimelapseTemplate.PROJECT_NAME, name)
 
 
 def _actualize_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
+    """
+    Swap the template's frame rate and durations for this timelapse's.
+
+    The template's values are known numbers (``_TMPL_*``), so each is replaced
+    inside the tags that carry it — scoping by tag keeps an equal number
+    elsewhere in the file untouched. The durations assume a cover frame;
+    ``_remove_cover`` corrects them when there is none.
+    """
     for tag in _FPS_TICKS_TAGS:
         xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
 
@@ -198,7 +218,14 @@ def _actualize_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: in
 
 
 def _remove_sound(xml: Xml) -> None:
-    """Remove the template's sound completely (this timelapse has none)."""
+    """
+    Remove the template's sound completely (this timelapse has none).
+
+    Only the blocks that name the sound's file are cut here. What pointed at them
+    is removed by ``remove_dangling_refs``; what they pointed at (streams,
+    markers, channel layouts) is left with nothing pointing at it and is swept
+    by ``remove_unreachable`` — both at the end of ``build_prproj``.
+    """
     sound_blocks = xml.toplevel_blocks().containing(TimelapseTemplate.SOUND_NAME)
 
     xml.remove_blocks_by_positions([b.span for b in sound_blocks])
@@ -206,19 +233,20 @@ def _remove_sound(xml: Xml) -> None:
 
 def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> tuple[str | None, list[tuple[str, Sound]]]:
     """
-    Realize every sound from the template and put it in the project panel.
+    Copy the template's sound once per real sound and put every copy in the project panel.
 
     The template carries one sound as a full cluster: a project-panel clip plus a
     timeline slot fused to it (the slot shares the clip's audio media). We split it
-    once — ``panel_template`` (the panel clip) and the full ``template`` (clip +
-    slot). A sound wanted on the timeline is realized from the full template (its
-    slot co-clones, so it stays wired to the clip for free); a panel-only sound
-    from ``panel_template``.
+    once — ``panel_template`` (the panel clip) and the full ``timeline_template``
+    (clip + slot). A sound wanted on the timeline is copied from the full template
+    (its slot comes along, so it stays wired to the clip for free); a panel-only
+    sound from ``panel_template``.
 
-    Two phases: **realize** — each Sound renames + adapts its own section, in the
+    Two phases: **adapt** — each Sound renames + adapts its own copy, still in the
     template's ids; **integrate** — assign each a fresh, non-clashing id-space,
-    splice them in, register them in the panel. Returns the template slot id and
-    the new slots as ``(slot id, sound)`` pairs, which is all the timeline needs.
+    splice them in, register them in the panel. The template's own sound is
+    removed at the end. Returns the template slot id and the new slots as
+    ``(slot id, sound)`` pairs, which is all the timeline needs.
     """
     blocks = xml.toplevel_blocks()
     panel_roots = blocks.containing(TimelapseTemplate.SOUND_NAME)
@@ -230,7 +258,7 @@ def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> 
     # Anchors: the template's own panel uid and slot id. Read them now, because
     # the template blocks are deleted at the end of this function. The <Item>/
     # <TrackItem> lines naming them sit outside the cluster and survive, so
-    # afterwards we can still find them and splice the clones in right after.
+    # afterwards we can still find them and splice the copies in right after.
 
 
     if template_panel := panel_template.by_tag(Tag.ClipProjectItem).first():
@@ -246,7 +274,7 @@ def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> 
     insert_at = max(block.end for block in timeline_template)
     max_id = xml.max_object_id()
 
-    # realize: template → each sound's own section (renamed + adapted, template ids)
+    # adapt: template → each sound's own section (renamed + adapted, template ids)
     new_sound_sections: list[str] = []
 
     for sound in sounds:
@@ -270,7 +298,7 @@ def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> 
             panel_uids.append(uid)
 
         # Only full-template (timeline) sections carry a slot; panel-only ones don't.
-        # Keep the slot paired with the sound it was realized from: that pairing is
+        # Keep the slot paired with the sound it was copied for: that pairing is
         # exactly what the layout needs, and it is known here for free.
         if slot_id := TimelapseXmlOps.audio_clip_track_item_id(section):
             timeline_slots.append((slot_id, sound))
@@ -284,7 +312,14 @@ def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> 
 
 
 def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]) -> None:
-    """List the cloned clips in the project panel, right after the template's entry."""
+    """
+    List the cloned clips in the project panel, right after the template's entry.
+
+    The panel lists clips as ``<Item Index="N" ObjectURef="uid"/>`` lines. The
+    clones' lines go right after the template's own, with the indexes counting on
+    from it. The template's line itself is left for ``remove_dangling_refs``: its
+    clip is already gone. Does nothing without an anchor or without clones.
+    """
     if not (template_uid and clone_uids):
         return
 
@@ -364,7 +399,14 @@ def _lay_out_timeline(xml: Xml, timeline_slots: list[tuple[str, Sound]]) -> None
 
 
 def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
-    """Remove the cover frame and slide the image sequence back to the start."""
+    """
+    Remove the cover frame and slide the image sequence back to the start.
+
+    Only the cover's media blocks are cut directly. What pointed at them is
+    removed by ``remove_dangling_refs``; what they pointed at is swept by
+    ``remove_unreachable`` at the end of ``build_prproj``. The durations ``_actualize_ticks`` wrote
+    assumed a cover, so the frames clip's Start/End are pulled back by one frame.
+    """
     # Cut the cover's own media chunks (the ones that name cover.jpg). The
     # rest of the cover's cluster (its VideoClip, its timeline slot, its slot
     # list entry) then has nothing pointing to it, so remove_dangling_refs

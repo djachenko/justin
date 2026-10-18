@@ -14,6 +14,8 @@ from justin_utils.filesystem import Folder
 
 
 class TimelapseCommand(DestinationsAwareCommand):
+    """``justin timelapse``: builds a Premiere project for each matched timelapse folder."""
+
     def __init__(
         self,
         context: Context,
@@ -31,6 +33,7 @@ class TimelapseCommand(DestinationsAwareCommand):
         typer.echo(f"Created: {output}")
 
     def handle_common(self, folder: Folder, extra: Extra) -> None:
+        """Nothing to do: only timelapse folders produce a project."""
         pass
 
 
@@ -46,6 +49,7 @@ def timelapse(
         fps: Annotated[float, Option(help="Image sequence FPS")] = 10.0,
         timeline_sound: Annotated[list[str], Option(help="Sound (filename or stem) to lay on the timeline; repeatable. Default: all sounds panel-only")] = [],
 ) -> None:
+    """Generate a Premiere Pro project for each timelapse in the matched photosets."""
     settings = TimelapseSettings(
         fps=fps,
         timeline_sounds=timeline_sound

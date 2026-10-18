@@ -66,7 +66,12 @@ from justin.actions.timelapse_tags import Tag
 
 
 class PremiereClass(NamedTuple):
-    """A Premiere type: its ``ClassID`` and the tag that names it."""
+    """A Premiere type: its ``ClassID`` and the tag that names it.
+
+    ``uuid`` is the type's ``ClassID``, not an object's id: a constant compiled into
+    Premiere, the same in every project. The values in the ``CLASS`` declarations
+    below were read off the template (see the module docstring).
+    """
 
     uuid: str
     tag: str
@@ -126,6 +131,11 @@ class PremiereObject(ABC):
         self._doc = doc
 
     def __init_subclass__(cls, **kwargs: object) -> None:
+        """Register every subclass that declares a ``CLASS``, keyed by its ``ClassID``.
+
+        Defining a model class is all it takes to make :func:`parse` produce it; the
+        abstract bases (``CLASS = None``) are skipped.
+        """
         super().__init_subclass__(**kwargs)
 
         if cls.CLASS is not None:
@@ -143,6 +153,7 @@ class PremiereObject(ABC):
 
     @property
     def tag(self) -> str:
+        """The block's top-level tag — the class's readable name, not its identity."""
         return self._block.tag
 
     @property
@@ -154,7 +165,7 @@ class PremiereObject(ABC):
     @abstractmethod
     def identity(self) -> str | None:
         """This object's own id, in whichever scheme its class uses."""
-        ...
+        pass
 
     @property
     def name(self) -> str | None:
@@ -219,6 +230,7 @@ class NumericObject(PremiereObject):
 
     @cached_property
     def identity(self) -> str | None:
+        """The ``ObjectID`` — a number, so it names the object only together with its class."""
         return self._block.id
 
 
@@ -227,6 +239,7 @@ class UuidObject(PremiereObject):
 
     @cached_property
     def identity(self) -> str | None:
+        """The ``ObjectUID`` — a uuid, unique across the whole document on its own."""
         return search_group(TimelapseRe.OBJECT_UID, self._block.header)
 
 
@@ -239,6 +252,11 @@ class OpaqueObject(PremiereObject):
 
     @cached_property
     def identity(self) -> str | None:
+        """Whichever id the block carries: ``ObjectID`` first, else ``ObjectUID``.
+
+        An unmodelled class gives no hint which scheme it uses, so both are tried;
+        no block carries both, so the order does not matter.
+        """
         if self._block.id is not None:
             return self._block.id
 
@@ -248,6 +266,8 @@ class OpaqueObject(PremiereObject):
 # ── clip hierarchy ─────────────────────────────────────────────────────────────
 
 class ClipProjectItem(UuidObject):
+    """A clip's entry in the project panel — what the user sees in the bin, by name."""
+
     CLASS = PremiereClass("cb4e0ed7-aca1-4171-8525-e3658dec06dd", Tag.ClipProjectItem)
 
 
@@ -275,15 +295,21 @@ class Clip(NumericObject):
 
 
 class AudioClip(Clip):
+    """The audio half of a master clip; its ``OutPoint`` is how long the sound plays."""
+
     CLASS = PremiereClass("b8830d03-de02-41ee-84ec-fe566dc70cd9", Tag.AudioClip)
 
 
 class VideoClip(Clip):
+    """The video half of a master clip — the picture side an audio-only sound drops."""
+
     CLASS = PremiereClass("9308dbef-2440-4acb-9ab2-953b9a4e82ec", Tag.VideoClip)
 
 
 # MasterClip and SubClip name Clip in their edges, so they follow it.
 class MasterClip(UuidObject):
+    """Project material — a file or a sequence — grouping its video and audio halves."""
+
     CLASS = PremiereClass("fb11c33a-b0a9-4465-aa94-b6d5db2628cf", Tag.MasterClip)
 
     @property
@@ -317,6 +343,11 @@ class MasterClip(UuidObject):
 
 
 class SubClip(NumericObject):
+    """What a timeline slot plays: one half of a master clip, under the slot's name.
+
+    The playing range is not stored here but in the clip half it points at.
+    """
+
     CLASS = PremiereClass("e0c58dc9-dbdd-4166-aef7-5db7e3f22e84", Tag.SubClip)
 
     @property
@@ -333,16 +364,22 @@ class SubClip(NumericObject):
 # ── media streams ──────────────────────────────────────────────────────────────
 
 class AudioStream(NumericObject):
+    """The audio stream of a media file. No behaviour of its own yet."""
+
     CLASS = PremiereClass("0b5cf52f-2b85-4863-890b-8844b64ecfe9", Tag.AudioStream)
 
 
 class VideoStream(NumericObject):
+    """The picture stream of a media file — the target of :attr:`Media.video_stream`."""
+
     CLASS = PremiereClass("a36e4719-3ec6-4a0c-ab11-8b4aab377aa5", Tag.VideoStream)
 
 
 # Media holds the stream, so it comes after it: its edge names VideoStream
 # directly, which only works once that is defined.
 class Media(UuidObject):
+    """A file reference: path, streams and codec info of one file on disk."""
+
     CLASS = PremiereClass("7a5c103e-f3ac-4391-b6b4-7cc3d2f9a7ff", Tag.Media)
 
     @property
@@ -362,12 +399,16 @@ class Media(UuidObject):
 # ── clip metadata ──────────────────────────────────────────────────────────────
 
 class Markers(NumericObject):
+    """A clip's in/out markers. One block can be shared by several clips. No behaviour yet."""
+
     CLASS = PremiereClass("bee50706-b524-416c-9f03-b596ce5f6866", Tag.Markers)
 
 
 # ── timeline slots ─────────────────────────────────────────────────────────────
 
 class AudioClipTrackItem(NumericObject):
+    """A slot on an audio track: where on the timeline a sub-clip plays."""
+
     CLASS = PremiereClass("064ec682-9ba6-11d5-af2d-9ca32c7d6164", Tag.AudioClipTrackItem)
 
     @property
@@ -421,6 +462,10 @@ class Document:
         return iter(self._objects)
 
     def of_type(self, model_class: type[_T]) -> list[_T]:
+        """Every object that is a ``model_class``, subclasses included, in document order.
+
+        Subclasses count, so asking for ``Clip`` returns both Audio- and VideoClips.
+        """
         return [o for o in self._objects if isinstance(o, model_class)]
 
     def by_ref(self, model_class: type[_T], object_id: str | None) -> _T | None:

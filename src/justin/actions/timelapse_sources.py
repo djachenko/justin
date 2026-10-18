@@ -12,6 +12,8 @@ JPEG_EXTENSIONS = {
 
 @dataclass(frozen=True)
 class TimelapseSources:
+    """What a timelapse folder holds: the frames, the optional cover and the sounds."""
+
     name: str
     folder: Path
 
@@ -22,14 +24,21 @@ class TimelapseSources:
 
     @property
     def frames_count(self) -> int:
+        """How many frames the image sequence has."""
         return len(self.frames)
 
     @property
     def first_frame(self) -> Path:
+        """The sequence's first frame — Premiere locates an image sequence by its first file."""
         return self.frames[0]
 
     @classmethod
     def from_folder(cls, name: str, path: Path) -> Self:
+        """Collect the sources from a timelapse folder.
+
+        The layout is ``frames/`` (required), ``cover.jpg`` and ``sound/`` (both
+        optional). ``name`` names the project and its sequence.
+        """
         return cls(
             name=name,
             folder=path,
@@ -40,6 +49,11 @@ class TimelapseSources:
 
     @classmethod
     def get_frames(cls, path: Path) -> list[Path]:
+        """The JPEGs in ``frames/``, sorted by name — that order is the sequence order.
+
+        Raises ``ValueError`` if the folder is missing or holds no JPEGs: a
+        timelapse without frames has nothing to build.
+        """
         frames_dir = path / "frames"
 
         if not frames_dir.exists():
@@ -54,6 +68,7 @@ class TimelapseSources:
 
     @classmethod
     def get_cover(cls, path: Path) -> Path | None:
+        """``cover.jpg`` in the folder, or ``None`` — the project then has no cover frame."""
         cover_path = path / "cover.jpg"
 
         if cover_path.exists():
@@ -63,6 +78,11 @@ class TimelapseSources:
 
     @classmethod
     def get_sounds(cls, path: Path) -> list[Sound]:
+        """The supported sound files in ``sound/``, sorted by name; ``[]`` without the folder.
+
+        Files of other formats are skipped rather than rejected, so stray files in
+        the folder don't stop the build.
+        """
         sounds_dir = path / "sound"
 
         if not sounds_dir.exists():

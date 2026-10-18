@@ -68,6 +68,7 @@ class TimelapseXmlOps:
         slot references after the last existing entry, continuing the Index sequence.
         """
         def rewrite(track_items_block: re.Match) -> str:
+            """The matched slot list with ``new_ids`` appended after its last entry."""
             listing = track_items_block.group(0)
             existing = list(re.finditer(TimelapseRe.TRACK_ITEM_LINE, listing))
             last_index = int(existing[-1].group(1))
@@ -80,7 +81,7 @@ class TimelapseXmlOps:
         xml.regex_replace(TimelapseRe.track_items_block(anchor_id), rewrite, count=1, flags=re.DOTALL)
 
     # -----------------------------------------------------------------------
-    # Integration — assign fresh, non-clashing ids to a realized section
+    # Integration — assign fresh, non-clashing ids to an adapted section
     # -----------------------------------------------------------------------
 
     @staticmethod
@@ -88,8 +89,8 @@ class TimelapseXmlOps:
         """
         Give a sound section fresh identities so it can coexist in the document.
 
-        A realized section still carries the template's original ids, shared with
-        every other section realized from the same template. To integrate them all,
+        An adapted section still carries the template's original ids, shared with
+        every other section adapted from the same template. To integrate them all,
         each gets a distinct id-space:
           * every plain-number id is bumped by ``id_offset`` (picked bigger than any
             id already in use, so the bumped numbers can't clash);

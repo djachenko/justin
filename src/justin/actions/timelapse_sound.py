@@ -30,14 +30,22 @@ _T = TypeVar("_T", bound=PremiereObject)
 
 @dataclass(frozen=True)
 class Sound(ABC):
+    """A sound file from the timelapse folder, and how to turn the template's sound into it.
+
+    Subclasses differ by format: how much of the template's mp4 structure the file
+    keeps. Pick one with :meth:`from_path`.
+    """
+
     path: Path
 
     @property
     def name(self) -> str:
+        """The file name with extension — what the project calls the clip and the media."""
         return self.path.name
 
     @property
     def stem(self) -> str:
+        """The file name without extension — accepted as a shorthand for ``--timeline-sound``."""
         return self.path.stem
 
     @cached_property
@@ -63,11 +71,18 @@ class Sound(ABC):
 
     @abstractmethod
     def adapt(self, section: str) -> str:
-        """Realize a template section as this sound's own — rename the placeholder to
-        this sound's file and adapt structure (video stripped for audio-only) — and
-        return it (still on template ids; integration assigns fresh ones later).
-        Subclasses build this out of ``replace_name``."""
-        ...
+        """Turn a copy of the template's sound section into this sound's section.
+
+        ``section`` is the raw text of the template sound's blocks. The result
+        describes this sound instead: the placeholder file name replaced by this
+        sound's name, and the structure fitted to its format (an audio-only file
+        loses the video part the mp4 template carries).
+
+        Ids are left as the template's — the caller assigns fresh ones when it
+        splices the section into the project. Subclasses build this out of
+        ``replace_name``.
+        """
+        pass
 
     def replace_name(self, section: str) -> str:
         """Swap the template's placeholder sound name for this sound's real filename."""
@@ -75,6 +90,11 @@ class Sound(ABC):
 
     @classmethod
     def from_path(cls, path: Path) -> "Sound":
+        """The ``Sound`` subclass matching the file's extension.
+
+        Returns ``Sound``, not ``Self``: the subclass is chosen by the extension, not
+        by the class it is called on. Raises ``ValueError`` for an unsupported format.
+        """
         suffix = path.suffix.lower()
 
         if suffix in AUDIO_ONLY_EXTENSIONS:
@@ -160,7 +180,7 @@ class AudioSound(Sound):
 
     def _own(self, document: Document, model_class: type[_T]) -> _T | None:
         """The one object of that class that belongs to this sound — the section may
-        also carry blocks realized from other placeholders, so match on the filename."""
+        also carry blocks built from other placeholders, so match on the filename."""
         return next((obj for obj in document.of_type(model_class) if self.name in obj.block.text), None)
 
 
@@ -171,4 +191,5 @@ class VideoSound(Sound):
     """
 
     def adapt(self, section: str) -> str:
+        """Rename to this sound's file; the mp4 template's structure already fits."""
         return self.replace_name(section)
