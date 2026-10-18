@@ -32,6 +32,9 @@ of id, and the difference bites you if you ignore it:
 We do almost all the editing one block at a time: ``toplevel_blocks``
 finds where each block starts and ends in the raw text, and we cut blocks out or
 splice them back in with ordinary string slicing.
+
+Functions below go top-down: the entry points first, then the steps of
+``build_prproj`` in the order it calls them.
 """
 
 from importlib.resources import files as _resource_files
@@ -78,10 +81,41 @@ _FRAMES_DUR_TAGS = (
 )
 
 
+def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = TimelapseSettings()) -> Path:
+    """
+    Build the timelapse's project next to its sources and return its path.
 
-def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) -> list[Sound]:
-    return [sound for sound in sounds if sound.name in timeline_sounds or sound.stem in timeline_sounds]
+    The file is ``<folder>/<name>.prproj``. An existing project is never
+    overwritten — it may have been edited by hand — so the next free numbered
+    name (``<name>_1.prproj``, …) is used instead. Prints a short summary of what
+    goes into the project before building it.
+    """
+    output_path = sources.folder / f"{sources.name}.prproj"
 
+    if output_path.exists():
+        suffix = 1
+
+        while (candidate := sources.folder / f"{sources.name}_{suffix}.prproj").exists():
+            suffix += 1
+
+        output_path = candidate
+
+    timeline_sounds = _resolve_timeline_sounds(sources.sounds, settings.timeline_sounds)
+
+    frames_line = str(sources.frames_count)
+
+    if sources.cover:
+        frames_line += " + cover"
+
+    timeline_line = [s.name for s in timeline_sounds] or "panel only"
+
+    print(f"Photoset:  {sources.name}")
+    print(f"Frames:    {frames_line}")
+    print(f"Sounds:    {[s.name for s in sources.sounds]}")
+    print(f"FPS:       {settings.fps}")
+    print(f"Timeline:  {timeline_line}")
+
+    return build_prproj(output_path, sources, settings)
 
 
 def build_prproj(
@@ -124,6 +158,23 @@ def build_prproj(
     xml.to_prproj(output_path)
 
     return output_path
+
+
+def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) -> list[Sound]:
+    """
+    The sounds named in ``timeline_sounds``, in the order of ``sounds``.
+
+    A sound is named by its file name or by its stem, so ``--timeline-sound rain``
+    and ``--timeline-sound rain.mp3`` pick the same file. Names that match no
+    sound are ignored.
+    """
+    resolved: list[Sound] = []
+
+    for sound in sounds:
+        if sound.name in timeline_sounds or sound.stem in timeline_sounds:
+            resolved.append(sound)
+
+    return resolved
 
 
 def _actualize_paths(xml: Xml, name: str, first_frame: str) -> None:
@@ -232,23 +283,6 @@ def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> 
     return template_slot_id, timeline_slots
 
 
-def _place_on_timeline(xml: Xml, template_slot_id: str | None, timeline_slots: list[tuple[str, Sound]]) -> None:
-    """
-    Put the chosen sounds on the audio track: register their slots, then lay out.
-
-    The slots already exist in the document — they co-cloned with their panel clips
-    in ``_place_in_panel``. Here we register them on the track (anchored after the
-    template's own slot) and line them up back-to-back at their real lengths.
-
-    With no slots there is simply nothing to do, and both steps below are already
-    empty-safe, so the caller needs no special case.
-    """
-    if template_slot_id and timeline_slots:
-        TimelapseXmlOps.append_track_items_after(xml, template_slot_id, [slot_id for slot_id, _ in timeline_slots])
-
-    _lay_out_timeline(xml, timeline_slots)
-
-
 def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]) -> None:
     """List the cloned clips in the project panel, right after the template's entry."""
     if not (template_uid and clone_uids):
@@ -268,6 +302,24 @@ def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]
         f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>',
         f'<Item Index="{anchor_index}" ObjectURef="{template_uid}"/>{added}',
     )
+
+
+def _place_on_timeline(xml: Xml, template_slot_id: str | None, timeline_slots: list[tuple[str, Sound]]) -> None:
+    """
+    Put the chosen sounds on the audio track: register their slots, then lay out.
+
+    The slots already exist in the document — they were copied with their panel
+    clips in ``_place_in_panel``. Here we register them on the track (anchored
+    after the template's own slot) and line them up back-to-back at their real
+    lengths.
+
+    With no slots there is simply nothing to do, and both steps below are already
+    empty-safe, so the caller needs no special case.
+    """
+    if template_slot_id and timeline_slots:
+        TimelapseXmlOps.append_track_items_after(xml, template_slot_id, [slot_id for slot_id, _ in timeline_slots])
+
+    _lay_out_timeline(xml, timeline_slots)
 
 
 def _lay_out_timeline(xml: Xml, timeline_slots: list[tuple[str, Sound]]) -> None:
@@ -326,34 +378,3 @@ def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, 
     # With the cover gone it starts at the very beginning: [0 → image_sequence_duration].
     xml.replace(f"<Start>{ticks_per_frame}</Start>", "<Start>0</Start>")
     xml.replace(f"<End>{sequence_duration}</End>", f"<End>{image_sequence_duration}</End>")
-
-
-def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = TimelapseSettings()) -> Path:
-    output_path = sources.folder / f"{sources.name}.prproj"
-
-    # Don't clobber an existing project (it may have been edited by hand) — pick
-    # the next free numbered name instead.
-    if output_path.exists():
-        suffix = 1
-
-        while (candidate := sources.folder / f"{sources.name}_{suffix}.prproj").exists():
-            suffix += 1
-
-        output_path = candidate
-
-    timeline_sounds = _resolve_timeline_sounds(sources.sounds, settings.timeline_sounds)
-
-    frames_line = str(sources.frames_count)
-
-    if sources.cover:
-        frames_line += " + cover"
-
-    timeline_line = [s.name for s in timeline_sounds] or "panel only"
-
-    print(f"Photoset:  {sources.name}")
-    print(f"Frames:    {frames_line}")
-    print(f"Sounds:    {[s.name for s in sources.sounds]}")
-    print(f"FPS:       {settings.fps}")
-    print(f"Timeline:  {timeline_line}")
-
-    return build_prproj(output_path, sources, settings)
