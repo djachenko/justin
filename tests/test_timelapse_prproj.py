@@ -1,0 +1,334 @@
+"""
+Structural tests for the timelapse .prproj generator.
+
+These build real projects from the shipped template + synthetic input dirs and
+assert the invariants that make Premiere accept the file, without opening
+Premiere: well-formed XML, no dangling references, no duplicate object uuids,
+consistent per-type ClassIDs on clones, and the expected timeline layout.
+
+ffprobe (``subprocess.run`` behind ``Sound.duration_ticks``) is mocked so the
+synthetic sound files can be empty and tests stay hermetic.
+"""
+
+import gzip
+import re
+import xml.etree.ElementTree as ET
+from collections import Counter
+from pathlib import Path
+from subprocess import CompletedProcess
+from unittest.mock import patch
+
+import pytest
+
+from justin.actions.timelapse_model import AudioClipTrackItem, Document
+from justin.actions.timelapse_prproj import (
+    _lay_out_timeline,
+    _resolve_timeline_sounds,
+    build_prproj,
+    generate_prproj,
+    _TEMPLATE_DATA,
+)
+from justin.actions.timelapse_settings import TimelapseSettings
+from justin.actions.timelapse_sound import Sound
+from justin.actions.timelapse_sources import TimelapseSources
+from justin.actions.timelapse_ticks import PREMIERE_TIMEBASE
+from justin.actions.timelapse_xml import Xml
+
+
+# --------------------------------------------------------------------------- #
+# fixtures / helpers
+# --------------------------------------------------------------------------- #
+
+def make_timelapse(
+    root: Path,
+    photoset: str = "26.05.31.testset",
+    n_frames: int = 3,
+    cover: bool = True,
+    sounds: tuple[str, ...] = ("alpha.mp3", "beta.mp3"),
+) -> Path:
+    """Create a synthetic <photoset>/timelapse/ tree and return the timelapse dir."""
+    timelapse_dir = root / photoset / "timelapse"
+    frames_dir = timelapse_dir / "frames"
+    frames_dir.mkdir(parents=True)
+
+    for i in range(1, n_frames + 1):
+        (frames_dir / f"shot_{i:04}.jpg").write_bytes(b"")
+
+    if cover:
+        (timelapse_dir / "cover.jpg").write_bytes(b"")
+
+    if sounds:
+        sound_dir = timelapse_dir / "sound"
+        sound_dir.mkdir()
+
+        for name in sounds:
+            (sound_dir / name).write_bytes(b"")
+
+    return timelapse_dir
+
+
+@pytest.fixture(autouse=True)
+def stub_ffprobe():
+    """Deterministic durations keyed by filename, no ffprobe needed."""
+    def probe(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+        # Distinct per name so sequential layout is observable; the path is ffprobe's last argument.
+        return CompletedProcess(args, 0, stdout=f"{len(Path(args[-1]).name) + 1}\n")
+
+    with patch("justin.actions.timelapse_sound.subprocess.run", side_effect=probe):
+        yield
+
+
+def read_project(path: Path) -> str:
+    with gzip.open(path, "rb") as f:
+        return f.read().decode("utf-8")
+
+
+def dangling_numeric_refs(xml: str) -> set[str]:
+    ids = set(re.findall(r'ObjectID="(\d+)"', xml))
+    refs = set(re.findall(r'ObjectRef="(\d+)"', xml))
+    return refs - ids
+
+
+def dangling_uuid_refs(xml: str) -> set[str]:
+    uids = set(re.findall(r'ObjectUID="([^"]+)"', xml))
+    urefs = set(re.findall(r'ObjectURef="([^"]+)"', xml))
+    return urefs - uids
+
+
+def duplicate_uuids(xml: str) -> list[str]:
+    counts = Counter(re.findall(r'ObjectUID="([^"]+)"', xml))
+    return [uid for uid, n in counts.items() if n > 1]
+
+
+def orphan_blocks(xml: str) -> list[str]:
+    """Top-level blocks nothing points at. Premiere never saves one: only the
+    id-less ``Project`` root goes unreferenced."""
+    refs = set(re.findall(r'ObjectRef="(\d+)"', xml)) | set(re.findall(r'ObjectURef="([^"]+)"', xml))
+    orphans = []
+
+    for block in Xml(xml).toplevel_blocks():
+        identity = re.search(r'Object(?:U)?ID="([^"]+)"', block.header)
+
+        if identity and identity.group(1) not in refs:
+            orphans.append(f"{block.tag} {identity.group(1)}")
+
+    return orphans
+
+
+def track_item_count(xml: str) -> int:
+    return xml.count("<AudioClipTrackItem ")
+
+
+def panel_item_names(xml: str) -> set[str]:
+    return set(re.findall(r"<ClipProjectItem[^>]*>.*?<Name>([^<]+)</Name>", xml, re.DOTALL))
+
+
+def assert_structurally_sound(xml: str) -> None:
+    ET.fromstring(xml)  # raises on malformed XML
+    assert not dangling_numeric_refs(xml)
+    assert not dangling_uuid_refs(xml)
+    assert not duplicate_uuids(xml)
+    assert not orphan_blocks(xml)
+
+
+def generate(timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] | None = None) -> str:
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    settings = TimelapseSettings(fps=fps, timeline_sounds=timeline_sounds or [])
+    out = timelapse_dir / "out.prproj"
+    build_prproj(out, sources, settings)
+    return read_project(out)
+
+
+# --------------------------------------------------------------------------- #
+# scenario matrix — every combination must produce an openable project
+# --------------------------------------------------------------------------- #
+
+# mp3 strips the template's video half (AudioSound), mp4 keeps it (VideoSound);
+# the mixed pool checks both id-spaces stay apart in one document.
+@pytest.mark.parametrize("pool", [("alpha.mp3", "beta.mp3"), ("alpha.mp3", "song.mp4")],
+                         ids=["audio_only", "mixed_formats"])
+@pytest.mark.parametrize("n_sounds", [0, 1, 2])
+@pytest.mark.parametrize("cover", [True, False])
+@pytest.mark.parametrize("on_timeline", ["none", "all"])
+def test_scenario_matrix_is_structurally_sound(tmp_path, n_sounds, cover, on_timeline, pool):
+    names = pool[:n_sounds]
+    timelapse_dir = make_timelapse(tmp_path, cover=cover, sounds=names)
+    timeline_sounds = list(names) if on_timeline == "all" else []
+
+    xml = generate(timelapse_dir, timeline_sounds=timeline_sounds)
+
+    assert_structurally_sound(xml)
+    expected_actis = len(names) if on_timeline == "all" else 0
+    assert track_item_count(xml) == expected_actis
+
+
+# --------------------------------------------------------------------------- #
+# panel vs timeline placement
+# --------------------------------------------------------------------------- #
+
+def test_all_sounds_land_in_panel_regardless_of_timeline(tmp_path):
+    timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
+    xml = generate(timelapse_dir, timeline_sounds=[])
+    assert {"alpha.mp3", "beta.mp3"} <= panel_item_names(xml)
+
+
+def test_partial_timeline_selection_keeps_only_chosen_sound(tmp_path):
+    timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
+    xml = generate(timelapse_dir, timeline_sounds=["beta"])
+
+    assert track_item_count(xml) == 1
+    assert {"alpha.mp3", "beta.mp3"} <= panel_item_names(xml)
+    # slot → SubClip → file name
+    document = Document(Xml(xml).toplevel_blocks())
+    names = [slot.subclip.name for slot in document.of_type(AudioClipTrackItem)]
+
+    assert names == ["beta.mp3"]
+
+
+def test_timeline_sounds_are_laid_out_sequentially(tmp_path):
+    timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
+    xml = generate(timelapse_dir, timeline_sounds=["alpha", "beta"])
+
+    alpha_dur = (len("alpha.mp3") + 1) * PREMIERE_TIMEBASE
+    beta_dur = (len("beta.mp3") + 1) * PREMIERE_TIMEBASE
+
+    ends = [int(e) for e in re.findall(r"<End>(\d+)</End>", _audio_track_items_region(xml))]
+    starts = [int(s) for s in re.findall(r"<Start>(\d+)</Start>", _audio_track_items_region(xml))]
+    assert alpha_dur in ends
+    assert alpha_dur in starts
+    assert alpha_dur + beta_dur in ends
+
+
+def test_layout_skips_a_slot_the_document_does_not_have(tmp_path):
+    # An unknown slot id is skipped without shifting the slots that resolve.
+    timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3",))
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    out = timelapse_dir / "out.prproj"
+    build_prproj(out, sources, TimelapseSettings(timeline_sounds=["alpha.mp3"]))
+
+    xml = Xml(read_project(out))
+    slot = Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
+    ghost = Sound.from_path(Path("ghost.mp3"))
+
+    _lay_out_timeline(xml,[("999999", ghost), (slot.identity, ghost)])
+
+    laid_out = Document(xml.toplevel_blocks()).of_type(AudioClipTrackItem)[0]
+
+    # The real slot starts at tick 0.
+    assert f"<End>{ghost.duration_ticks}</End>" in laid_out.block.text
+    assert "<Start>" not in laid_out.block.text
+
+
+def _audio_track_items_region(xml: str) -> str:
+    """Concatenated AudioClipTrackItem blocks (where timeline Start/End live)."""
+    return "".join(
+        b.text for b in Xml(xml).toplevel_blocks() if b.tag == "AudioClipTrackItem"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# golden: reproduce the real sample template structure
+# --------------------------------------------------------------------------- #
+
+def test_reproduces_sample_template_structure(tmp_path):
+    # The template is the real sample project; equivalent inputs must reproduce its structure.
+    timelapse_dir = make_timelapse(
+        tmp_path, photoset="26.04.17.sample",
+        n_frames=106, cover=True, sounds=("snejnye_volki.mp4",),
+    )
+    xml = generate(timelapse_dir, timeline_sounds=["snejnye_volki"])
+
+    template = gzip.decompress(_TEMPLATE_DATA).decode("utf-8")
+
+    def tag_counts(project: str) -> Counter:
+        return Counter(b.tag for b in Xml(project).toplevel_blocks())
+
+    assert tag_counts(xml) == tag_counts(template)
+    assert_structurally_sound(xml)
+
+
+# --------------------------------------------------------------------------- #
+# clone correctness — the bug that made multi-sound projects fail to open
+# --------------------------------------------------------------------------- #
+
+def test_clone_introduces_no_new_classids(tmp_path):
+    # Clones must reuse template ClassIDs: fresh ones make Premiere reject the file.
+    timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
+    xml = generate(timelapse_dir, timeline_sounds=["alpha", "beta"])
+
+    template = gzip.decompress(_TEMPLATE_DATA).decode("utf-8")
+    template_classids = set(re.findall(r'ClassID="([^"]+)"', template))
+    output_classids = set(re.findall(r'ClassID="([^"]+)"', xml))
+
+    assert output_classids <= template_classids
+    assert not duplicate_uuids(xml)
+
+
+# --------------------------------------------------------------------------- #
+# removal paths — regressions for remove_dangling_refs corruption
+# --------------------------------------------------------------------------- #
+
+def test_no_cover_project_is_valid(tmp_path):
+    timelapse_dir = make_timelapse(tmp_path, cover=False, sounds=("alpha.mp3",))
+    assert_structurally_sound(generate(timelapse_dir, timeline_sounds=[]))
+
+
+def test_no_sound_project_is_valid(tmp_path):
+    timelapse_dir = make_timelapse(tmp_path, sounds=())
+    xml = generate(timelapse_dir)
+    assert_structurally_sound(xml)
+    assert track_item_count(xml) == 0
+
+
+# --------------------------------------------------------------------------- #
+# generate_prproj wrapper
+# --------------------------------------------------------------------------- #
+
+def test_generate_numbers_output_instead_of_overwriting(tmp_path):
+    timelapse_dir = make_timelapse(tmp_path, photoset="26.05.31.numbered", sounds=("alpha.mp3",))
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    first = generate_prproj(sources)
+    second = generate_prproj(sources)
+
+    assert first.name == "26.05.31.numbered.prproj"
+    assert second.name == "26.05.31.numbered_1.prproj"
+    assert first.exists() and second.exists()
+
+
+def test_selector_matches_by_name_or_stem(tmp_path):
+    timelapse_dir = make_timelapse(tmp_path, sounds=("alpha.mp3", "beta.mp3"))
+    sources = TimelapseSources.from_folder(timelapse_dir.parent.name, timelapse_dir)
+    by_stem = _resolve_timeline_sounds(sources.sounds, ["alpha"])
+    by_name = _resolve_timeline_sounds(sources.sounds, ["alpha.mp3"])
+    assert [p.name for p in by_stem] == ["alpha.mp3"]
+    assert [p.name for p in by_name] == ["alpha.mp3"]
+
+
+# --------------------------------------------------------------------------- #
+# packaging — template must be bundled as a readable resource
+# --------------------------------------------------------------------------- #
+
+def test_template_resource_is_packaged():
+    from importlib.resources import files as resource_files
+    data = resource_files("justin.resources.timelapse_templates").joinpath("timelapse_template.prproj").read_bytes()
+    assert len(data) > 0
+    xml = gzip.decompress(data).decode("utf-8")
+    ET.fromstring(xml)
+
+
+def test_premiere_saved_template_has_no_orphans():
+    # Grounds the orphan check: the invariant holds for what Premiere itself writes.
+    assert not orphan_blocks(gzip.decompress(_TEMPLATE_DATA).decode("utf-8"))
+
+
+# --------------------------------------------------------------------------- #
+# low-level helpers
+# --------------------------------------------------------------------------- #
+
+def test_parse_toplevel_blocks_roundtrip():
+    xml = "<Project>\n\t<Foo ObjectID=\"1\">\n\t\t<Bar/>\n\t</Foo>\n\t<Baz ObjectID=\"2\"/>\n</Project>\n"
+    blocks = Xml(xml).toplevel_blocks()
+    assert [b.tag for b in blocks] == ["Foo", "Baz"]
+    # Offsets slice the exact block text back out.
+    for b in blocks:
+        assert xml[b.start:b.end] == b.text
