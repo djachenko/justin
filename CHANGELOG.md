@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.4.1 (2026-10-18)
+
+### Bug Fixes
+
+- Register EditedHook in ourate stage hooks
+  ([`416f1dd`](https://github.com/djachenko/justin/commit/416f1dd52a042f207312577e6cf434c3a799158d))
+
+
 ## v0.4.0 (2026-10-18)
 
 ### Chores
