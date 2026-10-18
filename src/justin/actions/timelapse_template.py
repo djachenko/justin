@@ -7,6 +7,6 @@ class TimelapseTemplate:
     renames its cloned section) can reference one source without a circular import.
     """
 
-    SOUND_NAME  = "TMPL_SOUND.mp4"
-    FIRST_FRAME = "TMPL_FIRST_FRAME.jpg"
-    PHOTOSET    = "TMPL_PHOTOSET"
+    SOUND_NAME   = "TMPL_SOUND.mp4"
+    FIRST_FRAME  = "TMPL_FIRST_FRAME.jpg"
+    PROJECT_NAME = "TMPL_PHOTOSET"

@@ -130,7 +130,7 @@ def _actualize_paths(xml: Xml, name: str, first_frame: str) -> None:
     # Premiere uses relative paths (./frames/, ./sound/) to locate media,
     # so we only need to swap the per-filename placeholders and the project name.
     xml.replace(TimelapseTemplate.FIRST_FRAME, first_frame)
-    xml.replace(TimelapseTemplate.PHOTOSET, name)
+    xml.replace(TimelapseTemplate.PROJECT_NAME, name)
 
 
 def _actualize_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, sequence_duration: int) -> None:
