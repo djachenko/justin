@@ -114,18 +114,26 @@ class PremiereObject(ABC):
     # the type can't say so without naming the class inside its own body.
     _BY_CLASS_UUID: ClassVar[dict[str, type]] = {}
 
-    def __init__(self, block: Block) -> None:
+    def __init__(self, block: Block, doc: "Document | None" = None) -> None:
+        """Wrap ``block``; ``doc`` is the document it belongs to, if any.
+
+        Edges resolve their pointers through ``doc``, so an object parsed on its own
+        (no Document) can be read but not navigated. Pointers are followed lazily,
+        so ``doc`` may still be filling up while its objects are created.
+        """
         self._block = block
-        # The document this object belongs to — set by Document once it has parsed
-        # the whole block list. Edges resolve their pointers through it, so an object
-        # parsed on its own (no Document) can be read but not navigated.
-        self._doc: Document | None = None
+        self._doc = doc
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
 
         if cls.CLASS is not None:
             PremiereObject._BY_CLASS_UUID[cls.CLASS.uuid] = cls
+
+    @classmethod
+    def class_for(cls, class_uuid: str) -> "type[PremiereObject] | None":
+        """The model class registered for ``class_uuid``, or ``None`` if it is not modelled."""
+        return PremiereObject._BY_CLASS_UUID.get(class_uuid)
 
     @property
     def block(self) -> Block:
@@ -380,18 +388,21 @@ class AudioClipTrackItem(NumericObject):
         return self._edit(re.sub(TimelapseRe.SLOT_POSITION, position, self._block.text, count=1))
 
 
-def parse(block: Block) -> PremiereObject:
+def parse(block: Block, doc: "Document | None" = None) -> PremiereObject:
     """Wrap a block in its model class, falling back to :class:`OpaqueObject`.
 
     Dispatches on ``ClassID``, not on the tag — see the module docstring. A plain
-    function, not a classmethod, so its return type can be named directly.
+    function, not a classmethod, so its return type can be named directly. ``doc``
+    is passed on to the object, see :class:`PremiereObject`.
     """
     class_uuid = search_group(TimelapseRe.CLASS_ID, block.header)
 
     if class_uuid is None:
-        return OpaqueObject(block)
+        return OpaqueObject(block, doc)
 
-    return PremiereObject._BY_CLASS_UUID.get(class_uuid, OpaqueObject)(block)
+    model_class = PremiereObject.class_for(class_uuid) or OpaqueObject
+
+    return model_class(block, doc)
 
 
 class Document:
@@ -402,11 +413,8 @@ class Document:
     """
 
     def __init__(self, blocks: Blocks) -> None:
-        self._objects = [parse(block) for block in blocks]
-
-        # Hand every object a way back to the document, so its edges can resolve.
-        for obj in self._objects:
-            obj._doc = self
+        """Parse ``blocks``, handing every object a way back to this document."""
+        self._objects = [parse(block, self) for block in blocks]
 
     def __iter__(self) -> Iterator[PremiereObject]:
         return iter(self._objects)
@@ -429,4 +437,4 @@ class Document:
         if len(matches) > 1:
             raise AmbiguousReference(model_class, object_id, matches)
 
-        return matches[0] if matches else None
+        return next(iter(matches), None)
