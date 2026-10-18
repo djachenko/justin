@@ -38,6 +38,10 @@ class TimelapseSources:
 
         The layout is ``frames/`` (required), ``cover.jpg`` and ``sound/`` (both
         optional). ``name`` names the project and its sequence.
+
+        :param name: the name of the project and its sequence.
+        :param path: the timelapse folder.
+        :returns: the folder's sources.
         """
         return cls(
             name=name,
@@ -51,8 +55,10 @@ class TimelapseSources:
     def get_frames(cls, path: Path) -> list[Path]:
         """The JPEGs in ``frames/``, sorted by name — that order is the sequence order.
 
-        Raises ``ValueError`` if the folder is missing or holds no JPEGs: a
-        timelapse without frames has nothing to build.
+        :param path: the timelapse folder.
+        :returns: the frame files, in sequence order.
+        :raises ValueError: if ``frames/`` is missing or holds no JPEGs: a
+            timelapse without frames has nothing to build.
         """
         frames_dir = path / "frames"
 
@@ -68,7 +74,11 @@ class TimelapseSources:
 
     @classmethod
     def get_cover(cls, path: Path) -> Path | None:
-        """``cover.jpg`` in the folder, or ``None`` — the project then has no cover frame."""
+        """``cover.jpg`` in the folder, or ``None`` — the project then has no cover frame.
+
+        :param path: the timelapse folder.
+        :returns: the cover's path, or ``None`` if there is no cover.
+        """
         cover_path = path / "cover.jpg"
 
         if cover_path.exists():
@@ -82,6 +92,9 @@ class TimelapseSources:
 
         Files of other formats are skipped rather than rejected, so stray files in
         the folder don't stop the build.
+
+        :param path: the timelapse folder.
+        :returns: one ``Sound`` per supported file, in name order.
         """
         sounds_dir = path / "sound"
 

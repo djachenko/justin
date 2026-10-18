@@ -50,7 +50,11 @@ class Sound(ABC):
 
     @cached_property
     def duration_ticks(self) -> int:
-        """How long this sound plays, in Premiere ticks (measured by ffprobe once, then cached)."""
+        """How long this sound plays, in Premiere ticks (measured by ffprobe once, then cached).
+
+        :raises FileNotFoundError: if ffprobe is not installed.
+        :raises subprocess.CalledProcessError: if ffprobe fails to read the file.
+        """
         probe = subprocess.run(
             [
                 "ffprobe",
@@ -81,11 +85,18 @@ class Sound(ABC):
         Ids are left as the template's — the caller assigns fresh ones when it
         splices the section into the project. Subclasses build this out of
         ``replace_name``.
+
+        :param section: the raw text of the template sound's blocks.
+        :returns: this sound's section, still in the template's ids.
         """
         pass
 
     def replace_name(self, section: str) -> str:
-        """Swap the template's placeholder sound name for this sound's real filename."""
+        """Swap the template's placeholder sound name for this sound's real filename.
+
+        :param section: the section's raw text.
+        :returns: the section with this sound's filename in place of the placeholder.
+        """
         return section.replace(TimelapseTemplate.SOUND_NAME, self.name)
 
     @classmethod
@@ -93,7 +104,11 @@ class Sound(ABC):
         """The ``Sound`` subclass matching the file's extension.
 
         Returns ``Sound``, not ``Self``: the subclass is chosen by the extension, not
-        by the class it is called on. Raises ``ValueError`` for an unsupported format.
+        by the class it is called on.
+
+        :param path: the sound file.
+        :returns: an ``AudioSound`` or a ``VideoSound`` for the file.
+        :raises ValueError: if the extension is not a supported sound format.
         """
         suffix = path.suffix.lower()
 
@@ -125,6 +140,9 @@ class AudioSound(Sound):
 
         Works on this sound's own section only (nothing outside its cluster) and
         returns the renamed, audio-only section.
+
+        :param section: the raw text of the template sound's blocks.
+        :returns: this sound's audio-only section, still in the template's ids.
         """
         section = self.replace_name(section)
         fragment = Xml(section)
@@ -180,7 +198,12 @@ class AudioSound(Sound):
 
     def _own(self, document: Document, model_class: type[_T]) -> _T | None:
         """The one object of that class that belongs to this sound — the section may
-        also carry blocks built from other placeholders, so match on the filename."""
+        also carry blocks built from other placeholders, so match on the filename.
+
+        :param document: the section, parsed.
+        :param model_class: the class to look for.
+        :returns: the first object of that class naming this sound, or ``None``.
+        """
         return next((obj for obj in document.of_type(model_class) if self.name in obj.block.text), None)
 
 
@@ -191,5 +214,9 @@ class VideoSound(Sound):
     """
 
     def adapt(self, section: str) -> str:
-        """Rename to this sound's file; the mp4 template's structure already fits."""
+        """Rename to this sound's file; the mp4 template's structure already fits.
+
+        :param section: the raw text of the template sound's blocks.
+        :returns: this sound's section, still in the template's ids.
+        """
         return self.replace_name(section)

@@ -89,6 +89,10 @@ def generate_prproj(sources: TimelapseSources, settings: TimelapseSettings = Tim
     overwritten — it may have been edited by hand — so the next free numbered
     name (``<name>_1.prproj``, …) is used instead. Prints a short summary of what
     goes into the project before building it.
+
+    :param sources: what the timelapse folder holds.
+    :param settings: the frame rate and the sounds to put on the timeline.
+    :returns: the path of the written project.
     """
     output_path = sources.folder / f"{sources.name}.prproj"
 
@@ -130,6 +134,11 @@ def build_prproj(
     first, then the sounds (all into the panel, the chosen ones onto the
     timeline), then the cover is dropped if there is none. A final sweep removes
     whatever the removals left pointing at nothing. Overwrites ``output_path``.
+
+    :param output_path: where to write the project.
+    :param sources: what the timelapse folder holds.
+    :param settings: the frame rate and the sounds to put on the timeline.
+    :returns: ``output_path``.
     """
     timeline_sounds = _resolve_timeline_sounds(sources.sounds, settings.timeline_sounds)
 
@@ -175,6 +184,10 @@ def _resolve_timeline_sounds(sounds: list[Sound], timeline_sounds: list[str]) ->
     A sound is named by its file name or by its stem, so ``--timeline-sound rain``
     and ``--timeline-sound rain.mp3`` pick the same file. Names that match no
     sound are ignored.
+
+    :param sounds: the folder's sounds.
+    :param timeline_sounds: the names or stems of the sounds to pick.
+    :returns: the picked sounds.
     """
     resolved: list[Sound] = []
 
@@ -191,6 +204,10 @@ def _actualize_paths(xml: Xml, name: str, first_frame: str) -> None:
 
     Premiere uses relative paths (./frames/, ./sound/) to locate media, so only
     the per-filename placeholders and the project name need swapping.
+
+    :param xml: the project, edited in place.
+    :param name: the project's name.
+    :param first_frame: the file name of the sequence's first frame.
     """
     xml.replace(TimelapseTemplate.FIRST_FRAME, first_frame)
     xml.replace(TimelapseTemplate.PROJECT_NAME, name)
@@ -204,6 +221,11 @@ def _actualize_ticks(xml: Xml, ticks_per_frame: int, image_sequence_duration: in
     inside the tags that carry it — scoping by tag keeps an equal number
     elsewhere in the file untouched. The durations assume a cover frame;
     ``_remove_cover`` corrects them when there is none.
+
+    :param xml: the project, edited in place.
+    :param ticks_per_frame: one frame's length at the chosen fps.
+    :param image_sequence_duration: the frames' total length, in ticks.
+    :param sequence_duration: the whole sequence's length with the cover frame, in ticks.
     """
     for tag in _FPS_TICKS_TAGS:
         xml.replace(f"<{tag}>{_TMPL_FPS_TICKS}</{tag}>", f"<{tag}>{ticks_per_frame}</{tag}>")
@@ -225,6 +247,8 @@ def _remove_sound(xml: Xml) -> None:
     is removed by ``remove_dangling_refs``; what they pointed at (streams,
     markers, channel layouts) is left with nothing pointing at it and is swept
     by ``remove_unreachable`` — both at the end of ``build_prproj``.
+
+    :param xml: the project, edited in place.
     """
     sound_blocks = xml.toplevel_blocks().containing(TimelapseTemplate.SOUND_NAME)
 
@@ -247,6 +271,12 @@ def _place_in_panel(xml: Xml, sounds: list[Sound], timeline_names: set[str]) -> 
     splice them in, register them in the panel. The template's own sound is
     removed at the end. Returns the template slot id and the new slots as
     ``(slot id, sound)`` pairs, which is all the timeline needs.
+
+    :param xml: the project, edited in place.
+    :param sounds: the folder's sounds, in panel order.
+    :param timeline_names: the names of the sounds that also go on the timeline.
+    :returns: the template slot's id (``None`` if the template has no slot) and a
+        ``(slot id, sound)`` pair per timeline sound, in the order of ``sounds``.
     """
     blocks = xml.toplevel_blocks()
     panel_roots = blocks.containing(TimelapseTemplate.SOUND_NAME)
@@ -319,6 +349,10 @@ def _register_in_panel(xml: Xml, template_uid: str | None, clone_uids: list[str]
     clones' lines go right after the template's own, with the indexes counting on
     from it. The template's line itself is left for ``remove_dangling_refs``: its
     clip is already gone. Does nothing without an anchor or without clones.
+
+    :param xml: the project, edited in place.
+    :param template_uid: ``ObjectUID`` of the template's panel clip — the anchor.
+    :param clone_uids: ``ObjectUID``s of the cloned panel clips, in panel order.
     """
     if not (template_uid and clone_uids):
         return
@@ -350,6 +384,10 @@ def _place_on_timeline(xml: Xml, template_slot_id: str | None, timeline_slots: l
 
     With no slots there is simply nothing to do, and both steps below are already
     empty-safe, so the caller needs no special case.
+
+    :param xml: the project, edited in place.
+    :param template_slot_id: ``ObjectID`` of the template's slot — the anchor.
+    :param timeline_slots: ``(slot id, sound)`` pairs, in timeline order.
     """
     if template_slot_id and timeline_slots:
         TimelapseXmlOps.append_track_items_after(xml, template_slot_id, [slot_id for slot_id, _ in timeline_slots])
@@ -369,6 +407,9 @@ def _lay_out_timeline(xml: Xml, timeline_slots: list[tuple[str, Sound]]) -> None
     is worked out up front, then applied from the end of the document backwards
     so the byte offsets stay valid — which is why the slots cannot be placed one
     at a time: each edit changes lengths and shifts every offset after it.
+
+    :param xml: the project, edited in place.
+    :param timeline_slots: ``(slot id, sound)`` pairs, in timeline order.
     """
     document = Document(xml.toplevel_blocks())
 
@@ -406,6 +447,11 @@ def _remove_cover(xml: Xml, ticks_per_frame: int, image_sequence_duration: int, 
     removed by ``remove_dangling_refs``; what they pointed at is swept by
     ``remove_unreachable`` at the end of ``build_prproj``. The durations ``_actualize_ticks`` wrote
     assumed a cover, so the frames clip's Start/End are pulled back by one frame.
+
+    :param xml: the project, edited in place.
+    :param ticks_per_frame: one frame's length at the chosen fps.
+    :param image_sequence_duration: the frames' total length, in ticks.
+    :param sequence_duration: the sequence's length ``_actualize_ticks`` wrote, cover frame included.
     """
     # Cut the cover's own media chunks (the ones that name cover.jpg). The
     # rest of the cover's cluster (its VideoClip, its timeline slot, its slot
