@@ -56,16 +56,7 @@ class Sound(ABC):
         :raises subprocess.CalledProcessError: if ffprobe fails to read the file.
         """
         probe = subprocess.run(
-            [
-                "ffprobe",
-                "-v",
-                "error",
-                "-show_entries",
-                "format=duration",
-                "-of",
-                "csv=p=0",
-                str(self.path),
-            ],
+            "ffprobe -v error -show_entries format=duration -of csv=p=0".split() + [str(self.path)],
             capture_output=True,
             text=True,
             check=True,
