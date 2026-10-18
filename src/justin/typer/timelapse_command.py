@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from typing import Annotated, Iterable, List
 
@@ -27,8 +28,22 @@ class TimelapseCommand(DestinationsAwareCommand):
         self.__settings = settings
 
     def handle_timelapse(self, timelapse_folder: Folder, extra: Extra) -> None:
+        """Build a ``.prproj`` for one timelapse folder.
+
+        Without ``--timeline-sound``, a folder with exactly one sound gets it on the
+        timeline: there is nothing to choose between. With several, they all stay in
+        the panel until named. Decided here, not in the settings or the generator:
+        only the command sees both what the user asked for and what the folder holds.
+        """
         sources = TimelapseSources.from_folder(extra[self.SET_NAME], timelapse_folder.path)
-        output = generate_prproj(sources, self.__settings)
+        settings = self.__settings
+
+        if not settings.timeline_sounds and len(sources.sounds) == 1:
+            settings = replace(settings, timeline_sounds=[
+                sources.sounds[0].name,
+            ])
+
+        output = generate_prproj(sources, settings)
 
         typer.echo(f"Created: {output}")
 
@@ -47,7 +62,7 @@ def timelapse(
             Path.cwd(),
         ],
         fps: Annotated[float, Option(help="Image sequence FPS")] = 10.0,
-        timeline_sound: Annotated[list[str], Option(help="Sound (filename or stem) to lay on the timeline; repeatable. Default: all sounds panel-only")] = [],
+        timeline_sound: Annotated[list[str], Option(help="Sound (filename or stem) to lay on the timeline; repeatable. Default: a single sound goes on the timeline, several stay panel-only")] = [],
 ) -> None:
     """Generate a Premiere Pro project for each timelapse in the matched photosets."""
     settings = TimelapseSettings(
