@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v0.4.1 (2026-10-18)
+
+### Bug Fixes
+
+- Register EditedHook in ourate stage hooks
+  ([`416f1dd`](https://github.com/djachenko/justin/commit/416f1dd52a042f207312577e6cf434c3a799158d))
+
+
+## v0.4.0 (2026-10-18)
+
+### Chores
+
+- Ignore CLAUDE.local.md, add GROUP to ide runner commands
+  ([`d68ef8d`](https://github.com/djachenko/justin/commit/d68ef8db5cc3f98a9c71fc6975293e802422ef9d))
+
+### Features
+
+- Name Cullen json by album, drop index.json for Cullen integration
+  ([`1463c18`](https://github.com/djachenko/justin/commit/1463c189e5bc2c6cd5f8c224924cab4a0e0720f8))
+
+
 ## v0.3.0 (2026-10-06)
 
 ### Bug Fixes
