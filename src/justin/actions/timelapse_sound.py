@@ -132,9 +132,8 @@ class AudioSound(Sound):
         fragment.remove_blocks_by_positions([obj.block.span for obj in document if obj.block.id in removed])
 
         # Drop the emptied video slot from the MasterClip and promote the audio to slot 0.
-        if video_clip and audio_clip:
-            if master := self._own(Document(fragment.toplevel_blocks()), MasterClip):
-                fragment.replace_range(*master.without_video_half(video_clip, audio_clip))
+        if video_clip and audio_clip and (master := self._own(Document(fragment.toplevel_blocks()), MasterClip)):
+            fragment.replace_range(*master.without_video_half(video_clip, audio_clip))
 
         return fragment.text
 
