@@ -571,7 +571,6 @@ class TestAgainstRealTemplate:
         assert "<AudioStream ObjectRef=" in text
 
     def test_registry_covers_every_modelled_class_once(self):
-        registry = PremiereObject._BY_CLASS_UUID
         modelled = [
             value for value in vars(model).values()
             if isinstance(value, type)
@@ -579,5 +578,5 @@ class TestAgainstRealTemplate:
             and value.CLASS is not None
         ]
 
-        assert len(registry) == len(modelled)
-        assert {c.CLASS.uuid for c in modelled} == set(registry)
+        assert len({c.CLASS.uuid for c in modelled}) == len(modelled)
+        assert all(PremiereObject.class_for(c.CLASS.uuid) is c for c in modelled)
