@@ -77,6 +77,9 @@ class Blocks(list[Block]):
 
         Matches the tag only, not the class: one tag can name several Premiere
         classes (see ``timelapse_model``), so this is a coarse structural filter.
+
+        :param tag: the tag to keep.
+        :returns: the blocks with that tag.
         """
         return Blocks(block for block in self if block.tag == tag)
 
@@ -85,6 +88,9 @@ class Blocks(list[Block]):
 
         Used with the template's placeholder strings: only the blocks that name a
         file (media, panel items) carry them, so this finds a cluster's entry points.
+
+        :param marker: the substring to look for, usually a template placeholder.
+        :returns: the blocks containing it.
         """
         return Blocks(block for block in self if marker in block.text)
 
@@ -107,7 +113,9 @@ class Blocks(list[Block]):
         ObjectRef="56"/>`` may be a Video- or AudioClip), so we accept any
         member-tag block carrying that id; uuid pointers are unambiguous.
 
-        Returns the cluster as a ``Blocks``, ordered by position in the document.
+        :param seeds: the blocks to start from; they are part of the cluster.
+        :param member_tags: the tags a block needs to join the cluster.
+        :returns: the cluster, in document order.
         """
         # member_tags bounds what can be pulled in. A number names a block only
         # together with its class, and callers delete this cluster, so collecting

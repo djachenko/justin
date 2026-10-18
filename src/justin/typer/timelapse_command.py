@@ -34,6 +34,9 @@ class TimelapseCommand(DestinationsAwareCommand):
         timeline: there is nothing to choose between. With several, they all stay in
         the panel until named. Decided here, not in the settings or the generator:
         only the command sees both what the user asked for and what the folder holds.
+
+        :param timelapse_folder: the matched timelapse folder.
+        :param extra: per-photoset data from the base command; holds the photoset's name.
         """
         sources = TimelapseSources.from_folder(extra[self.SET_NAME], timelapse_folder.path)
         settings = self.__settings
@@ -48,7 +51,11 @@ class TimelapseCommand(DestinationsAwareCommand):
         typer.echo(f"Created: {output}")
 
     def handle_common(self, folder: Folder, extra: Extra) -> None:
-        """Nothing to do: only timelapse folders produce a project."""
+        """Nothing to do: only timelapse folders produce a project.
+
+        :param folder: a matched folder that is not a timelapse.
+        :param extra: per-photoset data from the base command.
+        """
         pass
 
 

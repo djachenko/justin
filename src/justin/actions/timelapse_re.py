@@ -35,6 +35,10 @@ def search_group(pattern: str, text: str) -> str | None:
 
     The one shared way to pull a single value out of block text: the model's edges
     and the xml ops' queries both read Premiere XML through this.
+
+    :param pattern: a regex with at least one capture group.
+    :param text: the text to search.
+    :returns: group 1 of the first match, or ``None`` if nothing matches.
     """
     if match := re.search(pattern, text):
         return match.group(1)
@@ -263,7 +267,11 @@ class TimelapseRe:
     #   "               — closing quote
     @staticmethod
     def panel_item(uid: str) -> str:
-        """The panel-list entry for the clip with ``uid``; group 1 is its index."""
+        """The panel-list entry for the clip with ``uid``; group 1 is its index.
+
+        :param uid: the clip's ``ObjectUID``.
+        :returns: a pattern matching its ``<Item>`` entry.
+        """
         return rf'<Item Index="(\d+)" ObjectURef="{re.escape(uid)}"'
 
     # The entire <TrackItems> block that contains a specific anchor slot.
@@ -279,6 +287,9 @@ class TimelapseRe:
         """The whole ``<TrackItems>`` list of the track holding slot ``anchor_id``.
 
         Needs ``re.DOTALL``: the list spans many lines.
+
+        :param anchor_id: ``ObjectID`` of a slot on the wanted track.
+        :returns: a pattern matching that track's ``<TrackItems>`` list.
         """
         return (
             rf'<TrackItems Version="\d+">(?:(?!</TrackItems>).)*?'
@@ -297,5 +308,8 @@ class TimelapseRe:
         """``ObjectID``/``ObjectRef`` set to ``old_id``; group 1 is the attribute up to the value.
 
         Scoped to the attributes so a bare number elsewhere in the text is never remapped.
+
+        :param old_id: the numeric id to find.
+        :returns: a pattern matching both attributes with that id.
         """
         return rf'((?:ObjectID|ObjectRef)="){re.escape(old_id)}"'

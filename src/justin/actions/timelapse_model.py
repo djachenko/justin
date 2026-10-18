@@ -126,6 +126,9 @@ class PremiereObject(ABC):
         Edges resolve their pointers through ``doc``, so an object parsed on its own
         (no Document) can be read but not navigated. Pointers are followed lazily,
         so ``doc`` may still be filling up while its objects are created.
+
+        :param block: the block to wrap.
+        :param doc: the document to resolve pointers through, or ``None``.
         """
         self._block = block
         self._doc = doc
@@ -143,7 +146,11 @@ class PremiereObject(ABC):
 
     @classmethod
     def class_for(cls, class_uuid: str) -> "type[PremiereObject] | None":
-        """The model class registered for ``class_uuid``, or ``None`` if it is not modelled."""
+        """The model class registered for ``class_uuid``, or ``None`` if it is not modelled.
+
+        :param class_uuid: a ``ClassID``.
+        :returns: the model class, or ``None`` for an unmodelled class.
+        """
         return PremiereObject._BY_CLASS_UUID.get(class_uuid)
 
     @property
@@ -183,6 +190,10 @@ class PremiereObject(ABC):
         The target's class must be known — a number alone is ambiguous — so the
         caller names it. ``None`` if there's no such pointer or no document to
         resolve against.
+
+        :param model_class: the target's class.
+        :param pattern: a regex whose group 1 is the pointer's id.
+        :returns: the target, or ``None``.
         """
         if self._doc is None:
             return None
@@ -190,7 +201,11 @@ class PremiereObject(ABC):
         return self._doc.by_ref(model_class, search_group(pattern, self._block.text))
 
     def _edit(self, text: str) -> Edit:
-        """This object's block, rewritten as ``text`` — an edit for ``Xml`` to apply."""
+        """This object's block, rewritten as ``text`` — an edit for ``Xml`` to apply.
+
+        :param text: the block's new text.
+        :returns: the edit over this block's span.
+        """
         return Edit(self._block.start, self._block.end, text)
 
     @staticmethod
@@ -200,6 +215,10 @@ class PremiereObject(ABC):
         The one place that knows the shape. Written out by hand in two classes it
         would be two places to fix, and a mismatch fails silently — the text just
         stays as it was.
+
+        :param tag: the element's tag.
+        :param attributes: attribute names and values, in the order they are written.
+        :returns: the element's text.
         """
         written = " ".join(f'{name}="{value}"' for name, value in attributes.items())
 
@@ -213,6 +232,11 @@ class PremiereObject(ABC):
         about the layout broke. Raising is the point: ``str.replace`` would return the
         text unchanged, the edit would rewrite the block as itself, and the pointer
         would survive into a file that Premiere then refuses to open — far from here.
+
+        :param tag: the pointer's tag.
+        :param attributes: the pointer's attributes, as for :meth:`_pointer`.
+        :returns: the block's text without the pointer's line.
+        :raises MissingPointer: if the block has no such line.
         """
         line = f"\t\t{self._pointer(tag, **attributes)}\n"
 
@@ -285,6 +309,9 @@ class Clip(NumericObject):
 
         ``None`` when the clip has no ``OutPoint`` — then there is nothing to trim,
         and saying so is more honest than handing back an edit that changes nothing.
+
+        :param duration: how many ticks of the media play.
+        :returns: the edit, or ``None`` if the clip has no ``OutPoint``.
         """
         if not re.search(TimelapseRe.OUT_POINT, self._block.text):
             return None
@@ -333,6 +360,10 @@ class MasterClip(UuidObject):
 
         Assumes the media layout the template's sound has: video in slot 0, audio in
         slot 1 (see :meth:`clips` — that order is not universal).
+
+        :param video: the video half to drop, in slot 0.
+        :param audio: the audio half to keep, in slot 1.
+        :returns: the edit.
         """
         audio_only = self._without_pointer(Tag.Clip, Index=0, ObjectRef=video.block.id)
 
@@ -392,6 +423,9 @@ class Media(UuidObject):
 
         The stream is passed in rather than looked up again — the caller has to hold
         it anyway, to decide there is a picture side at all.
+
+        :param stream: the picture stream to unlink.
+        :returns: the edit.
         """
         return self._edit(self._without_pointer(Tag.VideoStream, ObjectRef=stream.block.id))
 
@@ -421,6 +455,10 @@ class AudioClipTrackItem(NumericObject):
 
         ``start=None`` writes no Start element at all — that is how a slot at tick 0
         is stored, and Premiere reads the absence as 0.
+
+        :param start: where the slot begins, in ticks; ``None`` for 0.
+        :param end: where it ends, in ticks.
+        :returns: the edit.
         """
         if start is not None:
             position = f"<Start>{start}</Start>\n\t\t\t\t<End>{end}</End>"
@@ -436,6 +474,10 @@ def parse(block: Block, doc: "Document | None" = None) -> PremiereObject:
     Dispatches on ``ClassID``, not on the tag — see the module docstring. A plain
     function, not a classmethod, so its return type can be named directly. ``doc``
     is passed on to the object, see :class:`PremiereObject`.
+
+    :param block: the block to wrap.
+    :param doc: the document the object belongs to, or ``None``.
+    :returns: the block's model object.
     """
     class_uuid = search_group(TimelapseRe.CLASS_ID, block.header)
 
@@ -455,7 +497,10 @@ class Document:
     """
 
     def __init__(self, blocks: Blocks) -> None:
-        """Parse ``blocks``, handing every object a way back to this document."""
+        """Parse ``blocks``, handing every object a way back to this document.
+
+        :param blocks: the snapshot to parse.
+        """
         self._objects = [parse(block, self) for block in blocks]
 
     def __iter__(self) -> Iterator[PremiereObject]:
@@ -465,6 +510,9 @@ class Document:
         """Every object that is a ``model_class``, subclasses included, in document order.
 
         Subclasses count, so asking for ``Clip`` returns both Audio- and VideoClips.
+
+        :param model_class: the class to filter by.
+        :returns: the matching objects.
         """
         return [o for o in self._objects if isinstance(o, model_class)]
 
@@ -474,6 +522,11 @@ class Document:
         A number is unique only within a ClassID, so a base class spanning several
         (``Clip`` → Audio/VideoClip) could match more than one object — that means
         the ids collide across the family, and rather than guess we fail loud.
+
+        :param model_class: the target's class.
+        :param object_id: the pointer's numeric id, or ``None`` when there is no pointer.
+        :returns: the one matching object, or ``None`` if there is none.
+        :raises AmbiguousReference: if more than one object matches.
         """
         if object_id is None:
             return None

@@ -26,20 +26,34 @@ class Xml:
 
     @classmethod
     def from_gzip_bytes(cls, data: bytes) -> Self:
-        """Read a ``.prproj`` file's bytes: a ``.prproj`` is gzipped UTF-8 XML."""
+        """Read a ``.prproj`` file's bytes: a ``.prproj`` is gzipped UTF-8 XML.
+
+        :param data: the file's raw bytes.
+        :returns: the project's XML.
+        """
         return cls(gzip.decompress(data).decode('utf-8'))
 
     def to_prproj(self, path: Path) -> None:
-        """Write the project to ``path`` as a ``.prproj`` — gzipped UTF-8, like Premiere saves it."""
+        """Write the project to ``path`` as a ``.prproj`` — gzipped UTF-8, like Premiere saves it.
+
+        :param path: where to write; an existing file is overwritten.
+        """
         with gzip.open(path, 'wb') as f:
             f.write(self._xml.encode('utf-8'))
 
     def max_object_id(self) -> int:
-        """The highest numeric ObjectID in the project — used to pick a safe id_offset when cloning."""
+        """The highest numeric ObjectID in the project — used to pick a safe id_offset when cloning.
+
+        :returns: the largest ``ObjectID``.
+        """
         return max(int(i) for i in re.findall(TimelapseRe.OBJECT_ID, self._xml))
 
     def find_panel_item_index(self, uid: str) -> int | None:
-        """Index of the <Item ObjectURef="uid"/> entry in the project panel's clip list, or None."""
+        """Index of the <Item ObjectURef="uid"/> entry in the project panel's clip list, or None.
+
+        :param uid: the clip's ``ObjectUID``.
+        :returns: the entry's ``Index``, or ``None`` if the panel does not list the clip.
+        """
         if m := re.search(TimelapseRe.panel_item(uid), self._xml):
             return int(m.group(1))
         else:
@@ -50,6 +64,9 @@ class Xml:
 
         Global on purpose — used for placeholders and template values that must
         change everywhere they appear. Not for editing one block: use an ``Edit``.
+
+        :param old: the text to find.
+        :param new: the text to put in its place.
         """
         self._xml = self._xml.replace(old, new)
 
@@ -58,6 +75,10 @@ class Xml:
 
         Shifts every offset after ``end``, so any ``Blocks`` snapshot taken before
         is stale afterwards.
+
+        :param start: offset where the replaced text begins.
+        :param end: offset where it ends, exclusive.
+        :param text: the replacement.
         """
         self._xml = self._xml[:start] + text + self._xml[end:]
 
@@ -67,6 +88,9 @@ class Xml:
         The ranges must not overlap. Edits are applied from the end of the string
         backwards, so each one's offsets stay valid however the later (earlier in
         the string) replacements change length.
+
+        :param edits: non-overlapping edits, in any order.
+        :returns: this ``Xml``, for chaining.
         """
         for start, end, text in sorted(edits, reverse=True):
             self.replace_range(start, end, text)
@@ -74,11 +98,21 @@ class Xml:
         return self
 
     def insert(self, position: int, text: str) -> None:
-        """Insert ``text`` at offset ``position``; offsets after it shift like in ``replace_range``."""
+        """Insert ``text`` at offset ``position``; offsets after it shift like in ``replace_range``.
+
+        :param position: the offset to insert at.
+        :param text: the text to insert.
+        """
         self.replace_range(position, position, text)
 
     def regex_replace(self, pattern: str, repl, count: int = 0, flags: int = 0) -> None:
-        """``re.sub`` over the whole project, in place — same ``repl``, ``count`` and ``flags``."""
+        """``re.sub`` over the whole project, in place — same ``repl``, ``count`` and ``flags``.
+
+        :param pattern: the regex to replace.
+        :param repl: a replacement string or a function of the match, as in ``re.sub``.
+        :param count: the most replacements to make; ``0`` replaces all.
+        :param flags: ``re`` flags for ``pattern``.
+        """
         self._xml = re.sub(pattern, repl, self._xml, count=count, flags=flags)
 
     def remove_blocks_by_positions(self, positions: list[tuple[int, int]]) -> Self:
@@ -88,6 +122,9 @@ class Xml:
         through ``replace_ranges`` and the spans may come in any order. Nothing
         else is touched: pointers to the removed blocks are left dangling for
         ``remove_dangling_refs`` to clean up.
+
+        :param positions: the blocks' spans, in any order.
+        :returns: this ``Xml``, for chaining.
         """
         return self.replace_ranges([Edit(start, end, "") for start, end in positions])
 
@@ -107,6 +144,8 @@ class Xml:
           * number pointers (ObjectRef) from SubClip / Source / Content.
         It also tidies the two lists that name clips by pointer — the project's clip
         list (``<Items>``) and each track's clip list (``<TrackItems>``).
+
+        :returns: this ``Xml``, for chaining.
         """
         while True:
             # Collect all ids/uuids that actually exist right now.
@@ -114,9 +153,17 @@ class Xml:
             live_ids = set(re.findall(TimelapseRe.OBJECT_ID, self._xml))
 
             def prune_panel_items(items_block: re.Match) -> str:
-                """The matched ``<Items>`` list without entries for clips that no longer exist."""
+                """The matched ``<Items>`` list without entries for clips that no longer exist.
+
+                :param items_block: the match of an ``<Items>`` list.
+                :returns: the list's text without the stale entries.
+                """
                 def keep(item: re.Match) -> str:
-                    """The ``<Item .../>`` line itself, or ``''`` if the clip it points at by uuid is gone."""
+                    """The ``<Item .../>`` line itself, or ``''`` if the clip it points at by uuid is gone.
+
+                    :param item: the match of one ``<Item .../>`` line.
+                    :returns: the line, or ``''`` to drop it.
+                    """
                     uref = re.search(TimelapseRe.OBJECT_UREF, item.group(0))
 
                     if uref and uref.group(1) not in live_uids:
@@ -133,9 +180,17 @@ class Xml:
             self._xml = re.sub(TimelapseRe.PANEL_ITEMS_BLOCK, prune_panel_items, self._xml, flags=re.DOTALL)
 
             def prune_track_items(track_items_block: re.Match) -> str:
-                """The matched ``<TrackItems>`` list without entries for gone slots, renumbered from 0."""
+                """The matched ``<TrackItems>`` list without entries for gone slots, renumbered from 0.
+
+                :param track_items_block: the match of a ``<TrackItems>`` list.
+                :returns: the list's text without the stale entries, renumbered.
+                """
                 def keep(item: re.Match) -> str:
-                    """The ``<TrackItem .../>`` line itself, or ``''`` if the slot it points at by number is gone."""
+                    """The ``<TrackItem .../>`` line itself, or ``''`` if the slot it points at by number is gone.
+
+                    :param item: the match of one ``<TrackItem .../>`` line.
+                    :returns: the line, or ``''`` to drop it.
+                    """
                     ref = re.search(TimelapseRe.OBJECT_REF, item.group(0))
                     if ref and ref.group(1) not in live_ids:
                         return ''
@@ -194,6 +249,8 @@ class Xml:
 
         Every tag counts as a target of a numeric pointer: a number shared by two
         classes keeps both chunks alive, which errs on the side of keeping.
+
+        :returns: this ``Xml``, for chaining.
         """
         blocks = self.toplevel_blocks()
         reached = blocks.reachable_cluster(blocks.by_tag(Tag.Project), {block.tag for block in blocks})
@@ -207,6 +264,8 @@ class Xml:
         Top-level chunks are the ones indented by exactly one tab — the direct
         children of the project root. (Chunks nested deeper are left alone; we only
         ever move whole top-level chunks around.)
+
+        :returns: a snapshot of the top-level blocks, in document order.
         """
         blocks: Blocks = Blocks()
 
