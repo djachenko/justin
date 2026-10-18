@@ -40,7 +40,9 @@ app = Typer()
 @app.command()
 def timelapse(
         context: Annotated[typer.Context, Argument()],
-        pattern: Annotated[List[Path], Argument()] = [Path.cwd()],
+        pattern: Annotated[List[Path], Argument()] = [
+            Path.cwd(),
+        ],
         fps: Annotated[float, Option(help="Image sequence FPS")] = 10.0,
         timeline_sound: Annotated[list[str], Option(help="Sound (filename or stem) to lay on the timeline; repeatable. Default: all sounds panel-only")] = [],
 ) -> None:

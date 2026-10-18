@@ -12,8 +12,18 @@ from justin.actions.timelapse_xml import Xml
 
 # Formats that carry audio only — no picture. The template's sound is an mp4
 # (which has a video part), so clones of these need that video part stripped.
-AUDIO_ONLY_EXTENSIONS = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
-VIDEO_AS_AUDIO_EXTENSIONS = {".mp4"}
+AUDIO_ONLY_EXTENSIONS = {
+    ".mp3",
+    ".wav",
+    ".aac",
+    ".m4a",
+    ".flac",
+    ".ogg",
+    ".aiff",
+}
+VIDEO_AS_AUDIO_EXTENSIONS = {
+    ".mp4",
+}
 
 _T = TypeVar("_T", bound=PremiereObject)
 
@@ -34,7 +44,16 @@ class Sound(ABC):
     def duration_ticks(self) -> int:
         """How long this sound plays, in Premiere ticks (measured by ffprobe once, then cached)."""
         probe = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(self.path)],
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "csv=p=0",
+                str(self.path),
+            ],
             capture_output=True,
             text=True,
             check=True,
@@ -116,7 +135,9 @@ class AudioSound(Sound):
         video_clip = next((clip for clip in halves if isinstance(clip, VideoClip)), None)
         audio_clip = next((clip for clip in halves if isinstance(clip, AudioClip)), None)
 
-        video_side = {video_stream_id}
+        video_side = {
+            video_stream_id,
+        }
 
         if video_clip:
             video_side.add(video_clip.block.id)
