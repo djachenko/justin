@@ -303,7 +303,7 @@ class TestBlocksQueries:
         assert str(blocks) == "\t<Media ObjectID=\"1\"/>\n\t<SubClip ObjectID=\"2\"/>\n"
 
     def test_str_of_subset_is_a_spliceable_section(self):
-        # A filtered Blocks stringifies to just those blocks — a section to realize/insert.
+        # A filtered Blocks stringifies to just those blocks — a section to adapt/insert.
         assert str(self._sample().by_tag("SubClip")) == (
             '<SubClip ObjectID="2"><Name>a.mp3</Name></SubClip>'
             '<SubClip ObjectID="3"><Name>b.mp3</Name></SubClip>'

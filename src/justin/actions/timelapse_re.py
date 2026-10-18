@@ -263,6 +263,7 @@ class TimelapseRe:
     #   "               — closing quote
     @staticmethod
     def panel_item(uid: str) -> str:
+        """The panel-list entry for the clip with ``uid``; group 1 is its index."""
         return rf'<Item Index="(\d+)" ObjectURef="{re.escape(uid)}"'
 
     # The entire <TrackItems> block that contains a specific anchor slot.
@@ -275,6 +276,10 @@ class TimelapseRe:
     #   </TrackItems>                  — closing tag
     @staticmethod
     def track_items_block(anchor_id: str) -> str:
+        """The whole ``<TrackItems>`` list of the track holding slot ``anchor_id``.
+
+        Needs ``re.DOTALL``: the list spans many lines.
+        """
         return (
             rf'<TrackItems Version="\d+">(?:(?!</TrackItems>).)*?'
             rf'<TrackItem Index="\d+" ObjectRef="{anchor_id}"/>.*?</TrackItems>'
@@ -289,4 +294,8 @@ class TimelapseRe:
     #   "                          — closing quote
     @staticmethod
     def id_remap(old_id: str) -> str:
+        """``ObjectID``/``ObjectRef`` set to ``old_id``; group 1 is the attribute up to the value.
+
+        Scoped to the attributes so a bare number elsewhere in the text is never remapped.
+        """
         return rf'((?:ObjectID|ObjectRef)="){re.escape(old_id)}"'

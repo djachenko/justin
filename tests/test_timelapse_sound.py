@@ -1,11 +1,11 @@
 """
 Unit tests for the Sound hierarchy.
 
-``adapt`` realizes a template section as this sound's own: it renames the
+``adapt`` turns a template section into this sound's own: it renames the
 template's placeholder to the sound's filename, and — for audio-only sounds —
 strips the video half the mp4 template carries. These tests drive adapt on a
 small synthetic mp4-shaped section (still named with the placeholder) and assert
-what the realized section looks like.
+what the adapted section looks like.
 """
 
 from pathlib import Path

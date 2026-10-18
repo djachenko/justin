@@ -25,14 +25,25 @@ class Block(NamedTuple):
 
     @property
     def header(self) -> str:
+        """The start of the block's text, long enough to hold its opening tag.
+
+        Own ids are read from here, not from the whole text: a block's body is full
+        of pointers to other blocks (``ObjectRef``, ``ObjectURef``), and a search
+        over the full text could pick one of those up instead of the block's own id.
+        """
         return self.text[:_HEADER_LEN]
 
     @property
     def id(self) -> str | None:
+        """The block's own ``ObjectID``, or ``None`` for uuid-identified blocks.
+
+        Unique only among blocks of the same class — see ``timelapse_model``.
+        """
         return search_group(TimelapseRe.OBJECT_ID, self.header)
 
     @property
     def span(self) -> tuple[int, int]:
+        """``(start, end)`` — the form the ``Xml`` removal methods take."""
         return self.start, self.end
 
 
@@ -62,17 +73,28 @@ class Blocks(list[Block]):
     """
 
     def by_tag(self, tag: str) -> "Blocks":
+        """The blocks whose top-level tag is ``tag``, in document order.
+
+        Matches the tag only, not the class: one tag can name several Premiere
+        classes (see ``timelapse_model``), so this is a coarse structural filter.
+        """
         return Blocks(block for block in self if block.tag == tag)
 
     def containing(self, marker: str) -> "Blocks":
+        """The blocks whose text contains ``marker`` anywhere, in document order.
+
+        Used with the template's placeholder strings: only the blocks that name a
+        file (media, panel items) carry them, so this finds a cluster's entry points.
+        """
         return Blocks(block for block in self if marker in block.text)
 
     def first(self) -> Block | None:
+        """The first block, or ``None`` if there are none."""
         return next(iter(self), None)
 
     def __str__(self) -> str:
         """The raw text of these blocks, concatenated in order — a section ready to
-        splice into a document (or hand to a Sound to realize)."""
+        splice into a document (or hand to ``Sound.adapt``)."""
         return "".join(block.text for block in self)
 
     def reachable_cluster(self, seeds: Iterable[Block], member_tags: Set[str]) -> "Blocks":

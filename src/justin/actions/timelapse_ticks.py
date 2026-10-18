@@ -11,8 +11,13 @@ PREMIERE_TIMEBASE = 254_016_000_000  # ticks per second
 
 
 def seconds_to_ticks(seconds: float) -> int:
+    """``seconds`` in Premiere ticks, truncated to a whole tick."""
     return int(seconds * PREMIERE_TIMEBASE)
 
 
 def ticks_per_frame(fps: float) -> int:
+    """How many ticks one frame lasts at ``fps``, truncated to a whole tick.
+
+    Premiere stores frame rates this way (``<FrameRate>``), not as frames per second.
+    """
     return int(PREMIERE_TIMEBASE / fps)

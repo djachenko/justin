@@ -9,6 +9,11 @@ from justin.actions.timelapse_tags import Tag
 
 
 class Xml:
+    """A ``.prproj``'s XML as mutable text — every edit is a text edit on it.
+
+    Blocks and model objects taken from it are snapshots, valid until the next edit.
+    """
+
     def __init__(self, xml: str):
         super().__init__()
 
@@ -16,13 +21,16 @@ class Xml:
 
     @property
     def text(self) -> str:
+        """The current project text, with every edit made so far applied."""
         return self._xml
 
     @classmethod
     def from_gzip_bytes(cls, data: bytes) -> Self:
+        """Read a ``.prproj`` file's bytes: a ``.prproj`` is gzipped UTF-8 XML."""
         return cls(gzip.decompress(data).decode('utf-8'))
 
     def to_prproj(self, path: Path) -> None:
+        """Write the project to ``path`` as a ``.prproj`` — gzipped UTF-8, like Premiere saves it."""
         with gzip.open(path, 'wb') as f:
             f.write(self._xml.encode('utf-8'))
 
@@ -38,9 +46,19 @@ class Xml:
             return None
 
     def replace(self, old: str, new: str) -> None:
+        """Replace every occurrence of ``old`` with ``new`` across the whole project.
+
+        Global on purpose — used for placeholders and template values that must
+        change everywhere they appear. Not for editing one block: use an ``Edit``.
+        """
         self._xml = self._xml.replace(old, new)
 
     def replace_range(self, start: int, end: int, text: str) -> None:
+        """Replace the text between offsets ``start`` and ``end`` with ``text``.
+
+        Shifts every offset after ``end``, so any ``Blocks`` snapshot taken before
+        is stale afterwards.
+        """
         self._xml = self._xml[:start] + text + self._xml[end:]
 
     def replace_ranges(self, edits: list[Edit]) -> Self:
@@ -56,13 +74,21 @@ class Xml:
         return self
 
     def insert(self, position: int, text: str) -> None:
+        """Insert ``text`` at offset ``position``; offsets after it shift like in ``replace_range``."""
         self.replace_range(position, position, text)
 
     def regex_replace(self, pattern: str, repl, count: int = 0, flags: int = 0) -> None:
+        """``re.sub`` over the whole project, in place — same ``repl``, ``count`` and ``flags``."""
         self._xml = re.sub(pattern, repl, self._xml, count=count, flags=flags)
 
     def remove_blocks_by_positions(self, positions: list[tuple[int, int]]) -> Self:
-        # Removing a block is just replacing its range with nothing.
+        """Cut out the blocks at the given ``(start, end)`` spans.
+
+        Removing a block is just replacing its range with nothing, so this goes
+        through ``replace_ranges`` and the spans may come in any order. Nothing
+        else is touched: pointers to the removed blocks are left dangling for
+        ``remove_dangling_refs`` to clean up.
+        """
         return self.replace_ranges([Edit(start, end, "") for start, end in positions])
 
     def remove_dangling_refs(self) -> Self:
@@ -88,8 +114,9 @@ class Xml:
             live_ids = set(re.findall(TimelapseRe.OBJECT_ID, self._xml))
 
             def prune_panel_items(items_block: re.Match) -> str:
+                """The matched ``<Items>`` list without entries for clips that no longer exist."""
                 def keep(item: re.Match) -> str:
-                    # Each <Item .../> line points at a clip by uuid. Drop the line if that clip is gone.
+                    """The ``<Item .../>`` line itself, or ``''`` if the clip it points at by uuid is gone."""
                     uref = re.search(TimelapseRe.OBJECT_UREF, item.group(0))
 
                     if uref and uref.group(1) not in live_uids:
@@ -106,8 +133,9 @@ class Xml:
             self._xml = re.sub(TimelapseRe.PANEL_ITEMS_BLOCK, prune_panel_items, self._xml, flags=re.DOTALL)
 
             def prune_track_items(track_items_block: re.Match) -> str:
+                """The matched ``<TrackItems>`` list without entries for gone slots, renumbered from 0."""
                 def keep(item: re.Match) -> str:
-                    # Each <TrackItem .../> line points at a clip by number. Drop if that clip is gone.
+                    """The ``<TrackItem .../>`` line itself, or ``''`` if the slot it points at by number is gone."""
                     ref = re.search(TimelapseRe.OBJECT_REF, item.group(0))
                     if ref and ref.group(1) not in live_ids:
                         return ''

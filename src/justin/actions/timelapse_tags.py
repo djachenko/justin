@@ -2,6 +2,8 @@ from enum import StrEnum
 
 
 class Tag(StrEnum):
+    """The ``.prproj`` XML tag names the generator reads or edits."""
+
     # ── project panel ─────────────────────────────────────────────────────────
     Project                      = "Project"                       # graph root: the only top-level chunk without an id
 
