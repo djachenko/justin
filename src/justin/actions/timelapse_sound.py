@@ -57,6 +57,7 @@ class Sound(ABC):
     @classmethod
     def from_path(cls, path: Path) -> "Sound":
         suffix = path.suffix.lower()
+
         if suffix in AUDIO_ONLY_EXTENSIONS:
             return AudioSound(path)
         elif suffix in VIDEO_AS_AUDIO_EXTENSIONS:
@@ -106,7 +107,11 @@ class AudioSound(Sound):
         # side (a shared Markers block is reachable from both, so it must stay).
         document = Document(fragment.toplevel_blocks())
         master = self._own(document, MasterClip)
-        halves = master.clips if master else []
+
+        if master is not None:
+            halves = master.clips
+        else:
+            halves = []
 
         video_clip = next((clip for clip in halves if isinstance(clip, VideoClip)), None)
         audio_clip = next((clip for clip in halves if isinstance(clip, AudioClip)), None)
