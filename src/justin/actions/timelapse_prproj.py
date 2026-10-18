@@ -120,6 +120,7 @@ def build_prproj(
         _remove_cover(xml, ticks_per_frame, image_sequence_duration, sequence_duration)
 
     xml.remove_dangling_refs()
+    xml.remove_unreachable()
     xml.to_prproj(output_path)
 
     return output_path

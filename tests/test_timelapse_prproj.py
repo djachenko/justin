@@ -96,6 +96,21 @@ def duplicate_uuids(xml: str) -> list[str]:
     return [uid for uid, n in counts.items() if n > 1]
 
 
+def orphan_blocks(xml: str) -> list[str]:
+    """Top-level blocks nothing points at. Premiere never saves one: only the
+    id-less ``Project`` root goes unreferenced."""
+    refs = set(re.findall(r'ObjectRef="(\d+)"', xml)) | set(re.findall(r'ObjectURef="([^"]+)"', xml))
+    orphans = []
+
+    for block in Xml(xml).toplevel_blocks():
+        identity = re.search(r'Object(?:U)?ID="([^"]+)"', block.header)
+
+        if identity and identity.group(1) not in refs:
+            orphans.append(f"{block.tag} {identity.group(1)}")
+
+    return orphans
+
+
 def track_item_count(xml: str) -> int:
     return xml.count("<AudioClipTrackItem ")
 
@@ -109,6 +124,7 @@ def assert_structurally_sound(xml: str) -> None:
     assert not dangling_numeric_refs(xml)
     assert not dangling_uuid_refs(xml)
     assert not duplicate_uuids(xml)
+    assert not orphan_blocks(xml)
 
 
 def generate(timelapse_dir: Path, fps: float = 10.0, timeline_sounds: list[str] | None = None) -> str:
@@ -294,6 +310,11 @@ def test_template_resource_is_packaged():
     assert len(data) > 0
     xml = gzip.decompress(data).decode("utf-8")
     ET.fromstring(xml)
+
+
+def test_premiere_saved_template_has_no_orphans():
+    # Grounds the orphan check: the invariant holds for what Premiere itself writes.
+    assert not orphan_blocks(gzip.decompress(_TEMPLATE_DATA).decode("utf-8"))
 
 
 # --------------------------------------------------------------------------- #
