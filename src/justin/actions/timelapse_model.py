@@ -57,6 +57,7 @@ project's ``.prproj`` format notes (reverse-engineering reference in memory).
 
 import re
 from abc import ABC, abstractmethod
+from functools import cached_property
 from typing import ClassVar, Iterator, NamedTuple, TypeVar
 
 from justin.actions.timelapse_block import Block, Blocks, Edit
@@ -216,7 +217,7 @@ class PremiereObject(ABC):
 class NumericObject(PremiereObject):
     """Identified by ``ObjectID`` — unique only within its own class."""
 
-    @property
+    @cached_property
     def identity(self) -> str | None:
         return self._block.id
 
@@ -224,7 +225,7 @@ class NumericObject(PremiereObject):
 class UuidObject(PremiereObject):
     """Identified by ``ObjectUID`` — globally unique. Has no ``ObjectID`` at all."""
 
-    @property
+    @cached_property
     def identity(self) -> str | None:
         return search_group(TimelapseRe.OBJECT_UID, self._block.header)
 
@@ -236,7 +237,7 @@ class OpaqueObject(PremiereObject):
     ``<Project ObjectRef="1"/>`` forward reference.
     """
 
-    @property
+    @cached_property
     def identity(self) -> str | None:
         if self._block.id is not None:
             return self._block.id
