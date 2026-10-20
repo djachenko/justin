@@ -5,7 +5,8 @@ from typing import Annotated, Iterable, List, Optional
 import typer
 from justin_utils import util
 from justin_utils.filesystem import Folder
-from justin_utils.util import parse_date
+from justin_utils.util import first, parse_date
+from pyvko.aspects.groups import Group
 from typer import Typer, Argument
 
 from justin.browser.event_creation.event_creation_settings import Category
@@ -18,14 +19,17 @@ from justin.browser.sections.section_settings import (
 )
 from justin.browser.vk_browser import VKBrowser
 from justin.shared.context import Context
+from justin.shared.metafiles.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset
+from justin.shared.vk import VK_URL
 from justin.typer.base_commands.pattern_command import Extra, PatternCommand
 
 
 class SetupEventCommand(PatternCommand):
-    """Создаёт или донастраивает событие VK — по фотосету либо вручную.
+    """Creates or configures a VK event — from a photoset or by hand.
 
-    Разбор паттернов, построение фотосета и отсев не-фотосетов делает PatternCommand.
+    Parsing patterns, building the photoset and filtering out non-photosets is
+    PatternCommand's job.
     """
 
     def __init__(
@@ -41,15 +45,22 @@ class SetupEventCommand(PatternCommand):
     ):
         super().__init__(context, patterns)
 
-        self.create = create
-        self.url = url
-        self.manual = manual
-        self.date = parse_date(date_) if date_ else None
-        self.title = title
-        self.parent = parent
+        self.__create = create
+        self.__url = url
+        self.__manual = manual
+        self.__date = self.__parsed_date(date_)
+        self.__title = title
+        self.__parent = parent
+
+    @staticmethod
+    def __parsed_date(date_: str | None) -> date | None:
+        if not date_:
+            return None
+
+        return parse_date(date_)
 
     def run(self) -> None:
-        if self.manual:
+        if self.__manual:
             self.__setup(self.__manual_title(), self.__manual_date(), self.__manual_parent())
 
             return
@@ -57,26 +68,27 @@ class SetupEventCommand(PatternCommand):
         super().run()
 
     def run_for_photoset(self, photoset: Photoset, extra: Extra) -> None:
-        parent = self.__photoset_parent(photoset)
+        candidates = self.__candidates(photoset)
 
-        if parent is None:
-            print(f"Unable to determine parent. {photoset.path}")
+        self.__check_unique_groups(candidates, photoset)
 
-            return
+        folder, parent = self.__target(candidates, photoset)
+        title = self.__title or photoset.name
 
-        title = self.title or photoset.name
+        event_id = self.__setup(title, self.__date or self.__date_from_name(photoset.name), parent)
 
-        self.__setup(title, self.date or self.__date_from_name(photoset.name), parent)
+        if GroupMetafile.get(folder) is None:
+            GroupMetafile(group_id=-event_id).save(folder)
 
     def __manual_title(self) -> str:
-        return self.title or input("Enter event title: ")
+        return self.__title or input("Enter event title: ")
 
     def __manual_date(self) -> date:
-        return self.date or parse_date(input("Enter event date: "))
+        return self.__date or parse_date(input("Enter event date: "))
 
     def __manual_parent(self):
-        if self.parent:
-            return self.context.pyvko.get(self.parent)
+        if self.__parent:
+            return self.context.pyvko.get(self.__parent)
 
         choice = util.ask_for_choice("Choose event parent:", ["closed", "meeting"])
 
@@ -88,36 +100,84 @@ class SetupEventCommand(PatternCommand):
 
         raise ValueError("Invalid parent")
 
-    def __photoset_parent(self, photoset: Photoset):
-        def needs_event(folder: Folder | None) -> bool:
-            return folder is not None  # and not GroupMetafile.has(folder)
+    def __candidates(self, photoset: Photoset) -> list[tuple[Folder, Group]]:
+        """Folders an event belongs to, in walk order: every closed/<name> has its own
+        event, meeting has one. The parent comes from the kind of folder."""
+        closed = [
+            (name_folder, self.context.closed_group)
+            for part in photoset.parts
+            if part.closed is not None
+            for name_folder in part.closed.subfolders
+        ]
+        meeting = [
+            (part.meeting, self.context.meeting_group)
+            for part in photoset.parts
+            if part.meeting is not None
+        ]
 
-        if self.parent:
-            return self.context.pyvko.get(self.parent)
+        return closed + meeting
 
-        if any(needs_event(part.closed) for part in photoset.parts):
-            return self.context.closed_group
+    @staticmethod
+    def __group_id(folder: Folder) -> int | None:
+        metafile = GroupMetafile.get(folder)
 
-        if any(needs_event(part.meeting) for part in photoset.parts):
-            return self.context.meeting_group
+        if metafile is None:
+            return None
 
-        return None
+        return abs(metafile.group_id)
+
+    def __check_unique_groups(self, candidates: list[tuple[Folder, Group]], photoset: Photoset) -> None:
+        group_ids = [self.__group_id(folder) for folder, _ in candidates]
+        linked = [group_id for group_id in group_ids if group_id is not None]
+
+        if len(linked) != len(set(linked)):
+            raise ValueError(f"Two folders are linked to the same event. {photoset.path}")
+
+    def __target(self, candidates: list[tuple[Folder, Group]], photoset: Photoset) -> tuple[Folder, Group]:
+        """The first folder linked to --url, else the first folder with no event yet —
+        so a rerun picks up where the previous one stopped."""
+        if self.__url:
+            event_id = abs(self.context.pyvko.get(self.__url).id)
+            linked = first(candidates, key=lambda candidate: self.__group_id(candidate[0]) == event_id)
+
+            if linked is not None:
+                return linked
+
+        free = first(candidates, key=lambda candidate: self.__group_id(candidate[0]) is None)
+
+        if free is None:
+            raise ValueError(f"No folder left without an event. {photoset.path}")
+
+        return free
 
     @staticmethod
     def __date_from_name(name: str) -> date:
-        """Фотосеты названы YY.M.D.event_name — дата события берётся оттуда."""
+        """Photosets are named YY.M.D.event_name — the event date comes from there."""
         year, month, day, _ = name.split(".", maxsplit=3)
 
         return date(int(year) + 2000, int(month), int(day))
 
-    def __setup(self, title: str, event_date: date, parent) -> None:
+    @staticmethod
+    def __organiser_id(parent) -> int | None:
+        if parent is None:
+            return None
+
+        return parent.id
+
+    def __new_browser(self) -> VKBrowser:
+        """Creation can run into a captcha, and a human solves it — the window must show."""
+        if self.__create:
+            return VKBrowser(headless=False)
+
+        return VKBrowser()
+
+    def __setup(self, title: str, event_date: date, parent) -> int:
         start_dt = datetime.combine(event_date, time(hour=12))
         end_dt = start_dt + timedelta(hours=4)
-        organiser_id = parent.id if parent is not None else None
+        organiser_id = self.__organiser_id(parent)
 
-        # Создание может упереться в капчу, а её решает человек — окно должно быть видно.
-        with VKBrowser(headless=False if self.create else None) as browser:
-            if self.create:
+        with self.__new_browser() as browser:
+            if self.__create:
                 event_id = browser.create_event(
                     title=title,
                     start_dt=start_dt,
@@ -126,16 +186,18 @@ class SetupEventCommand(PatternCommand):
                     is_closed=True,
                 )
 
-                print(f"Event created: https://vk.com/event{event_id} (id={event_id})")
-            elif self.url:
-                event_id = abs(self.context.pyvko.get(self.url).id)
+                print(f"Event created: {VK_URL}/event{event_id} (id={event_id})")
+            elif self.__url:
+                event_id = abs(self.context.pyvko.get(self.__url).id)
             else:
                 raise ValueError("Either --create or --url must be specified")
 
             browser.apply_settings(
                 event_id, self._default_settings(title, organiser_id, start_dt, end_dt))
 
-        print(f"Event is ready: https://vk.com/event{event_id}")
+        print(f"Event is ready: {VK_URL}/event{event_id}")
+
+        return event_id
 
     @staticmethod
     def _default_settings(title: str, organiser_id: int | None, start_dt: datetime, end_dt: datetime) -> EventSettingsSettings:
@@ -191,18 +253,3 @@ def setup_event(
 
     SetupEventCommand(context.obj, pattern or [Path.cwd()], create, url, manual,
                       date_, title, parent).run()
-
-
-if __name__ == "__main__":
-    TEST_EVENT_ID = 239324394
-
-    with VKBrowser() as browser:
-        browser.apply_settings(TEST_EVENT_ID, EventSettingsSettings(
-            messages=MessagesSettings(enabled=True),
-            sections=SectionsConfig(
-                posts=PostsSettings(),
-                photos=PhotosSettings(),
-            ),
-        ))
-
-    print(f"Done: https://vk.com/event{TEST_EVENT_ID}")
