@@ -1,11 +1,10 @@
-"""Общее для тестов, ходящих в живой VK.
+"""Shared by the tests that go to live VK.
 
-Id тестового события читается фикстурой, а не на уровне модуля. Разница принципиальная:
-отбор по маркерам происходит **после** импорта, поэтому чтение переменной на импорте
-роняло сборку тестов там, где `.env` нет (CI), и никакой `-m` этому помешать не мог.
-Фикстура же выполняется только у тех тестов, которые отбор пережили.
+The test event id is read by a fixture, not at module level. Markers are applied after
+import, so reading the variable on import broke collection wherever there is no .env
+(CI), and no -m could prevent that. A fixture runs only for tests that survived selection.
 
-Если переменной нет, а живой тест позвали — падаем, так и надо.
+A live test called without the variable fails — as it should.
 """
 import os
 

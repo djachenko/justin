@@ -1,18 +1,19 @@
-"""Открытие страниц VK в тестах: переиспользование вкладки и пропуск при троттлинге.
+"""Opening VK pages in tests: tab reuse and skipping while throttled.
 
-Одна вкладка живёт весь модуль, поэтому загруженную страницу можно не перезагружать —
-это главная экономия запросов к VK. Опасность одна: тест, который что-то на странице
-поменял, оставляет её следующему. Отсюда три входа вместо флагов —
+One tab lives for the whole module, so a loaded page need not be reloaded — that is the
+main saving on requests to VK. The one danger: a test that changed something on the page
+leaves it to the next one. Hence three entry points instead of flags —
 
-    reading  — только читает, берёт уже открытую;
-    editing  — меняет и убрать за собой не может, страница остаётся грязной;
-    modal    — открывает модалку и закрывает её на выходе, чем возвращает чистоту.
+    reading  — reads only, takes the page already open;
+    editing  — changes it and cannot undo that, the page stays dirty;
+    modal    — opens a modal and closes it on the way out, which restores cleanliness.
 
-Чистота снимается на входе и возвращается только если блок дошёл до конца: упавший
-тест не доходит до возврата, и страница честно остаётся грязной.
+Cleanliness is dropped on entry and restored only if the block reached its end: a failing
+test never reaches the restore, and the page honestly stays dirty.
 """
 import time
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 import pytest
 from selenium.common.exceptions import TimeoutException
@@ -23,15 +24,22 @@ from justin.browser.shared.elements import Locator, gone
 from justin.browser.shared.page import content_rendered
 from justin.browser.vk_browser import VKBrowser
 
-WAIT = 10  # секунд: тесту хватает, а на задушенной VK не превращает прогон в минуты
+WAIT = 10  # seconds: enough for a test, and a throttled VK does not stretch the run
 _SHORT = 3
 
-_state: dict = {"url": None, "dirty": True}
+@dataclass
+class _Tab:
+    url: str | None = None
+    dirty: bool = True
+
+
+_tab = _Tab()
 
 
 def forget_page() -> None:
-    """Сбросить память о вкладке — для тестов, которые ходят мимо этого модуля."""
-    _state.update(url=None, dirty=True)
+    """Forget the tab — for tests that open pages past this module."""
+    _tab.url = None
+    _tab.dirty = True
 
 
 @contextmanager
@@ -42,45 +50,46 @@ def reading(browser: VKBrowser, url: str):
 @contextmanager
 def editing(browser: VKBrowser, url: str):
     wait = _load_if_stale(browser, url)
-    _state["dirty"] = True
+    _tab.dirty = True
 
     yield wait
 
 
 @contextmanager
 def modal(browser: VKBrowser, url: str, inside_modal: Locator):
-    """inside_modal — элемент внутри модалки: по его исчезновению видно, закрылась ли."""
+    """inside_modal is an element inside the modal: its disappearance means it closed."""
     wait = _load_if_stale(browser, url)
-    _state["dirty"] = True
+    _tab.dirty = True
 
     yield wait
 
     if _closed_by_escape(browser, inside_modal):
-        _state["dirty"] = False
+        _tab.dirty = False
 
 
 def _load_if_stale(browser: VKBrowser, url: str):
     wait = browser.new_wait(WAIT)
 
-    if _state["url"] == url and not _state["dirty"]:
+    if _tab.url == url and not _tab.dirty:
         return wait
 
-    # Пока страница не загружена, память о вкладке недействительна: если загрузка
-    # окажется заглушкой троттлинга, следующий тест не должен принять её за годную.
+    # Until the page is loaded the memory of the tab is invalid: if the load turns out to
+    # be a throttling stub, the next test must not take it for a good page.
     forget_page()
     browser.driver.get(url)
 
-    # Заголовок появляется не мгновенно — без ожидания проверка читает пустую строку.
+    # The title does not appear at once — without a wait the check reads an empty string.
     browser.new_wait(_SHORT).until(lambda d: d.title)
 
     if browser.is_throttled:
-        pytest.skip(f"VK отдаёт {browser.ERROR_TITLE!r}: кулдаун после интенсивных прогонов "
-                    f"либо страница действительно пропала — {url}")
+        pytest.skip(f"VK serves {browser.ERROR_TITLE!r}: a cooldown after heavy runs, "
+                    f"or the page is really gone — {url}")
 
     wait.until(content_rendered)
     time.sleep(0.5)
 
-    _state.update(url=url, dirty=False)
+    _tab.url = url
+    _tab.dirty = False
 
     return wait
 
