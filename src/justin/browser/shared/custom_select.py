@@ -3,8 +3,12 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
+from justin_utils.util import first
+
 from justin.browser.shared.elements import by_css, found
 from justin.browser.shared.pacing import AFTER_ACTION, pause
+
+SELECT_HOLDER = by_css("input[role='combobox']")
 
 
 def option_by_value(value: str) -> str:
@@ -18,10 +22,8 @@ def set_custom_select(driver: WebDriver, wait: WebDriverWait, holder: WebElement
 
     option = found(
         wait,
-        lambda d: next(
-            (el for el in d.find_elements(*by_css(option_by_value(value))) if el.is_displayed()),
-            None
-        )
+        lambda d: first(d.find_elements(*by_css(option_by_value(value))),
+                        key=lambda el: el.is_displayed()),
     )
 
     label = option.text.strip()
@@ -34,3 +36,11 @@ def set_custom_select(driver: WebDriver, wait: WebDriverWait, holder: WebElement
 
     if shown != label:
         raise ValueError(f"Option not applied: select shows {shown!r}, expected {label!r}")
+
+
+def set_custom_select_at(driver: WebDriver, wait: WebDriverWait, container: WebElement,
+                         position: int, value: str) -> None:
+    """Selects without testids are told apart by their order inside the container."""
+    holder = container.find_elements(*SELECT_HOLDER)[position]
+
+    set_custom_select(driver, wait, holder, value)
