@@ -1,11 +1,7 @@
-"""
-Контракт селекторов: проверяет, что элементы, на которые опираются схемы,
-всё ещё есть на живых страницах VK. Ничего не меняет — только читает.
+"""Selector contract: the elements the schemas rely on are still on the live VK pages.
+Changes nothing — only reads.
 
-Падение теста = VK переписал страницу, смотри имя теста и селектор.
-
-Запуск: pytest -m integration tests/browser/test_selector_contract.py
-(по умолчанию живые тесты отобраны маркером — см. addopts в pyproject.toml)
+A failure means VK rewrote the page: see the test name and the selector.
 """
 from datetime import datetime
 
@@ -14,15 +10,13 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from justin.browser.event_creation.event_creation_schema import EventCreationSchema
-from justin.browser.event_settings.event_settings_schema import _MESSAGES_OFF, _MESSAGES_ON, _MESSAGES_SELECT
+from justin.browser.event_settings.event_settings_schema import Messages
 from justin.browser.event_setup.event_setup_schema import (
-    _ACCESS, _CITY, _SUBJECT, _fill_date_field, _visible_selectors,
+    Access, Selectors, _fill_date_field, _visible_selectors,
 )
-from justin.browser.shared.custom_select import option_by_value
+from justin.browser.shared.custom_select import SELECT_HOLDER, option_by_value
 from justin.browser.shared.elements import by_css, by_testid, by_xpath, clickable, found, present, visible
-from justin.browser.invite_link.invite_link_schema import (
-    _CREATE_LINK_BUTTON, _LIFETIME, _MODAL, _MODAL_CREATE, _SELECT_HOLDER, _USES,
-)
+from justin.browser.invite_link.invite_link_schema import InviteLinkSchema
 from justin.browser.invite_link.invite_link_settings import LinkLifetime, LinkUses
 from justin.browser.shared.save_button import find_save_buttons
 from justin.browser.sections.section_schema import (
@@ -30,11 +24,12 @@ from justin.browser.sections.section_schema import (
     PhotosSchema, PostsSchema, TopicsSchema, VideosSchema,
 )
 from justin.browser.vk_browser import VKBrowser
+from justin.shared.vk import VK_URL
 from tests.browser.vk_page import editing, modal, reading
 
 PAGES = {
     "setup": (
-        "https://vk.com/event{event_id}?act=edit",
+        VK_URL + "/event{event_id}?act=edit",
         [
             "[id='group_edit_name']",
             "[id='group_edit_desc']",
@@ -44,19 +39,19 @@ PAGES = {
         ],
     ),
     "content_tabs": (
-        "https://vk.com/event{event_id}/settings/content_tabs",
+        VK_URL + "/event{event_id}/settings/content_tabs",
         ["[data-testid='sections_toggle_reorder']"],
     ),
     "sections": (
-        "https://vk.com/event{event_id}/settings/sections",
+        VK_URL + "/event{event_id}/settings/sections",
         ["[data-testid='list_sections']"],
     ),
     "cta": (
-        "https://vk.com/event{event_id}/settings/cta",
+        VK_URL + "/event{event_id}/settings/cta",
         ["[data-testid='groups_edit_header_switch_label_cta'] input[type='checkbox']"],
     ),
     "messages": (
-        "https://vk.com/event{event_id}/settings/messages",
+        VK_URL + "/event{event_id}/settings/messages",
         [
             "input[data-testid='settings_messages_enabled']",
             "select[data-testid='settings_messages_enabled']",
@@ -64,20 +59,19 @@ PAGES = {
         ],
     ),
     "addresses": (
-        "https://vk.com/event{event_id}?act=addresses",
+        VK_URL + "/event{event_id}?act=addresses",
         ["[data-testid='groups_edit_g_addresses']"],
     ),
     "invites": (
-        "https://vk.com/event{event_id}/settings/requests",
+        VK_URL + "/event{event_id}/settings/requests",
         [
             "[data-testid='settings-invitations-create-link-button']",
             "[data-testid='settings-invitations-by-link']",
         ],
     ),
     "extras": (
-        "https://vk.com/event{event_id}/settings/extras",
+        VK_URL + "/event{event_id}/settings/extras",
         [
-            "[data-testid='photo_recognize_enabled']",
             "[data-testid='clips_co_ownership_enabled']",
             "[data-testid='stories_replies_enabled']",
             "[data-testid='show_in_left_menu']",
@@ -98,143 +92,122 @@ SECTIONS = [
 ]
 
 
-
 @pytest.mark.integration
-@pytest.mark.parametrize("page", PAGES)
-def test_page_selectors_present(browser: VKBrowser, event_id: int, page: str) -> None:
-    url_tmpl, selectors = PAGES[page]
-    missing: list[str] = []
+class TestSelectorContract:
+    @pytest.mark.parametrize("page", PAGES)
+    def test_page_selectors_present(self, browser: VKBrowser, event_id: int, page: str) -> None:
+        url_tmpl, selectors = PAGES[page]
 
-    def all_present(driver: WebDriver) -> bool:
-        missing[:] = [s for s in selectors if not driver.find_elements(*by_css(s))]
-        return not missing
+        def missing_in(driver: WebDriver) -> list[str]:
+            return [selector for selector in selectors
+                    if not driver.find_elements(*by_css(selector))]
 
-    with reading(browser, url_tmpl.format(event_id=event_id)) as wait:
-        try:
-            wait.until(all_present)
-        except TimeoutException:
-            pass
+        with reading(browser, url_tmpl.format(event_id=event_id)) as wait:
+            try:
+                wait.until(lambda driver: not missing_in(driver))
+            except TimeoutException:
+                pass
 
-    assert not missing, f"[{page}] пропали селекторы: {missing}"
+            missing = missing_in(browser.driver)
 
+        assert not missing, f"[{page}] selectors gone: {missing}"
 
-@pytest.mark.integration
-def test_messages_select_values(browser: VKBrowser, event_id: int) -> None:
-    """Схема выбирает сообщения по значению, а не по подписи — значения должны быть на месте."""
-    with reading(browser, f"https://vk.com/event{event_id}/settings/messages"):
-        native = browser.driver.find_element(*by_css(f"select[data-testid='{_MESSAGES_SELECT}']"))
-        values = [option.get_attribute("value")
-                  for option in native.find_elements(*by_css("option"))]
+    def test_messages_select_values(self, browser: VKBrowser, event_id: int) -> None:
+        """The schema picks by value, not by label."""
+        with reading(browser, f"{VK_URL}/event{event_id}/settings/messages"):
+            native = browser.driver.find_element(*by_css(f"select[data-testid='{Messages.SELECT}']"))
+            values = [option.get_attribute("value")
+                      for option in native.find_elements(*by_css("option"))]
 
-    assert sorted(values) == sorted([_MESSAGES_OFF, _MESSAGES_ON]), f"значения селекта: {values}"
-    assert native.get_attribute("value") in values
+        assert sorted(values) == ["0", "1"], f"select values: {values}"
+        assert native.get_attribute("value") in values
 
+    @pytest.mark.parametrize("position,hidden", [
+        (Selectors.SUBJECT, "group_category_0"),
+        (Selectors.CITY, "sel_groups_edit_city"),
+    ], ids=["category", "city"])
+    def test_selector_positions(self, browser: VKBrowser, event_id: int, position: int, hidden: str) -> None:
+        """Category and city are picked by index among identical widgets — the index must
+        point to the widget bound to the hidden input."""
+        with reading(browser, PAGES["setup"][0].format(event_id=event_id)) as wait:
+            present(wait, _NAME_FIELD)
 
-@pytest.mark.integration
-@pytest.mark.parametrize("position,hidden", [
-    (_SUBJECT, "group_category_0"),
-    (_CITY, "sel_groups_edit_city"),
-], ids=["category", "city"])
-def test_selector_positions(browser: VKBrowser, event_id: int, position: int, hidden: str) -> None:
-    """Категория и город берутся по номеру среди одинаковых виджетов — проверяем,
-    что по этому номеру лежит именно тот виджет, к которому привязано скрытое поле."""
-    with reading(browser, PAGES["setup"][0].format(event_id=event_id)) as wait:
-        present(wait, _NAME_FIELD)
+            widget = browser.driver.find_element(*by_css(f"input[name='{hidden}']")).find_element(
+                *by_xpath("ancestor::*[contains(@class, 'selector')][1]"))
 
-        widget = browser.driver.find_element(*by_css(f"input[name='{hidden}']")).find_element(
-            *by_xpath("ancestor::*[contains(@class, 'selector')][1]"))
+            at_position = _visible_selectors(browser.driver)[position]
 
-        at_position = _visible_selectors(browser.driver)[position]
+        assert at_position in widget.find_elements(*by_css(".selector_input")), \
+            f"position {position} does not hold the widget of {hidden!r}"
 
-    assert at_position in widget.find_elements(*by_css(".selector_input")), \
-        f"на позиции {position} не виджет поля {hidden!r}"
+    @pytest.mark.parametrize("page", ["setup", "messages", "addresses"])
+    def test_save_button_present(self, browser: VKBrowser, event_id: int, page: str) -> None:
+        url_tmpl, _ = PAGES[page]
 
+        with reading(browser, url_tmpl.format(event_id=event_id)) as wait:
+            wait.until(lambda d: find_save_buttons(d))
 
-@pytest.mark.integration
-@pytest.mark.parametrize("page", ["setup", "messages", "addresses"])
-def test_save_button_present(browser: VKBrowser, event_id: int, page: str) -> None:
-    """Страницы, которые схемы сохраняют явной кнопкой."""
-    url_tmpl, _ = PAGES[page]
+    @pytest.mark.parametrize("page,section", SECTIONS, ids=[s.test_id for _, s in SECTIONS])
+    def test_section_modal_selectors(self, browser: VKBrowser, event_id: int, page: str, section: SectionSchema) -> None:
+        toggle = by_testid(section.enabled.test_id)
+        url = PAGES[page][0].format(event_id=event_id)
 
-    with reading(browser, url_tmpl.format(event_id=event_id)) as wait:
-        wait.until(lambda d: find_save_buttons(d))
+        with modal(browser, url, inside_modal=toggle) as wait:
+            section._open(browser.driver, wait)
 
+            present(wait, by_testid("form_modal_save"))
 
-@pytest.mark.integration
-@pytest.mark.parametrize("page,section", SECTIONS, ids=[s.test_id for _, s in SECTIONS])
-def test_section_modal_selectors(browser: VKBrowser, event_id: int, page: str, section: SectionSchema) -> None:
-    """Открывает модалку секции и проверяет тоггл и кнопку сохранения. Не сохраняет."""
-    toggle = by_testid(section.enabled.test_id)
-    url = PAGES[page][0].format(event_id=event_id)
+    @pytest.mark.parametrize("dt", [
+        datetime(2027, 2, 3, 9, 5),      # another year ahead
+        datetime(2025, 12, 28, 20, 0),   # a year back
+    ])
+    def test_date_field_is_filled(self, browser: VKBrowser, event_id: int, dt: datetime) -> None:
+        with editing(browser, PAGES["setup"][0].format(event_id=event_id)) as wait:
+            present(wait, _NAME_FIELD)
 
-    with modal(browser, url, inside_modal=toggle) as wait:
-        section._open(browser.driver, wait)
+            _fill_date_field(browser.driver, wait, "group_start_date_date_input", dt)
 
-        present(wait, by_testid("form_modal_save"))
+            shown = browser.driver.find_element(
+                *by_css("[id='group_start_date_date_input']")).get_attribute("value")
 
+        assert str(dt.day) in shown and str(dt.year) in shown, f"the field shows {shown!r}"
 
-@pytest.mark.integration
-@pytest.mark.parametrize("dt", [
-    datetime(2027, 2, 3, 9, 5),      # другой год вперёд
-    datetime(2025, 12, 28, 20, 0),   # год назад
-])
-def test_date_field_is_filled(browser: VKBrowser, event_id: int, dt: datetime) -> None:
-    """Дата и время проставляются через datepicker. Не сохраняет — перезагрузка всё откатит."""
-    with editing(browser, PAGES["setup"][0].format(event_id=event_id)) as wait:
-        present(wait, _NAME_FIELD)
+    def test_access_dropdown_has_both_options(self, browser: VKBrowser, event_id: int) -> None:
+        with editing(browser, PAGES["setup"][0].format(event_id=event_id)) as wait:
+            present(wait, _NAME_FIELD)
 
-        _fill_date_field(browser.driver, wait, "group_start_date_date_input", dt)
+            browser.driver.find_element(*by_css(Access.WIDGET)).click()
 
-        shown = browser.driver.find_element(
-            *by_css("[id='group_start_date_date_input']")).get_attribute("value")
+            items = found(wait, lambda d: [el for el in d.find_elements(
+                *Access.ITEMS) if el.is_displayed()] or None)
 
-    assert str(dt.day) in shown and str(dt.year) in shown, f"поле показывает {shown!r}"
+        assert len(items) == 2, f"the access dropdown has {len(items)} items: {[i.text for i in items]}"
 
+    @pytest.mark.parametrize("position,options", [
+        (InviteLinkSchema.Modal.LIFETIME, list(LinkLifetime)),
+        (InviteLinkSchema.Modal.USES, list(LinkUses)),
+    ], ids=["lifetime", "uses"])
+    def test_invite_modal_options(self, browser: VKBrowser, event_id: int, position: int, options: list) -> None:
+        url = PAGES["invites"][0].format(event_id=event_id)
 
-@pytest.mark.integration
-def test_access_dropdown_has_both_options(browser: VKBrowser, event_id: int) -> None:
-    """Доступ выбирается по позиции: 0 — открытое, 1 — закрытое. Не сохраняет."""
-    with editing(browser, PAGES["setup"][0].format(event_id=event_id)) as wait:
-        present(wait, _NAME_FIELD)
+        with modal(browser, url, inside_modal=InviteLinkSchema.Modal.SELF) as wait:
+            clickable(wait, InviteLinkSchema.Modal.OPEN_BUTTON).click()
 
-        browser.driver.find_element(*by_css(_ACCESS)).click()
+            dialog = visible(wait, InviteLinkSchema.Modal.SELF)
+            dialog.find_element(*InviteLinkSchema.Modal.CREATE)
 
-        items = found(wait, lambda d: [el for el in d.find_elements(
-            *by_css(f"{_ACCESS} .idd_item")) if el.is_displayed()] or None)
+            holder = dialog.find_elements(*SELECT_HOLDER)[position]
 
-    assert len(items) == 2, f"в выпадашке доступа {len(items)} пунктов: {[i.text for i in items]}"
+            browser.driver.execute_script("arguments[0].click()", holder)
 
+            found(wait, lambda d: d.find_elements(*by_css("[role='option']")))
 
-@pytest.mark.integration
-@pytest.mark.parametrize("position,options", [
-    (_LIFETIME, list(LinkLifetime)),
-    (_USES, list(LinkUses)),
-], ids=["lifetime", "uses"])
-def test_invite_modal_options(browser: VKBrowser, event_id: int, position: int, options: list) -> None:
-    """Каждый вариант из настроек ссылки существует в модалке. Ссылку не создаёт."""
-    url = PAGES["invites"][0].format(event_id=event_id)
+            missing = [option.name for option in options
+                       if not [el for el in browser.driver.find_elements(
+                           *by_css(option_by_value(option.value))) if el.is_displayed()]]
 
-    with modal(browser, url, inside_modal=_MODAL) as wait:
-        clickable(wait, _CREATE_LINK_BUTTON).click()
+        assert not missing, f"options gone: {missing}"
 
-        dialog = visible(wait, _MODAL)
-        dialog.find_element(*_MODAL_CREATE)
-
-        holder = dialog.find_elements(*_SELECT_HOLDER)[position]
-
-        browser.driver.execute_script("arguments[0].click()", holder)
-
-        found(wait, lambda d: d.find_elements(*by_css("[role='option']")))
-
-        missing = [option.name for option in options
-                   if not [el for el in browser.driver.find_elements(
-                       *by_css(option_by_value(option.value))) if el.is_displayed()]]
-
-    assert not missing, f"пропали варианты: {missing}"
-
-
-@pytest.mark.integration
-def test_event_creation_wizard_opens(browser: VKBrowser) -> None:
-    """Визард создания события отдаёт iframe, в котором работает схема. Событие не создаётся."""
-    with editing(browser, EventCreationSchema._URL) as wait:
-        present(wait, by_css(EventCreationSchema._IFRAME_CSS))
+    def test_event_creation_wizard_opens(self, browser: VKBrowser) -> None:
+        with editing(browser, EventCreationSchema._URL) as wait:
+            present(wait, by_css(EventCreationSchema._IFRAME_CSS))

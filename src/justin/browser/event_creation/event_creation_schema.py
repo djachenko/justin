@@ -4,56 +4,59 @@ from datetime import datetime
 from typing import Any, ClassVar
 from urllib.parse import urlparse
 
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.event_creation.event_creation_settings import Category, EventCreationSettings, \
     EventStep1Settings, EventStep2Settings
 from justin.browser.shared.captcha import wait_for_captcha_if_needed
-from justin.browser.shared.elements import by_css, by_testid, by_xpath, clickable, found, present
+from justin.browser.shared.elements import by_css, by_testid, by_xpath, clickable, found, present, type_into
+from justin.browser.shared.field import Field
 from justin.browser.shared.pacing import AFTER_ACTION, BETWEEN_FIELDS, pause
 from justin.browser.shared.react_select import set_react_select
+from justin.shared.vk import VK_URL
 
 
 @dataclass(frozen=True)
-class TitleInput:
+class TitleInput(Field[str]):
     test_id: str
 
     def set_value(self, value: str, driver: WebDriver, wait: WebDriverWait) -> None:
         el = clickable(wait, by_testid(self.test_id))
 
-        ActionChains(driver) \
-            .click(el) \
-            .send_keys(value) \
-            .perform()
+        el.click()
+
+        type_into(driver.switch_to.active_element, value)
 
         pause(AFTER_ACTION)
 
 
 @dataclass(frozen=True)
-class AccessSelect:
+class AccessSelect(Field[bool]):
     def set_value(self, value: bool, driver: WebDriver, wait: WebDriverWait) -> None:
         if not value:
             return
 
-        select_el = driver.find_element(*by_css('[name="access"]'))
+        select_el = present(wait, by_css('[name="access"]'))
         driver.execute_script("arguments[0].click()", select_el)
 
         pause(AFTER_ACTION)
 
-        closed_option = driver.find_element(*by_css('[role="option"][value="1"]'))
+        closed_option = present(wait, by_css('[role="option"][value="1"]'))
         driver.execute_script("arguments[0].click()", closed_option)
 
         pause(AFTER_ACTION)
 
 
 @dataclass(frozen=True)
-class DateSpinGroup:
+class DateSpinGroup(Field[datetime]):
     n: int = 0
 
     def set_value(self, value: datetime, driver: WebDriver, wait: WebDriverWait) -> None:
         parts = [
+            # The aria-labels are the Russian interface's own — selectors, not prose.
             ("День", str(value.day).zfill(2)),
             ("Месяц", str(value.month).zfill(2)),
             ("Год", str(value.year)),
@@ -62,15 +65,22 @@ class DateSpinGroup:
         ]
 
         for aria_label, val in parts:
-            spinbuttons = driver.find_elements(*by_css(f'[aria-label="{aria_label}"]'))
+            def nth(_: WebDriver) -> WebElement | None:
+                spinbuttons = driver.find_elements(*by_css(f'[aria-label="{aria_label}"]'))
 
-            spinbutton = spinbuttons[self.n]
+                if len(spinbuttons) <= self.n or not spinbuttons[self.n].is_displayed():
+                    return None
+
+                return spinbuttons[self.n]
+
+            spinbutton = found(wait, nth)
             driver.execute_script("arguments[0].focus()", spinbutton)
-            spinbutton.send_keys(val)
+
+            type_into(spinbutton, val)
 
 
 @dataclass(frozen=True)
-class OptionalDateSpinGroup:
+class OptionalDateSpinGroup(Field[datetime | None]):
     def set_value(self, value: datetime | None, driver: WebDriver, wait: WebDriverWait) -> None:
         if value is None:
             return
@@ -85,7 +95,7 @@ class OptionalDateSpinGroup:
 
 
 @dataclass(frozen=True)
-class OrganizerSelect:
+class OrganizerSelect(Field[int | None]):
     name: str = "eventGroupId"
 
     def set_value(self, value: int | None, driver: WebDriver, wait: WebDriverWait) -> None:
@@ -96,7 +106,7 @@ class OrganizerSelect:
 
 
 @dataclass(frozen=True)
-class CategorySelect:
+class CategorySelect(Field[Category]):
     def set_value(self, value: Category, driver: WebDriver, wait: WebDriverWait) -> None:
         btn = clickable(
             wait,
@@ -110,7 +120,7 @@ class CategorySelect:
 
 @dataclass(frozen=True)
 class WizardStep[S](ABC):
-    """Шаг визарда: поля-контролы заполняются из одноимённых полей настроек, потом «дальше»."""
+    """A wizard step: control fields are filled from the settings fields of the same name."""
 
     def fill(self, settings: S, driver: WebDriver, wait: WebDriverWait) -> None:
         for f in fields(self):
@@ -153,15 +163,19 @@ class EventStep2Schema(WizardStep[EventStep2Settings]):
         pause(AFTER_ACTION)
 
 
-_CREATION_URL_TAIL = "/groups_create"
-_EVENT_PREFIXES = ("event", "club")
+class Created:
+    """The wizard finishes by landing on the new community's own page."""
+    URL_TAIL = "/groups_create"  # still here means the creation did not go through
+    PREFIXES = ("event", "club")
 
 
 def _event_id_in(url: str) -> int | None:
-    """Адрес созданного события кончается на event<id> либо club<id>."""
-    tail = urlparse(url).path.rstrip("/").rsplit("/", 1)[-1]
+    """The url of a created event ends with event<id> or club<id>."""
+    tail = urlparse(url).path \
+        .rstrip("/") \
+        .rsplit("/", 1)[-1]
 
-    for prefix in _EVENT_PREFIXES:
+    for prefix in Created.PREFIXES:
         digits = tail.removeprefix(prefix)
 
         if digits != tail and digits.isdigit():
@@ -172,32 +186,26 @@ def _event_id_in(url: str) -> int | None:
 
 @dataclass(frozen=True)
 class EventStep3Schema:
+    headless: bool = True  # without a window nobody solves a captcha — fail rather than hang
+
     def submit(self, driver: WebDriver, wait: WebDriverWait) -> None:
         btn = clickable(wait, by_testid("go_to_community"))
 
         driver.execute_script("arguments[0].click()", btn)
         driver.switch_to.default_content()
 
-        wait_for_captcha_if_needed(driver, _CREATION_URL_TAIL)
+        wait_for_captcha_if_needed(driver, Created.URL_TAIL, self.headless)
 
     def event_id(self, driver: WebDriver, wait: WebDriverWait) -> int:
-        found(wait, lambda d: _event_id_in(d.current_url))
-
-        return self._parse_event_id(driver.current_url)
-
-    @staticmethod
-    def _parse_event_id(url: str) -> int:
-        event_id = _event_id_in(url)
-
-        if event_id is None:
-            raise ValueError(f"Could not parse event ID from URL: {url}")
-
-        return event_id
+        try:
+            return found(wait, lambda d: _event_id_in(d.current_url))
+        except TimeoutException:
+            raise ValueError(f"Could not parse event ID from URL: {driver.current_url}")
 
 
 @dataclass(frozen=True)
 class EventCreationSchema:
-    _URL: ClassVar[str] = "https://vk.com/groups/my_events?w=groups_create_new_event"
+    _URL: ClassVar[str] = VK_URL + "/groups/my_events?w=groups_create_new_event"
     _IFRAME_CSS: ClassVar[str] = "#react_rootcommunity_create iframe"
 
     step1: EventStep1Schema = EventStep1Schema()

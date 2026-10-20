@@ -1,34 +1,34 @@
-"""Паузы между действиями в браузере.
+"""Pauses between browser actions.
 
-Числа эмпирические: пришли из первой версии визарда и подбирались на глаз,
-измерений за ними нет. Каждая пауза отклоняется на долю от себя самой, поэтому
-одинаковые по смыслу задержки всё равно получаются разной длины — прогон не
-выглядит метрономом.
+The numbers are empirical — picked by eye in the first version of the wizard, with no
+measurements behind them. Every pause deviates by a share of itself, so pauses that mean
+the same thing still come out different: the run does not tick like a metronome.
 """
 import random
 import time
 
-PACE = 1.0  # общий множитель: 0 — без задержек, 1 — норма, 2 — вдвое медленнее
+PACE = 1.0  # overall multiplier: 0 — no delays, 1 — normal, 2 — twice as slow
 
-SPREAD = 0.5  # доля заданного значения, на которую пауза может отклониться в обе стороны
+SPREAD = 0.5  # share of the value a pause may deviate by, both ways
 
-BETWEEN_FIELDS = 0.3  # соседние поля одной формы
-AFTER_SCROLL = 0.3  # прокрутка до элемента, странице надо доехать
-AFTER_ACTION = 0.5  # клик или ввод, на который страница отвечает перерисовкой
-PAGE_SETTLE = 2.0  # переход между страницами и шагами визарда
+BETWEEN_FIELDS = 0.3  # neighbouring fields of one form
+AFTER_SCROLL = 0.3  # scrolled to an element, the page has to arrive
+AFTER_ACTION = 0.5  # a click or input the page answers with a repaint
+BETWEEN_KEYS = 0.08  # neighbouring characters while typing
+PAGE_SETTLE = 2.0  # moving between pages and wizard steps
 
 
-def varied(seconds: float, spread: float = SPREAD) -> float:
-    """seconds плюс-минус доля от самого seconds: 0.4 при spread=0.5 даёт 0.2…0.6.
+def varied(seconds: float) -> float:
+    """seconds give or take a share of itself: 0.4 with SPREAD=0.5 gives 0.2…0.6.
 
-    Отклонение считается от переданного значения, а не берётся фиксированным:
-    короткой паузе большой разброс не нужен, длинной — наоборот, мал.
+    The deviation is a share of the value rather than a fixed amount: a short pause does
+    not need a wide spread, and for a long one a fixed spread would be too narrow.
     """
-    return seconds * random.uniform(1 - spread, 1 + spread)
+    return seconds * random.uniform(1 - SPREAD, 1 + SPREAD)
 
 
-def pause(seconds: float, spread: float = SPREAD) -> None:
+def pause(seconds: float) -> None:
     if PACE <= 0:
         return
 
-    time.sleep(PACE * varied(seconds, spread))
+    time.sleep(PACE * varied(seconds))

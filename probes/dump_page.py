@@ -1,40 +1,40 @@
-"""Дампер структуры страницы VK — с него начинается любой новый селектор.
+"""Dumps the structure of a VK page — where every new selector starts.
 
-Все разовые скрипты разведки делали одно и то же: открыть страницу, вывести
-testid'ы, инпуты и кнопки, посмотреть глазами. Это они, сведённые в один вызов.
+Every one-off exploration script did the same thing: open the page, print testids, inputs
+and buttons, then look at them. This is all of them folded into one call.
 
-    VK_TEST_EVENT_ID=<id> python tests/browser/probes/dump_page.py requests
-    ... dump_page.py 'https://vk.com/event{event_id}?act=edit' --inputs
+    VK_TEST_EVENT_ID=<id> python probes/dump_page.py requests
+    ... dump_page.py 'https://vk.ru/event{event_id}?act=edit' --inputs
 
-Имена страниц берутся из PAGES контрактного теста, произвольный URL — тоже можно.
+Page names come from PAGES of the contract test; an arbitrary url works too.
 """
 import argparse
 import os
 import sys
 import time
 
-from selenium.webdriver.common.by import By
-
+from justin.browser.shared.elements import by_css
 from justin.browser.vk_browser import VKBrowser
+from justin.shared.vk import VK_URL
 
-# Пункты хрома вокруг контента: левое меню, шапка, меню настроек — шум в любом дампе.
+# Chrome around the content: left menu, header, settings menu — noise in any dump.
 CHROME_PREFIXES = ("leftmenu", "rightmenu", "header", "top", "cs_menu", "desktop",
                    "community_settings", "search_top")
 
 KNOWN_PAGES = {
-    "edit": "https://vk.com/event{event_id}?act=edit",
-    "sections": "https://vk.com/event{event_id}/settings/sections",
-    "messages": "https://vk.com/event{event_id}/settings/messages",
-    "members": "https://vk.com/event{event_id}/settings/members",
-    "requests": "https://vk.com/event{event_id}/settings/requests",
-    "extras": "https://vk.com/event{event_id}/settings/extras",
+    "edit": VK_URL + "/event{event_id}?act=edit",
+    "sections": VK_URL + "/event{event_id}/settings/sections",
+    "messages": VK_URL + "/event{event_id}/settings/messages",
+    "members": VK_URL + "/event{event_id}/settings/members",
+    "requests": VK_URL + "/event{event_id}/settings/requests",
+    "extras": VK_URL + "/event{event_id}/settings/extras",
 }
 
 
 def dump_testids(driver) -> None:
     print("=== testids ===")
 
-    for el in driver.find_elements(By.CSS_SELECTOR, "[data-testid]"):
+    for el in driver.find_elements(*by_css("[data-testid]")):
         test_id = el.get_attribute("data-testid")
 
         if not el.is_displayed() or test_id.startswith(CHROME_PREFIXES):
@@ -44,19 +44,26 @@ def dump_testids(driver) -> None:
 
 
 def dump_inputs(driver) -> None:
-    """Legacy-страницы держат значения в скрытых полях — видимых имён там нет."""
+    """Legacy pages keep values in hidden fields — there are no visible names there."""
     print("=== inputs ===")
 
-    for el in driver.find_elements(By.CSS_SELECTOR, "input, select, textarea"):
+    for el in driver.find_elements(*by_css("input, select, textarea")):
         print("   ", el.tag_name, repr(el.get_attribute("name")), repr(el.get_attribute("id")),
-              repr(el.get_attribute("value")), "vis" if el.is_displayed() else "hid",
+              repr(el.get_attribute("value")), _visibility(el),
               repr(el.get_attribute("class"))[:50])
+
+
+def _visibility(element) -> str:
+    if element.is_displayed():
+        return "vis"
+
+    return "hid"
 
 
 def dump_clickables(driver) -> None:
     print("=== buttons / links ===")
 
-    for el in driver.find_elements(By.CSS_SELECTOR, "button, [role='button'], [role='tab'], a"):
+    for el in driver.find_elements(*by_css("button, [role='button'], [role='tab'], a")):
         text = el.text.strip()
 
         if not el.is_displayed() or not text or len(text) > 40:
@@ -87,7 +94,7 @@ def main() -> None:
         time.sleep(args.delay)
 
         if args.click:
-            driver.find_element(By.CSS_SELECTOR, args.click).click()
+            driver.find_element(*by_css(args.click)).click()
             time.sleep(2.5)
 
         print("url:", driver.current_url, "| title:", repr(driver.title))

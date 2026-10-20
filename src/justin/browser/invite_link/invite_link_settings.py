@@ -2,13 +2,16 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+_HOUR = 60 * 60
+
+
 class LinkLifetime(str, Enum):
     """How long the link stays valid, in seconds — zero never expires."""
-    HALF_HOUR = "1800"
-    HOUR = "3600"
-    SIX_HOURS = "21600"
-    TWELVE_HOURS = "43200"
-    DAY = "86400"
+    HALF_HOUR = str(_HOUR // 2)
+    HOUR = str(_HOUR)
+    SIX_HOURS = str(6 * _HOUR)
+    TWELVE_HOURS = str(12 * _HOUR)
+    DAY = str(24 * _HOUR)
     INDEFINITE = "0"
 
 
@@ -22,7 +25,7 @@ class LinkUses(str, Enum):
     UNLIMITED = "0"
 
 
-@dataclass
+@dataclass(frozen=True)
 class InviteLinkSettings:
     """Settings of the new-link modal on the invites page."""
     lifetime: LinkLifetime = LinkLifetime.INDEFINITE

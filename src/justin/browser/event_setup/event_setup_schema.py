@@ -3,24 +3,27 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
+from justin_utils.util import first
+
 from justin.browser.event_creation.event_creation_settings import Category
 from justin.browser.event_setup.event_setup_settings import EventSetupSettings
-from justin.browser.shared.elements import by_css, by_testid, by_xpath, found, present
+from justin.browser.shared.elements import by_css, by_testid, by_xpath, found, present, type_into
 from justin.browser.shared.pacing import AFTER_ACTION, AFTER_SCROLL, pause
 from justin.browser.shared.page import content_rendered
 from justin.browser.shared.save_button import click_save
+from justin.shared.vk import VK_URL
 
 
 def _value_of(element: WebElement) -> str:
-    """Selenium отдаёт None, когда атрибута нет.
+    """Selenium returns None when the attribute is absent.
 
-    Для нас это такая же непринятая настройка, как и неверное значение, — иначе
-    вместо «дата не применилась» получим TypeError из середины сравнения.
+    That is a setting that did not apply, same as a wrong value: without the check a
+    missing date surfaces as a TypeError from the middle of a comparison.
     """
     value = element.get_attribute("value")
 
@@ -30,44 +33,81 @@ def _value_of(element: WebElement) -> str:
     return value
 
 
-def _clear_and_type(driver: WebDriver, el: WebElement, value: str) -> None:
-    driver.execute_script("arguments[0].value = ''", el)
-    el.send_keys(value)
+def _clear_and_type(el: WebElement, value: str) -> None:
+    el.clear()
+
+    type_into(el, value)
 
     pause(AFTER_ACTION)
 
 
 _MAX_YEAR_STEPS = 20
 
-_LAZY_BLOCKS = 1.0  # ленивые блоки страницы догружаются после прокрутки донизу
+_LAZY_BLOCKS = 1.0  # lazy blocks of the page load after scrolling to the bottom
 
-_SUBJECT = 0
-_CITY = 6
+
+class Access:
+    """Access is not a VK selector but a legacy dropdown: items are picked by position."""
+    WIDGET = "#groups_edit_g_access"
+    ITEMS = by_css(f"{WIDGET} .idd_item")
+    VALUE = by_css("input[name='groups_edit_g_access']")
+    OPEN = 0
+    CLOSED = 1
+
+
+class Selectors:
+    """Subject, organiser, hours, minutes and city are the same widget — only position differs."""
+    SUBJECT = 0
+    CITY = 6
+    INPUT = by_css(".selector_input")
+    FOLLOWING = by_xpath("following::input[contains(@class, 'selector_input')]")
+    RESULT_ITEM = by_css(".result_list li")
+    DROPDOWN_ITEM = by_css("[class*='dropdown'] li")
+
+
+class Calendar:
+    """Datepicker: months and days live in the very same td.day cells."""
+    CONTAINER = by_xpath("ancestor::*[contains(@class, 'datepicker_container')][1]")
+    DAY = by_css("td.day")
+    MONTH = by_css("td.month")
+    MONTH_MODE = by_css("a.cal_month_sel")
+
+
 _EVENT_HOST = by_css("input[name='event_host'], input[id='event_host']")
-_ACCESS = "#groups_edit_g_access"
-_ACCESS_ITEMS = by_css(f"{_ACCESS} .idd_item")
-_ACCESS_VALUE = by_css("input[name='groups_edit_g_access']")
-_OPEN = 0
-_CLOSED = 1
-
 _NAME = by_css("[id='group_edit_name']")
 _RIGHT_MENU = by_testid("rightmenu")
-_DAY = by_css("td.day")
-_MONTH = by_css("td.month")
-_MONTH_MODE = by_css("a.cal_month_sel")
-_SELECTOR_INPUT = by_css(".selector_input")
-_RESULT_ITEM = by_css(".result_list li")
-_DROPDOWN_ITEM = by_css("[class*='dropdown'] li")
-_CALENDAR = by_xpath("ancestor::*[contains(@class, 'datepicker_container')][1]")
 
 
 def _classes_of(element: WebElement) -> str:
     return element.get_attribute("class") or ""
 
 
+def _is_day(cell: WebElement, day: int) -> bool:
+    """Neighbouring months sit in the same calendar — their cells carry a class."""
+    classes = _classes_of(cell)
+
+    if "prev_month_day" in classes or "next_month_day" in classes:
+        return False
+
+    return cell.text.strip() == str(day)
+
+
+def _has_label(item: WebElement, label: str) -> bool:
+    return item.is_displayed() and item.text.strip() == label
+
+
+def _is_number(item: WebElement, value: int) -> bool:
+    text = item.text.strip()
+
+    if not item.is_displayed() or not text.isdigit():
+        return False
+
+    return int(text) == value
+
+
 def _visible_cells(calendar: WebElement) -> list[WebElement]:
     """Months and days share the td.day class — only one set is visible at a time."""
-    return [el for el in calendar.find_elements(*_DAY) if el.is_displayed()]
+    return [el for el in calendar.find_elements(*Calendar.DAY) if el.is_displayed()]
 
 
 def _click_arrow(calendar: WebElement, direction: str) -> None:
@@ -83,13 +123,13 @@ def _click_arrow(calendar: WebElement, direction: str) -> None:
 
 def _pick_year_and_month(driver: WebDriver, wait: WebDriverWait, calendar: WebElement, dt: datetime) -> None:
     """Month names are localised — the year is read as a number, the month picked by position."""
-    calendar.find_element(*_MONTH_MODE).click()
+    calendar.find_element(*Calendar.MONTH_MODE).click()
     wait.until(lambda _: len(_visible_cells(calendar)) == 12)
 
     for _ in range(_MAX_YEAR_STEPS):
         years = [re.search(r"\d{4}", el.text) for el in
-                 calendar.find_elements(*_MONTH) if el.is_displayed()]
-        shown = next((match for match in years if match), None)
+                 calendar.find_elements(*Calendar.MONTH) if el.is_displayed()]
+        shown = first(years)
 
         if shown is None:
             raise NoSuchElementException("Datepicker header has no year")
@@ -120,21 +160,18 @@ def _pick_date(driver: WebDriver, wait: WebDriverWait, date_el: WebElement, dt: 
 
     date_el.click()
 
-    calendar = date_el.find_element(*_CALENDAR)
+    calendar = date_el.find_element(*Calendar.CONTAINER)
 
-    wait.until(lambda _: calendar.find_elements(*_DAY))
+    wait.until(lambda _: calendar.find_elements(*Calendar.DAY))
 
     _pick_year_and_month(driver, wait, calendar, dt)
 
-    days = [el for el in _visible_cells(calendar)
-            if "prev_month_day" not in _classes_of(el)
-            and "next_month_day" not in _classes_of(el)
-            and el.text.strip() == str(dt.day)]
+    day = first(_visible_cells(calendar), key=lambda cell: _is_day(cell, dt.day))
 
-    if not days:
+    if day is None:
         raise NoSuchElementException(f"Day {dt.day} not found in datepicker")
 
-    days[0].click()
+    day.click()
 
     pause(AFTER_ACTION)
 
@@ -148,14 +185,9 @@ def _pick_from_selector(driver: WebDriver, wait: WebDriverWait, selector_input: 
     selector_input.click()
 
     def option(_: WebDriver) -> WebElement | None:
-        items = [el for el in driver.find_elements(*_DROPDOWN_ITEM)
-                 if el.is_displayed() and el.text.strip().isdigit()
-                 and int(el.text.strip()) == value]
+        items = driver.find_elements(*Selectors.DROPDOWN_ITEM)
 
-        if not items:
-            return None
-
-        return items[0]
+        return first(items, key=lambda item: _is_number(item, value))
 
     found(wait, option).click()
 
@@ -177,10 +209,10 @@ def _fill_date_field(driver: WebDriver, wait: WebDriverWait, date_input_id: str,
     if str(dt.day) not in shown or str(dt.year) not in shown:
         raise ValueError(f"Date not applied: field shows {shown!r}, expected {dt.date()}")
 
-    hour, minute = (
-        date_el.find_element(*by_xpath(f"following::input[contains(@class, 'selector_input')][{i}]"))
-        for i in (1, 2)
-    )
+    try:
+        hour, minute, *_ = date_el.find_elements(*Selectors.FOLLOWING)
+    except ValueError as e:
+        raise ValueError("Could not find a matching hour/minute selector") from e
 
     _pick_from_selector(driver, wait, hour, dt.hour)
     _pick_from_selector(driver, wait, minute, dt.minute)
@@ -191,9 +223,9 @@ def _fill_date_field(driver: WebDriver, wait: WebDriverWait, date_input_id: str,
         raise ValueError(f"Time not applied: fields show {got}, expected {dt:%H:%M}")
 
 
-def _visible_selectors(driver: WebDriver) -> list:
+def _visible_selectors(driver: WebDriver) -> list[WebElement]:
     """Subject, organiser, hours, minutes and city all render as the same selector widget."""
-    return [el for el in driver.find_elements(*_SELECTOR_INPUT) if el.is_displayed()]
+    return [el for el in driver.find_elements(*Selectors.INPUT) if el.is_displayed()]
 
 
 def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field: WebElement, label: str) -> None:
@@ -205,13 +237,9 @@ def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field: WebEle
     field.click()
 
     def option(_: WebDriver) -> WebElement | None:
-        items = [el for el in driver.find_elements(*_RESULT_ITEM)
-                 if el.is_displayed() and el.text.strip() == label]
+        items = driver.find_elements(*Selectors.RESULT_ITEM)
 
-        if not items:
-            return None
-
-        return items[0]
+        return first(items, key=lambda item: _has_label(item, label))
 
     found(wait, option).click()
 
@@ -224,7 +252,7 @@ def _pick_from_result_list(driver: WebDriver, wait: WebDriverWait, field: WebEle
 
 
 def _set_category(driver: WebDriver, wait: WebDriverWait, category: Category) -> None:
-    _pick_from_result_list(driver, wait, _visible_selectors(driver)[_SUBJECT], category.value)
+    _pick_from_result_list(driver, wait, _visible_selectors(driver)[Selectors.SUBJECT], category.value)
 
 
 def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None:
@@ -234,11 +262,11 @@ def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None
     so the one to pick is chosen by position: 0 open, 1 closed.
     """
     if is_closed:
-        expected = _CLOSED
+        expected = Access.CLOSED
     else:
-        expected = _OPEN
+        expected = Access.OPEN
 
-    wrap = driver.find_element(*by_css(_ACCESS))
+    wrap = driver.find_element(*by_css(Access.WIDGET))
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", wrap)
 
     pause(AFTER_SCROLL)
@@ -246,7 +274,7 @@ def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None
     wrap.click()
 
     def items(_: WebDriver) -> list[WebElement] | None:
-        visible = [el for el in driver.find_elements(*_ACCESS_ITEMS) if el.is_displayed()]
+        visible = [el for el in driver.find_elements(*Access.ITEMS) if el.is_displayed()]
 
         if len(visible) <= expected:
             return None
@@ -257,9 +285,11 @@ def _set_access(driver: WebDriver, wait: WebDriverWait, is_closed: bool) -> None
 
     pause(AFTER_ACTION)
 
-    shown = _value_of(driver.find_element(*_ACCESS_VALUE))
+    try:
+        wait.until(lambda _: _value_of(driver.find_element(*Access.VALUE)) == str(expected))
+    except TimeoutException:
+        shown = _value_of(driver.find_element(*Access.VALUE))
 
-    if int(shown) != expected:
         raise ValueError(f"Access not applied: widget holds {shown!r}, expected {expected}")
 
 
@@ -279,7 +309,7 @@ def _set_organiser(driver: WebDriver, organiser_id: int) -> None:
 
 
 def _form_ready(driver: WebDriver) -> bool:
-    """Форма legacy-страницы либо уже без скелетонов, либо хотя бы с правым меню."""
+    """The legacy page form is either past its skeletons or at least has the right menu."""
     if content_rendered(driver):
         return True
 
@@ -294,7 +324,7 @@ def _form_ready(driver: WebDriver) -> bool:
 def _wait_for_form(driver: WebDriver, wait: WebDriverWait) -> None:
     wait.until(_form_ready)
 
-    # Прокрутка донизу и обратно будит ленивые блоки — без неё часть полей не отрисована.
+    # Scrolling down and back wakes the lazy blocks — without it some fields are not drawn.
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
 
     pause(_LAZY_BLOCKS)
@@ -311,16 +341,16 @@ def _set_city(driver: WebDriver, wait: WebDriverWait, city: str) -> None:
     the hidden id untouched, so the value has to be picked from the result list."""
     selectors = _visible_selectors(driver)
 
-    if len(selectors) <= _CITY:
+    if len(selectors) <= Selectors.CITY:
         raise NoSuchElementException(
             f"City selector not found: page has {len(selectors)} selectors")
 
-    _pick_from_result_list(driver, wait, selectors[_CITY], city)
+    _pick_from_result_list(driver, wait, selectors[Selectors.CITY], city)
 
 
 @dataclass(frozen=True)
 class EventSetupSchema:
-    _SETTINGS_URL_TMPL: str = "https://vk.com/event{event_id}?act=edit"
+    _SETTINGS_URL_TMPL: str = VK_URL + "/event{event_id}?act=edit"
 
     def __call__(self, event_id: int, settings: EventSetupSettings,
                  driver: WebDriver, wait: WebDriverWait) -> None:
@@ -338,7 +368,7 @@ class EventSetupSchema:
             if value is None:
                 continue
 
-            _clear_and_type(driver, driver.find_element(*by_css(f"[id='{field_id}']")), value)
+            _clear_and_type(driver.find_element(*by_css(f"[id='{field_id}']")), value)
 
         if settings.category is not None:
             _set_category(driver, wait, settings.category)

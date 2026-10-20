@@ -10,18 +10,16 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.sections.section_settings import SectionsConfig
-from justin.browser.shared.run_mode import is_debug
+from justin.shared.run_mode import is_debug
 from justin.browser.shared.waiting import Wait
 
 from justin.browser.invite_link.invite_link_schema import InviteLinkSchema
 from justin.browser.invite_link.invite_link_settings import InviteLinkSettings
 from justin.browser.event_settings.event_settings_schema import EventSettingsSchema
 from justin.browser.event_settings.event_settings_settings import EventSettingsSettings
-from justin.browser.explorers.settings_explorer import SettingsExplorer
-from justin.browser.explorers.event_edit_explorer import EventEditExplorer
 
 from justin.browser.event_creation.event_creation_settings import EventCreationSettings, EventStep1Settings
-from justin.browser.event_creation.event_creation_schema import EventCreationSchema
+from justin.browser.event_creation.event_creation_schema import EventCreationSchema, EventStep3Schema
 
 
 class VKBrowser:
@@ -32,10 +30,10 @@ class VKBrowser:
     ERROR_TITLE = "Error"
 
     def __init__(self, headless: bool | None = None):
-        """headless=None — решать по режиму запуска: под отладчиком окно видно.
+        """headless=None — decide by run mode: under a debugger the window is shown.
 
-        Окно нужно там, где на человека рассчитывает сам сценарий: капчу за нас
-        никто не решит. Поэтому create_event поднимает браузер видимым.
+        A window is needed where the scenario itself counts on a human: nobody will solve
+        a captcha for us. Such a caller passes headless=False, as setup-event --create does.
         """
         options = webdriver.ChromeOptions()
         options.browser_version = self._BROWSER_VERSION
@@ -49,6 +47,8 @@ class VKBrowser:
 
         if headless:
             options.add_argument("--headless=new")
+
+        self._headless = headless
 
         logging.getLogger("selenium").setLevel(logging.DEBUG)
 
@@ -110,9 +110,9 @@ class VKBrowser:
 
     @property
     def is_throttled(self) -> bool:
-        """После интенсивных прогонов VK отдаёт вместо страницы настроек заглушку с
-        заголовком `Error`: формы нет вовсе, и любое ожидание упирается в таймаут.
-        Отличить это от «селектор умер» можно только по заголовку.
+        """After heavy runs VK serves a stub titled `Error` instead of the settings page:
+        there is no form at all, and every wait runs into its timeout. The title is the
+        only way to tell this apart from "the selector died".
         """
         return self._driver.title == self.ERROR_TITLE
 
@@ -139,7 +139,9 @@ class VKBrowser:
             ),
         )
 
-        return EventCreationSchema()(settings, self._driver, self.new_wait())
+        schema = EventCreationSchema(step3=EventStep3Schema(headless=self._headless))
+
+        return schema(settings, self._driver, self.new_wait())
 
     def apply_settings(self, event_id: int, settings: EventSettingsSettings) -> None:
         EventSettingsSchema()(event_id, settings, self._driver, self.new_wait())
@@ -155,17 +157,3 @@ class VKBrowser:
             settings = InviteLinkSettings()
 
         return InviteLinkSchema()(event_id, settings, self._driver, self.new_wait())
-
-    def explore_sections(self, event_id: int, out_dir: Path | None = None) -> None:
-        target = out_dir or Path(f"explore_output_{event_id}")
-
-        SettingsExplorer(self._driver, event_id, target).run()
-
-    def explore_edit(self, event_id: int, out_dir: Path | None = None) -> None:
-        target = out_dir or Path(f"explore_edit_{event_id}")
-
-        EventEditExplorer(self._driver, event_id, target).run()
-
-
-
-

@@ -1,8 +1,11 @@
 """Top-level schema for configuring a VK event after creation."""
 from dataclasses import dataclass
+from typing import Callable
 
 from justin_utils.util import first
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import (
+    NoSuchElementException, StaleElementReferenceException, TimeoutException,
+)
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
@@ -19,36 +22,46 @@ from justin.browser.sections.section_schema import (
 )
 from justin.browser.sections.section_settings import MainSection, SectionsConfig
 from justin.browser.shared.custom_select import set_custom_select
-from justin.browser.shared.elements import by_css, by_testid, present
+from justin.browser.shared.elements import by_css, by_testid, found, present, type_into
 from justin.browser.shared.pacing import AFTER_ACTION, PAGE_SETTLE, pause, varied
 from justin.browser.shared.page import wait_for_content
 from justin.browser.shared.save_button import click_save, click_save_if_present
+from justin.browser.shared.waiting import Wait
+from justin.shared.vk import VK_URL
 
-_MESSAGES_SELECT = "settings_messages_enabled"
-_MESSAGES_ON = "1"
-_MESSAGES_OFF = "0"
 
-_CONTENT_TABS_URL = "https://vk.com/event{event_id}/settings/content_tabs"
-_SECTIONS_URL = "https://vk.com/event{event_id}/settings/sections"
+class Messages:
+    """The messages page keeps its state in a hidden native select — values, not labels."""
+    SELECT = "settings_messages_enabled"
+
+
+class Pages:
+    CONTENT_TABS = VK_URL + "/event{event_id}/settings/content_tabs"
+    SECTIONS = VK_URL + "/event{event_id}/settings/sections"
+
+
+class Reorder:
+    """The main block is set by dragging a tab to the top of the content tabs list."""
+    TOGGLE = by_testid("sections_toggle_reorder")
+    LIST = by_css("[role='main'] [role='list']")  # only exists in reorder mode
+    TAB_CELLS = by_css("[data-testid^='content_tabs_'][data-testid$='_cell']")
+    DRAG_HANDLE = by_css(".vkuiCellDragger__host")
+    SETTLE = 1.5  # reorder mode turns on and off with an animation
+
+
+_STATE_TIMEOUT = 5
 
 _SECTIONS_LIST = by_testid("list_sections")
-_REORDER_TOGGLE = by_testid("sections_toggle_reorder")
-_REORDER_LIST = by_css("[role='main'] [role='list']")  # появляется только в режиме перестановки
-_TAB_CELLS = by_css("[data-testid^='content_tabs_'][data-testid$='_cell']")
-_MODAL_SAVE = by_testid("form_modal_save")
-_DRAG_HANDLE = by_css(".vkuiCellDragger__host")
 _DIALOG = by_css("[role='dialog']")
 
-_REORDER_SETTLE = 1.5  # режим перетаскивания включается и выключается с анимацией
-
-# Перетаскивание VKUI: хватка должна быть заметной, а шаг — мелким, иначе оно
-# считает движение рывком и бросает элемент.
+# VKUI drag and drop: the grab has to be noticeable and the step small, or it reads the
+# movement as a jerk and drops the element.
 _GRAB = 0.4
 _DRAG_STEP = 0.08
 _DRAG_STEPS = 10
-_NUDGE = 3  # первый сдвиг на пиксели, без него перетаскивание не начинается
+_NUDGE = 3  # the first few pixels; without them the drag never starts
 
-# Атрибут SectionsConfig → схема, по страницам. Порядок — порядок применения.
+# SectionsConfig attribute → schema, by page. The order is the order of application.
 _CONTENT_TABS: list[tuple[str, SectionSchema | ListSwitchSchema]] = [
     ("posts", PostsSchema("content_tabs_wall_cell")),
     ("photos", PhotosSchema("content_tabs_photos_cell")),
@@ -69,17 +82,44 @@ _SECTIONS: list[tuple[str, SectionSchema | ListSwitchSchema]] = [
 ]
 
 
+def _checkbox(driver: WebDriver, testid: str) -> WebElement:
+    """React checkbox-label (CTA, Extras): the state and the click both belong to the inner input."""
+    return driver.find_element(*by_testid(testid)).find_element(*by_css("input[type='checkbox']"))
+
+
+def _checkbox_label_state(driver: WebDriver, testid: str) -> bool:
+    return _checkbox(driver, testid).is_selected()
+
+
+def _idd_toggle_state(driver: WebDriver, testid: str) -> bool:
+    """Legacy idd_wrap (Addresses): the state is in the hidden input next to the label."""
+    return driver.find_element(*by_css(f"#{testid}_input")).get_attribute("value") == "1"
+
+
+def _wait_for_state(driver: WebDriver, read: Callable[[WebDriver, str], bool],
+                    testid: str, expected: bool) -> None:
+    """A JS click that never landed looks exactly like one that did — check the state moved."""
+    def applied(_: WebDriver) -> bool:
+        try:
+            return read(driver, testid) == expected
+        except StaleElementReferenceException:
+            return False
+
+    try:
+        Wait(driver, _STATE_TIMEOUT).until(applied)
+    except TimeoutException:
+        raise ValueError(f"{testid!r} stayed {not expected}, expected {expected}")
+
+
 def _set_checkbox_label(driver: WebDriver, testid: str, enabled: bool) -> None:
-    """Toggle React checkbox-label (CTA, Extras). State from inner input.checked."""
-    el = driver.find_element(*by_testid(testid))
-    inp = el.find_element(*by_css("input[type='checkbox']"))
+    checkbox = _checkbox(driver, testid)
 
-    currently = (inp.get_attribute("checked") == "true")
-
-    if currently == enabled:
+    if checkbox.is_selected() == enabled:
         return
 
-    driver.execute_script("arguments[0].click()", el)
+    driver.execute_script("arguments[0].click()", checkbox)
+
+    _wait_for_state(driver, _checkbox_label_state, testid, enabled)
 
     pause(AFTER_ACTION)
 
@@ -103,15 +143,18 @@ def _set_custom_select(driver: WebDriver, wait: WebDriverWait, testid: str, valu
 
 
 def _set_idd_toggle(driver: WebDriver, wait: WebDriverWait, testid: str, enabled: bool) -> None:
-    """Toggle legacy idd_wrap element (Messages, Addresses). State from text content."""
     el = present(wait, by_testid(testid))
 
-    currently = (el.text.strip().lower() == "enabled")
-
-    if currently == enabled:
+    if _idd_toggle_state(driver, testid) == enabled:
         return
 
     driver.execute_script("arguments[0].click()", el)
+
+    item = found(wait, lambda d: el.find_element(*by_testid(f"idd_item_{int(enabled)}")))
+
+    driver.execute_script("arguments[0].click()", item)
+
+    _wait_for_state(driver, _idd_toggle_state, testid, enabled)
 
     pause(AFTER_ACTION)
 
@@ -121,7 +164,7 @@ def _label_of(cell: WebElement) -> str:
 
 
 def _reorder_cells(driver: WebDriver) -> list[WebElement]:
-    section_list = driver.find_element(*_REORDER_LIST)
+    section_list = driver.find_element(*Reorder.LIST)
     children = driver.execute_script("return Array.from(arguments[0].children)", section_list)
 
     return [cell for cell in children if cell.text.strip()]
@@ -129,7 +172,7 @@ def _reorder_cells(driver: WebDriver) -> list[WebElement]:
 
 def _drag_to_top(driver: WebDriver, cell: WebElement, position: int) -> None:
     """VKUI starts dragging only after a hover and a small initial move."""
-    handle = cell.find_element(*_DRAG_HANDLE)
+    handle = cell.find_element(*Reorder.DRAG_HANDLE)
     distance = cell.rect["height"] * position + 10
 
     chain = ActionChains(driver)
@@ -142,7 +185,7 @@ def _drag_to_top(driver: WebDriver, cell: WebElement, position: int) -> None:
         .move_by_offset(0, -_NUDGE) \
         .pause(varied(_DRAG_STEP))
 
-    # Шаги разной длины и с разными паузами — рука не двигается равномерно.
+    # Uneven steps with uneven pauses — a hand does not move at a constant rate.
     for _ in range(_DRAG_STEPS):
         chain \
             .move_by_offset(0, -round(varied(distance / _DRAG_STEPS))) \
@@ -154,7 +197,7 @@ def _drag_to_top(driver: WebDriver, cell: WebElement, position: int) -> None:
         .release() \
         .perform()
 
-    pause(_REORDER_SETTLE)
+    pause(Reorder.SETTLE)
 
 
 def _confirm_reorder(driver: WebDriver) -> None:
@@ -164,7 +207,7 @@ def _confirm_reorder(driver: WebDriver) -> None:
     if not dialogs:
         return
 
-    dialogs[0].find_element(*_MODAL_SAVE).click()
+    dialogs[0].find_element(*SectionSchema.Modal.SAVE).click()
 
     pause(PAGE_SETTLE)
 
@@ -181,15 +224,15 @@ def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
 
     Not every enabled tab can be moved — only those the reorder list offers.
     """
-    url = _CONTENT_TABS_URL.format(event_id=event_id)
+    url = Pages.CONTENT_TABS.format(event_id=event_id)
 
     driver.get(url)
 
     label = _label_of(present(wait, by_testid(f"content_tabs_{section.value}_cell")))
 
-    toggle = present(wait, _REORDER_TOGGLE)
+    toggle = present(wait, Reorder.TOGGLE)
 
-    # VK выключает перестановку, когда двигать нечего — в списке меньше двух вкладок.
+    # VK hides reordering when there is nothing to move — fewer than two tabs in the list.
     if not toggle.is_enabled():
         print(f"    [main] nothing to reorder, {label!r} stays where it is")
 
@@ -197,7 +240,7 @@ def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
 
     toggle.click()
 
-    pause(_REORDER_SETTLE)
+    pause(Reorder.SETTLE)
 
     cells = _reorder_cells(driver)
     movable = [_label_of(cell) for cell in cells]
@@ -212,23 +255,23 @@ def _set_main_section(driver: WebDriver, wait: WebDriverWait, event_id: int,
     if position > 0:
         _drag_to_top(driver, cell, position)
 
-        # Перетаскивание могло сорваться молча — проверяем до того, как сохранять порядок.
+        # The drag may have failed silently — check before saving the order.
         _check_first([_label_of(cell) for cell in _reorder_cells(driver)], label, "after drag")
 
-    driver.find_element(*_REORDER_TOGGLE).click()
+    driver.find_element(*Reorder.TOGGLE).click()
 
-    pause(_REORDER_SETTLE)
+    pause(Reorder.SETTLE)
 
     _confirm_reorder(driver)
 
     driver.get(url)
 
-    present(wait, _REORDER_TOGGLE)
+    present(wait, Reorder.TOGGLE)
 
     pause(PAGE_SETTLE)
 
-    # Вне режима перестановки списка нет — порядок читается по ячейкам вкладок.
-    shown = [_label_of(cell) for cell in driver.find_elements(*_TAB_CELLS)]
+    # Outside reorder mode there is no list — the order is read from the tab cells.
+    shown = [_label_of(cell) for cell in driver.find_elements(*Reorder.TAB_CELLS)]
 
     _check_first([shown_label for shown_label in shown if shown_label in movable], label, "after save")
 
@@ -269,8 +312,8 @@ class EventSettingsSchema:
     def _apply_sections(event_id: int, config: SectionsConfig,
                         driver: WebDriver, wait: WebDriverWait) -> None:
         for url, ready, schemas in [
-            (_CONTENT_TABS_URL, _REORDER_TOGGLE, _CONTENT_TABS),
-            (_SECTIONS_URL, _SECTIONS_LIST, _SECTIONS),
+            (Pages.CONTENT_TABS, Reorder.TOGGLE, _CONTENT_TABS),
+            (Pages.SECTIONS, _SECTIONS_LIST, _SECTIONS),
         ]:
             pending = [(name, schema, getattr(config, name)) for name, schema in schemas
                        if getattr(config, name) is not None]
@@ -298,11 +341,11 @@ class EventSettingsSchema:
 
     @staticmethod
     def _apply_cta(event_id: int, s: CtaSettings, driver: WebDriver, wait: WebDriverWait) -> None:
-        """CTA — call to action: кнопка действия в шапке сообщества («Написать», «Перейти»).
+        """CTA — call to action: the action button in the community header ("Write", "Go to").
 
-        React-страница, сохраняется сама при переключении — кнопки Save нет.
+        A React page: it saves itself on toggle, there is no Save button.
         """
-        driver.get(f"https://vk.com/event{event_id}/settings/cta")
+        driver.get(f"{VK_URL}/event{event_id}/settings/cta")
 
         wait_for_content(wait)
 
@@ -313,22 +356,18 @@ class EventSettingsSchema:
     @staticmethod
     def _apply_messages(event_id: int, s: MessagesSettings,
                         driver: WebDriver, wait: WebDriverWait) -> None:
-        driver.get(f"https://vk.com/event{event_id}/settings/messages")
+        driver.get(f"{VK_URL}/event{event_id}/settings/messages")
 
         wait_for_content(wait)
 
-        if s.enabled:
-            value = _MESSAGES_ON
-        else:
-            value = _MESSAGES_OFF
-
-        _set_custom_select(driver, wait, _MESSAGES_SELECT, value)
+        _set_custom_select(driver, wait, Messages.SELECT, str(int(s.enabled)))
 
         if s.first_message is not None:
             ta = driver.find_element(*by_testid("settings_messages_first_message"))
 
-            driver.execute_script("arguments[0].value = ''", ta)
-            ta.send_keys(s.first_message)
+            ta.clear()
+
+            type_into(ta, s.first_message)
 
             pause(AFTER_ACTION)
 
@@ -339,7 +378,7 @@ class EventSettingsSchema:
     @staticmethod
     def _apply_addresses(event_id: int, s: AddressesSettings,
                          driver: WebDriver, wait: WebDriverWait) -> None:
-        driver.get(f"https://vk.com/event{event_id}?act=addresses")
+        driver.get(f"{VK_URL}/event{event_id}?act=addresses")
 
         wait_for_content(wait)
 
@@ -352,12 +391,9 @@ class EventSettingsSchema:
     @staticmethod
     def _apply_extras(event_id: int, s: ExtrasSettings,
                       driver: WebDriver, wait: WebDriverWait) -> None:
-        driver.get(f"https://vk.com/event{event_id}/settings/extras")
+        driver.get(f"{VK_URL}/event{event_id}/settings/extras")
 
         wait_for_content(wait)
-
-        if s.hide_tag_suggestions is not None:
-            _set_checkbox_label(driver, "photo_recognize_enabled", s.hide_tag_suggestions)
 
         if s.co_creatorship is not None:
             _set_checkbox_label(driver, "clips_co_ownership_enabled", s.co_creatorship)

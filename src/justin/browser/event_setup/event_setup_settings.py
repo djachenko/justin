@@ -4,7 +4,7 @@ from datetime import datetime
 from justin.browser.event_creation.event_creation_settings import Category
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventSetupSettings:
     """Settings for editing an existing VK event via ?act=edit."""
     title: str | None = None

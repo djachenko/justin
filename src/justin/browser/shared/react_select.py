@@ -1,9 +1,9 @@
-"""React-управляемый <select>: значение ставится через прототип, иначе React не заметит.
+"""A React-controlled <select>: the value goes in through the prototype setter.
 
-React подменяет сеттер value у самого элемента и держит состояние у себя, поэтому
-прямое присваивание select.value он не видит, а selenium-овский Select тоже идёт
-через него. Единственный путь, который React принимает за выбор пользователя, —
-нативный сеттер из прототипа плюс событие change.
+React replaces the element's own value setter and keeps the state to itself, so a plain
+select.value assignment goes unnoticed — and Selenium's Select goes through the same
+setter. The only path React takes for a user's choice is the native prototype setter
+plus a change event.
 """
 from selenium.webdriver.chrome.webdriver import WebDriver
 

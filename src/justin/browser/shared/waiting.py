@@ -1,19 +1,19 @@
-"""Ожидание, которое под отладчиком рассказывает, чего дождаться не удалось."""
+"""A wait that, under a debugger, tells what it failed to wait for."""
 from typing import Any, Callable
 
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 
 from justin.browser.explorers.page_explorer import PageExplorer
-from justin.browser.shared.run_mode import is_debug
+from justin.shared.run_mode import is_debug
 
 
 class Wait(WebDriverWait):
-    """Голый таймаут не говорит, что было на странице.
+    """A bare timeout says nothing about what was on the page.
 
-    Дамп снимается только под отладчиком: в проде он вываливается человеку под руку
-    посреди работы и ничем не помогает. Подменяется в одном месте — new_wait() —
-    поэтому весь сахар из elements.py получает это поведение без обёрток.
+    The dump is taken under a debugger only: in a normal run it lands in the middle of
+    someone's work and helps with nothing. It is substituted in one place — new_wait() —
+    so every helper from elements.py gets this behaviour without wrappers.
     """
 
     def until(self, method: Callable, message: str = "") -> Any:

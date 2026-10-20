@@ -1,4 +1,4 @@
-"""Готовность страницы VK: React-разметка приходит после скелетонов."""
+"""Readiness of a VK page: the React markup arrives after the skeletons."""
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -10,8 +10,8 @@ _SKELETON = by_testid("loading-skeleton")
 
 
 def content_rendered(driver: WebDriver) -> bool:
-    """Скелетоны исчезли — значит, контент на месте. Пока они перерисовываются,
-    ссылки на них протухают, и это не ошибка, а «ещё не готово»."""
+    """Skeletons gone means the content is there. While they are being repainted,
+    references to them go stale — that is "not ready yet", not an error."""
     try:
         skeletons = driver.find_elements(*_SKELETON)
 

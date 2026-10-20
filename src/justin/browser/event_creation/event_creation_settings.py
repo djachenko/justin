@@ -53,7 +53,7 @@ class Category(str, Enum):
     PLAY = "Play"
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventStep1Settings:
     title: str
     start_dt: datetime
@@ -62,12 +62,12 @@ class EventStep1Settings:
     organiser_id: int | None = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventStep2Settings:
     category: Category = Category.CIRCUS
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventCreationSettings:
     step1: EventStep1Settings
     step2: EventStep2Settings = field(default_factory=EventStep2Settings)
