@@ -1,7 +1,7 @@
-"""Чтение состояния переключателя и проверка того, что клик долетел.
+"""Reading a switch state and checking that the click landed.
 
-Без браузера: элементы подменены заглушками, потому что оба дефекта — про логику,
-а не про VK. Оба ловились только живьём и оба выглядели как «всё применилось».
+No browser: elements are replaced by fakes, because both defects are about logic, not VK.
+Both were caught only live, and both looked like "everything applied".
 """
 import pytest
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
@@ -11,6 +11,8 @@ from justin.browser.sections.section_schema import Toggle, _switch_state
 
 
 class FakeElement:
+    _FLIPPED = {"true": "false", "false": "true"}
+
     def __init__(self, checked: str | None, nested: "FakeElement | None" = None,
                  test_id: str = "form_x_toggle"):
         self.checked = checked
@@ -28,11 +30,19 @@ class FakeElement:
         return None
 
     def find_elements(self, by, css: str) -> list["FakeElement"]:
-        return [self.nested] if self.nested is not None else []
+        if self.nested is None:
+            return []
+
+        return [self.nested]
+
+    def flip(self) -> None:
+        if self.checked is None:
+            raise ValueError("An element with no aria-checked does not toggle")
+
+        self.checked = self._FLIPPED[self.checked]
 
 
 class FakeDriver:
-    """Клик по умолчанию срабатывает; landing=False имитирует не долетевший JS-клик."""
 
     def __init__(self, element: FakeElement, landing: bool = True):
         self.element = element
@@ -45,11 +55,10 @@ class FakeDriver:
         self.element.clicks += 1
 
         if self.landing:
-            self.element.checked = "false" if self.element.checked == "true" else "true"
+            self.element.flip()
 
 
 class StaleOnceDriver(FakeDriver):
-    """Список перерисовывается вокруг переключателя — первая проверка после клика протухает."""
 
     def __init__(self, element: FakeElement):
         super().__init__(element)
@@ -63,47 +72,48 @@ class StaleOnceDriver(FakeDriver):
         return self.element
 
 
-def test_state_read_from_element() -> None:
-    assert _switch_state(FakeElement("true")) is True
-    assert _switch_state(FakeElement("false")) is False
+class TestSwitchState:
+    @pytest.mark.parametrize("checked,state", [("true", True), ("false", False)])
+    def test_read_from_element(self, checked: str, state: bool) -> None:
+        assert _switch_state(FakeElement(checked)) is state
+
+    def test_read_from_nested_switch(self) -> None:
+        assert _switch_state(FakeElement(None, nested=FakeElement("false"))) is False
+
+    def test_unknown_state_raises(self) -> None:
+        """A missing state used to read as enabled, and enabling was silently skipped."""
+        with pytest.raises(NoSuchElementException):
+            _switch_state(FakeElement(None))
 
 
-def test_state_read_from_nested_switch() -> None:
-    """Часть testid'ов висит на ячейке, а не на самом переключателе."""
-    assert _switch_state(FakeElement(None, nested=FakeElement("false"))) is False
+class TestToggle:
+    def test_value_is_applied(self) -> None:
+        element = FakeElement("false")
 
+        Toggle("form_x_toggle").set_value(True, FakeDriver(element), None)
 
-def test_unknown_state_raises() -> None:
-    """Раньше отсутствие состояния читалось как «включено» — и включение молча пропускалось."""
-    with pytest.raises(NoSuchElementException):
-        _switch_state(FakeElement(None))
+        assert element.clicks == 1
+        assert _switch_state(element) is True
 
+    def test_already_set_value_is_skipped(self) -> None:
+        element = FakeElement("true")
 
-def test_toggle_applies_value() -> None:
-    element = FakeElement("false")
-    Toggle("form_x_toggle").set_value(True, FakeDriver(element), None)
+        Toggle("form_x_toggle").set_value(True, FakeDriver(element), None)
 
-    assert element.clicks == 1
-    assert _switch_state(element) is True
+        assert element.clicks == 0
 
+    def test_stale_element_after_click_is_tolerated(self) -> None:
+        """The list re-renders around the switch: the first read after a click goes stale."""
+        element = FakeElement("false")
 
-def test_toggle_skips_when_already_set() -> None:
-    element = FakeElement("true")
-    Toggle("form_x_toggle").set_value(True, FakeDriver(element), None)
+        Toggle("form_x_toggle").set_value(True, StaleOnceDriver(element), None)
 
-    assert element.clicks == 0
+        assert _switch_state(element) is True
 
+    def test_click_that_did_not_land_raises(self, monkeypatch) -> None:
+        monkeypatch.setattr(section_schema, "_STATE_TIMEOUT", 0.3)
 
-def test_toggle_tolerates_stale_element_after_click() -> None:
-    element = FakeElement("false")
-    Toggle("form_x_toggle").set_value(True, StaleOnceDriver(element), None)
+        element = FakeElement("false")
 
-    assert _switch_state(element) is True
-
-
-def test_toggle_raises_when_click_did_not_land(monkeypatch) -> None:
-    monkeypatch.setattr(section_schema, "_STATE_TIMEOUT", 0.3)
-    element = FakeElement("false")
-
-    with pytest.raises(ValueError):
-        Toggle("form_x_toggle").set_value(True, FakeDriver(element, landing=False), None)
+        with pytest.raises(ValueError):
+            Toggle("form_x_toggle").set_value(True, FakeDriver(element, landing=False), None)

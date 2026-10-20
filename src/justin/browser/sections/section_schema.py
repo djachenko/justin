@@ -1,6 +1,7 @@
 from dataclasses import dataclass, fields
 from enum import Enum
 
+from justin_utils.util import first
 from selenium.common.exceptions import (
     NoSuchElementException, StaleElementReferenceException, TimeoutException,
 )
@@ -12,15 +13,12 @@ from justin.browser.sections.section_settings import (
     AddAllowed, PostsPublishing, SectionSettings,
 )
 from justin.browser.shared.elements import by_css, by_testid, by_xpath, found, present
+from justin.browser.shared.field import Field
 from justin.browser.shared.pacing import AFTER_ACTION, BETWEEN_FIELDS, pause
+from justin.browser.shared.waiting import Wait
 
-_STATE_TIMEOUT = 5
-
-_MODAL_SETTLE = 1.5  # модалка секции закрывается с анимацией, список под ней перерисовывается
-_MODAL_SAVE = by_testid("form_modal_save")
-_DROPDOWN_ITEM = by_testid("dropdownactionsheet-item")
 _SWITCH = by_css("[role='switch']")
-_TITLE = by_xpath(".//span[normalize-space()]")
+_STATE_TIMEOUT = 5
 
 
 def _find(driver: WebDriver, test_id: str) -> WebElement:
@@ -61,13 +59,13 @@ def _wait_for_state(driver: WebDriver, test_id: str, expected: bool) -> None:
             return False
 
     try:
-        WebDriverWait(driver, _STATE_TIMEOUT).until(applied)
+        Wait(driver, _STATE_TIMEOUT).until(applied)
     except TimeoutException:
         raise ValueError(f"Switch {test_id!r} stayed {not expected}, expected {expected}")
 
 
 @dataclass(frozen=True)
-class Toggle:
+class Toggle(Field[bool]):
     test_id: str
 
     def set_value(self, value: bool, driver: WebDriver, wait: WebDriverWait) -> None:
@@ -85,9 +83,9 @@ class Toggle:
 
 
 @dataclass(frozen=True)
-class Radio[E: Enum]:
+class Radio[E: Enum](Field[E]):
     def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
-        """Значение енума — это и есть testid радиокнопки."""
+        """The enum value is the testid of the radio button."""
         el = _find(driver, value.value)
 
         driver.execute_script("arguments[0].click()", el)
@@ -96,7 +94,9 @@ class Radio[E: Enum]:
 
 
 @dataclass(frozen=True)
-class Dropdown[E: Enum]:
+class Dropdown[E: Enum](Field[E]):
+    ITEM = by_testid("dropdownactionsheet-item")
+
     test_id: str
 
     def set_value(self, value: E, driver: WebDriver, wait: WebDriverWait) -> None:
@@ -109,11 +109,8 @@ class Dropdown[E: Enum]:
         option_text = value.value
         option = found(
             wait,
-            lambda d: next(
-                (el for el in d.find_elements(*_DROPDOWN_ITEM)
-                 if el.is_displayed() and option_text in el.text),
-                None
-            )
+            lambda d: first(d.find_elements(*self.ITEM),
+                            key=lambda el: el.is_displayed() and option_text in el.text)
         )
 
         driver.execute_script("arguments[0].click()", option)
@@ -123,6 +120,12 @@ class Dropdown[E: Enum]:
 
 @dataclass(frozen=True)
 class SectionSchema:
+    class Modal:
+        """A section opens its own modal: switches inside, an explicit Save at the bottom."""
+        SETTLE = 1.5  # the modal closes with an animation, the list below repaints
+        SAVE = by_testid("form_modal_save")
+        TITLE = by_xpath(".//span[normalize-space()]")
+
     test_id: str
     enabled: Toggle
 
@@ -143,7 +146,7 @@ class SectionSchema:
 
         self._save(driver, wait)
 
-        pause(_MODAL_SETTLE)
+        pause(self.Modal.SETTLE)
 
     def _open(self, driver: WebDriver, wait: WebDriverWait) -> None:
         """The modal opens from the section title.
@@ -153,14 +156,14 @@ class SectionSchema:
         """
         item = present(wait, by_testid(self.test_id))
 
-        driver.execute_script("arguments[0].click()", item.find_element(*_TITLE))
+        driver.execute_script("arguments[0].click()", item.find_element(*self.Modal.TITLE))
 
         present(wait, by_testid(self.enabled.test_id))
 
         pause(AFTER_ACTION)
 
     def _save(self, driver: WebDriver, wait: WebDriverWait) -> None:
-        btn = present(wait, _MODAL_SAVE)
+        btn = present(wait, self.Modal.SAVE)
 
         driver.execute_script("arguments[0].click()", btn)
 
@@ -233,4 +236,4 @@ class ListSwitchSchema:
 
         _wait_for_state(driver, self.test_id, settings.enabled)
 
-        pause(_MODAL_SETTLE)
+        pause(SectionSchema.Modal.SETTLE)

@@ -12,81 +12,77 @@ class AddAllowed(Enum):
     ADMINS_AND_EDITORS = "admins_and_editors"
 
 
-@dataclass
+@dataclass(frozen=True)
 class SectionSettings:
-    enabled: bool
-
-
-@dataclass
-class PostsSettings(SectionSettings):
     enabled: bool = True
+
+
+@dataclass(frozen=True)
+class PostsSettings(SectionSettings):
     publishing: PostsPublishing = PostsPublishing.ADMINS_AND_EDITORS
     sharing_disabled: bool = False
 
 
-@dataclass
+@dataclass(frozen=True)
 class PhotosSettings(SectionSettings):
-    enabled: bool = True
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
-@dataclass
+@dataclass(frozen=True)
 class VideosSettings(SectionSettings):
-    enabled: bool = True
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
-@dataclass
+@dataclass(frozen=True)
 class TopicsSettings(SectionSettings):
-    enabled: bool = True
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
-@dataclass
+@dataclass(frozen=True)
 class MusicSettings(SectionSettings):
     enabled: bool = False
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
-@dataclass
+@dataclass(frozen=True)
 class FilesSettings(SectionSettings):
     enabled: bool = False
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
-@dataclass
+@dataclass(frozen=True)
 class MaterialsSettings(SectionSettings):
     enabled: bool = False
     add_allowed: AddAllowed = AddAllowed.ADMINS_AND_EDITORS
 
 
-@dataclass
+@dataclass(frozen=True)
 class ServicesSettings(SectionSettings):
     enabled: bool = False
 
 
-@dataclass
+@dataclass(frozen=True)
 class ChatsSettings(SectionSettings):
     """Toggled in the section list itself, without a modal."""
     enabled: bool = False
 
 
-@dataclass
+@dataclass(frozen=True)
 class ClipsSettings(SectionSettings):
     enabled: bool = False
 
 
-@dataclass
+@dataclass(frozen=True)
 class ArticlesSettings(SectionSettings):
     enabled: bool = False
 
 
-@dataclass
+@dataclass(frozen=True)
 class MomentsSettings(SectionSettings):
     enabled: bool = False
 
 
-@dataclass
+@dataclass(frozen=True)
 class ProductsSettings(SectionSettings):
     enabled: bool = False
 
@@ -102,11 +98,11 @@ class MainSection(str, Enum):
     PRODUCTS = "market"
 
 
-@dataclass
+@dataclass(frozen=True)
 class SectionsConfig:
-    """None = не трогать секцию."""
-    posts: PostsSettings | None = None #= field(default_factory=PostsSettings)
-    photos: PhotosSettings | None = None # = field(default_factory=PhotosSettings)
+    """None — leave the section alone."""
+    posts: PostsSettings | None = None
+    photos: PhotosSettings | None = None
     videos: VideosSettings | None = None
     topics: TopicsSettings | None = None
     music: MusicSettings | None = None
