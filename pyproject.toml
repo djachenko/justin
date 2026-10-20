@@ -41,6 +41,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-timeout>=2.0",
+    "python-dotenv>=1.0",
     "mypy>=1.0",
     "ruff>=0.15,<0.16",
     "black>=23.0",
@@ -75,8 +76,8 @@ Homepage = "https://github.com/djachenko/justin"
 # Тесты живут только здесь: иначе pytest подбирает случайные test_*.py из корня.
 testpaths = ["tests"]
 markers = [
-    "integration: requires live browser with active VK session",
-    "destructive: creates real VK events, run sparingly",
+    "integration: requires live browser with active VK session, reads and edits the test event",
+    "destructive: integration that leaves something behind — creates events or links that have to be cleaned up by hand",
     "performance: measures wall time, keep off shared/loaded machines",
 ]
 # По умолчанию — только то, что можно гонять где угодно: живые тесты требуют браузера
