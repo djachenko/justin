@@ -617,8 +617,7 @@ class UploadCommand(DestinationsAwareCommand, EventUtils):
 
     @staticmethod
     def __get_album(community: Albums, folder: Folder, params: UploadParams) -> Album:
-        if AlbumMetafile.has(folder):
-            metafile = AlbumMetafile.get(folder)
+        if metafile := AlbumMetafile.get(folder):
             album = community.get_album_by_id(metafile.album_id)
         else:
             album = community.create_album(params.album_name)

@@ -1,0 +1,46 @@
+"""VKUI CustomSelect: a readonly input backed by a hidden native select."""
+from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support.ui import WebDriverWait
+
+from justin_utils.util import first
+
+from justin.browser.shared.elements import by_css, found
+from justin.browser.shared.pacing import AFTER_ACTION, pause
+
+SELECT_HOLDER = by_css("input[role='combobox']")
+
+
+def option_by_value(value: str) -> str:
+    """Option labels are localised — VKUI puts the value into the option id instead."""
+    return f"[role='option'][id$='-{value}']"
+
+
+def set_custom_select(driver: WebDriver, wait: WebDriverWait, holder: WebElement, value: str) -> None:
+    """Open the select, pick the option carrying value and check the input took its label."""
+    driver.execute_script("arguments[0].click()", holder)
+
+    option = found(
+        wait,
+        lambda d: first(d.find_elements(*by_css(option_by_value(value))),
+                        key=lambda el: el.is_displayed()),
+    )
+
+    label = option.text.strip()
+
+    option.click()
+
+    pause(AFTER_ACTION)
+
+    shown = (holder.get_attribute("value") or "").strip()
+
+    if shown != label:
+        raise ValueError(f"Option not applied: select shows {shown!r}, expected {label!r}")
+
+
+def set_custom_select_at(driver: WebDriver, wait: WebDriverWait, container: WebElement,
+                         position: int, value: str) -> None:
+    """Selects without testids are told apart by their order inside the container."""
+    holder = container.find_elements(*SELECT_HOLDER)[position]
+
+    set_custom_select(driver, wait, holder, value)
