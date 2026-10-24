@@ -2,6 +2,202 @@
 
 <!-- version list -->
 
+## v0.6.0 (2026-10-24)
+
+### Bug Fixes
+
+- Apply settings the way VK actually accepts them
+  ([`f74291f`](https://github.com/djachenko/justin/commit/f74291fdd6c4a5f66028cc14c865e8aa1c0244a0))
+
+- Click_save waits for the button via found and first
+  ([`d53360a`](https://github.com/djachenko/justin/commit/d53360afda7974defbd4dc4a389d013cd86cd4cf))
+
+- Custom select holder by combobox role, add set_custom_select_at
+  ([`fdd6491`](https://github.com/djachenko/justin/commit/fdd6491642ae7a90774926664d20b4ac4f0f6927))
+
+- Date check compares the whole date, drop tautological hidden-field check
+  ([`f97668c`](https://github.com/djachenko/justin/commit/f97668c4240779ebee248638d02a6fb6d9d4576a))
+
+- Honest types instead of suppressed errors
+  ([`3fdf6ac`](https://github.com/djachenko/justin/commit/3fdf6ac0019ca2bf527fc023d0204a41e4440c61))
+
+- New_wait honours a zero timeout
+  ([`3477054`](https://github.com/djachenko/justin/commit/34770549dc4b5b5dd1d9aa3d48ce54aac13ba569))
+
+- Open the browser at 1440x900
+  ([`3999bc2`](https://github.com/djachenko/justin/commit/3999bc223707fea639d0f2a10d5c224e1c32e8cd))
+
+- Pin Chrome 152 and announce the browser start
+  ([`3e9b6e4`](https://github.com/djachenko/justin/commit/3e9b6e4f446eb742000aadfeb084e67eaba4b155))
+
+- Sections schema for the split Content tabs and Sections pages
+  ([`5c5f019`](https://github.com/djachenko/justin/commit/5c5f0198d7491ef6938f51599ddf103d862a5e4b))
+
+- Setup-event links the folder before applying settings
+  ([`dd74bb2`](https://github.com/djachenko/justin/commit/dd74bb2c07da9bceabc8ed0b7d397b64ce96ce83))
+
+### Build System
+
+- Honest Python floor and a pinned ruff
+  ([`5803b9f`](https://github.com/djachenko/justin/commit/5803b9f76905f18b6c6794c20a5ed8b1ca5f5a44))
+
+- Load .env in tests with python-dotenv
+  ([`d885dd8`](https://github.com/djachenko/justin/commit/d885dd8f19e3276c1747b1d09b1700475e52c5a3))
+
+- Python-dotenv in the test extra
+  ([`069b4e8`](https://github.com/djachenko/justin/commit/069b4e847f639a890a90bb11df6c62d348379d88))
+
+- Require the justin_utils we actually build against
+  ([`d58b6b4`](https://github.com/djachenko/justin/commit/d58b6b4507bcf097aa7cc80822a9f2e15eea7943))
+
+- Test markers, timeouts and default selection
+  ([`7e30784`](https://github.com/djachenko/justin/commit/7e30784850d9f5ec03f411e14e0f7b5d6a8df786))
+
+### Chores
+
+- Drop probes/dump_page.py
+  ([`dc4730f`](https://github.com/djachenko/justin/commit/dc4730f3af927d78c8c4f2a9c5e2f6db25f8f397))
+
+- Drop removed module from mypy overrides
+  ([`84805f6`](https://github.com/djachenko/justin/commit/84805f608271971dcc5ed11a8c93f14e40862d3b))
+
+- Placeholder test event id in .env.example
+  ([`b195524`](https://github.com/djachenko/justin/commit/b1955244706ef90d039d78cd669b4402da3ae6a5))
+
+- Setuptools package discovery, destructive pytest marker
+  ([`5a49f7a`](https://github.com/djachenko/justin/commit/5a49f7a17fe28f5dc449729e640c15295ed1f9d7))
+
+- Test event id via .env
+  ([`c611f68`](https://github.com/djachenko/justin/commit/c611f680038f7b67819ed5f4584458f2c49729d8))
+
+### Code Style
+
+- Unused imports and empty f-strings
+  ([`c1bfdb0`](https://github.com/djachenko/justin/commit/c1bfdb0ac65238606165d0649dfa978854a126a7))
+
+### Documentation
+
+- Browser shared modules, run mode and Folder location
+  ([`ef56e24`](https://github.com/djachenko/justin/commit/ef56e244fb9b0caffa60b41df3104b9845b28609))
+
+- Drop status notes from CLAUDE.md
+  ([`7227b8e`](https://github.com/djachenko/justin/commit/7227b8e9a1d8af43b9ae4e6505403ce48310b6ea))
+
+- Refresh project structure
+  ([`9b90d02`](https://github.com/djachenko/justin/commit/9b90d02ac421b3b89ec210ed8a83ae31c7d5585f))
+
+### Features
+
+- Add setup-event command with VKBrowser
+  ([`1cd3a01`](https://github.com/djachenko/justin/commit/1cd3a01e85b8120bf22dc29584cf1992e2f194ba))
+
+- Debug-aware browser and randomised pauses
+  ([`a7b3730`](https://github.com/djachenko/justin/commit/a7b373029e8170b62759f02b41e87f21403b26ba))
+
+- EventCreationSchema — schema-driven 3-step wizard
+  ([`8cda18c`](https://github.com/djachenko/justin/commit/8cda18ce9c6a5087ee3a328cc07befb98cd5c086))
+
+- EventSettingsSchema — schema-driven post-creation settings
+  ([`a21d54b`](https://github.com/djachenko/justin/commit/a21d54bcdda3e52fe4a8dfdeb595cd30074c588f))
+
+- Invite links
+  ([`cbc8885`](https://github.com/djachenko/justin/commit/cbc88852fe9bbb064c352c146f54a4e7eb14dbfb))
+
+- Page explorers and a structure dumper
+  ([`679a843`](https://github.com/djachenko/justin/commit/679a8436c3c05231dfcf6a8e87dd089c564a5444))
+
+- Setup-event configures the whole event
+  ([`389af3a`](https://github.com/djachenko/justin/commit/389af3a122176556d203f39ddf6a71074f546950))
+
+- Setup-event picks the folder, links it and writes GroupMetafile
+  ([`8e6bd83`](https://github.com/djachenko/justin/commit/8e6bd83757df1cd32a2bde42c2d3d951795e02ba))
+
+- VKBrowser — create_event via schema, apply_settings
+  ([`73a5f09`](https://github.com/djachenko/justin/commit/73a5f0970aaffc3797a7932bbf033f8e0aafd748))
+
+### Refactoring
+
+- Browser layer on vk.ru with namespaced selectors and verified setters
+  ([`8dea847`](https://github.com/djachenko/justin/commit/8dea847286a8f8ec411c2af580d73a1b9846468a))
+
+- Creation wizard after review
+  ([`5704672`](https://github.com/djachenko/justin/commit/5704672496304805b2005126a346a7c83d0fee52))
+
+- Deviate a pause by a share of itself
+  ([`dd42b91`](https://github.com/djachenko/justin/commit/dd42b91ca13b4d5c254d971c54fc5b141551ead3))
+
+- Drop the dead branches of VKBrowser
+  ([`f859fcf`](https://github.com/djachenko/justin/commit/f859fcfacc0109579206a05f1ef9ea377621ee17))
+
+- Drop the unreachable _explore_sub_clicks
+  ([`954c273`](https://github.com/djachenko/justin/commit/954c273f19c993b68674706ca7c1618bed816cc7))
+
+- Event settings schema after review
+  ([`07bd1e1`](https://github.com/djachenko/justin/commit/07bd1e1f2e06c23ad9171d8b85f22c635a581e18))
+
+- Field base for section controls, section modal nested in SectionSchema
+  ([`b31c86d`](https://github.com/djachenko/justin/commit/b31c86d0b250d5900fa2373cead498c8e273a37e))
+
+- Group browser by feature
+  ([`da03eb2`](https://github.com/djachenko/justin/commit/da03eb2570dd9fcb9e03a63a0a8afa036e61070e))
+
+- Locator sugar everywhere, debug dump inside Wait
+  ([`3afe60d`](https://github.com/djachenko/justin/commit/3afe60d18722c27c5b79d2960e90628862c13367))
+
+- Mypy debt test without nested comprehension
+  ([`05e4213`](https://github.com/djachenko/justin/commit/05e4213e7f07c4961d1aa081cf0b62ab5b271883))
+
+- Named pauses and consistent layout across the schemas
+  ([`16be688`](https://github.com/djachenko/justin/commit/16be68846bec21560b6542ded62e731c55143714))
+
+- Salvage live logic from the legacy wizard
+  ([`85679f0`](https://github.com/djachenko/justin/commit/85679f09d8eff950dc64f72c07ae074e42a51296))
+
+- Schema-driven section configuration with tests
+  ([`73b281b`](https://github.com/djachenko/justin/commit/73b281bb37ebee0b77911d62b094317cc095c3b2))
+
+- Setup-event on top of PatternCommand
+  ([`687bfaf`](https://github.com/djachenko/justin/commit/687bfaf8ce56c1b535c4376cd210c164f073c0ac))
+
+- Setup_event_command — apply_settings replaces set_sections + API call
+  ([`ccb86f8`](https://github.com/djachenko/justin/commit/ccb86f8f79b50e91dc958e286f826445bec53b8c))
+
+- Type browser element and driver parameters
+  ([`f4ab5eb`](https://github.com/djachenko/justin/commit/f4ab5eb88883fc1928051752273a63895fb2a970))
+
+- Unique module names inside packages
+  ([`2c128ca`](https://github.com/djachenko/justin/commit/2c128ca5c0f6622eae3ed32603618345bc23da65))
+
+- Vary pauses with a function, not a generator
+  ([`19db9dc`](https://github.com/djachenko/justin/commit/19db9dca0b95adb6b75ce7c7ccb6a3f64397762a))
+
+- Walrus for album metafile lookup
+  ([`5a8960c`](https://github.com/djachenko/justin/commit/5a8960c069e1b6401933f47fe7bba0149cad3f23))
+
+### Testing
+
+- Completion test needs the real config, mark it performance
+  ([`2cc3756`](https://github.com/djachenko/justin/commit/2cc37567ee5233a8b6c802005554eec2f3c501c5))
+
+- Group helper tests into classes, English docstrings
+  ([`4f5d055`](https://github.com/djachenko/justin/commit/4f5d055b950cf049a23b74817f98376d767dd9f5))
+
+- Integration tests for event creation and apply_settings
+  ([`68fa298`](https://github.com/djachenko/justin/commit/68fa298710a985826b3f977332757584ffa2f212))
+
+- Offline coverage for sections, event settings, creation fields and shared helpers
+  ([`3a696f1`](https://github.com/djachenko/justin/commit/3a696f11cf66243f54005893d02a646555439ee7))
+
+- Perf tests run justin next to the interpreter, cover completion
+  ([`28320d5`](https://github.com/djachenko/justin/commit/28320d56dd90b7fc438c96e9ebe46ce731cad13b))
+
+- Selector contract, fewer VK requests, startup budgets
+  ([`e8cc6aa`](https://github.com/djachenko/justin/commit/e8cc6aa186a6645fb379a74a9bac8b0285e38bcf))
+
+- Shared fast_wait and no_pauses for offline browser tests
+  ([`0931090`](https://github.com/djachenko/justin/commit/09310907bc6f8f8ff809fbbcaa30a0885cb575eb))
+
+
 ## v0.5.0 (2026-10-18)
 
 
