@@ -5,10 +5,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import TypeVar
 
-from justin.actions.timelapse_model import AudioClip, Document, MasterClip, Media, PremiereObject, VideoClip
-from justin.actions.timelapse_template import TimelapseTemplate
-from justin.actions.timelapse_ticks import seconds_to_ticks
-from justin.actions.timelapse_xml import Xml
+from justin.tools.timelapse.timelapse_model import AudioClip, Document, MasterClip, Media, PremiereObject, VideoClip
+from justin.tools.timelapse.timelapse_template import TimelapseTemplate
+from justin.tools.timelapse.timelapse_ticks import seconds_to_ticks
+from justin.tools.timelapse.timelapse_xml import Xml
 
 # Formats that carry audio only — no picture. The template's sound is an mp4
 # (which has a video part), so clones of these need that video part stripped.

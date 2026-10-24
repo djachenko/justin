@@ -14,8 +14,8 @@ import re
 
 import pytest
 
-from justin.actions import timelapse_model as model
-from justin.actions.timelapse_model import (
+from justin.tools.timelapse import timelapse_model as model
+from justin.tools.timelapse.timelapse_model import (
     AmbiguousReference,
     AudioClip,
     AudioClipTrackItem,
@@ -35,9 +35,9 @@ from justin.actions.timelapse_model import (
     VideoClip,
     VideoStream,
 )
-from justin.actions.timelapse_prproj import _TEMPLATE_DATA
-from justin.actions.timelapse_re import TimelapseRe
-from justin.actions.timelapse_xml import Xml
+from justin.tools.timelapse.timelapse_prproj import _TEMPLATE_DATA
+from justin.tools.timelapse.timelapse_re import TimelapseRe
+from justin.tools.timelapse.timelapse_xml import Xml
 
 
 def build(*blocks: str) -> Document:

@@ -12,8 +12,8 @@ tested in test_timelapse_model.
 import re
 import uuid
 
-from justin.actions.timelapse_xml import Xml
-from justin.actions.timelapse_xml_ops import TimelapseXmlOps
+from justin.tools.timelapse.timelapse_xml import Xml
+from justin.tools.timelapse.timelapse_xml_ops import TimelapseXmlOps
 
 
 # --------------------------------------------------------------------------- #

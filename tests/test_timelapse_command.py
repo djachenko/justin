@@ -10,7 +10,7 @@ asks it for matters.
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from justin.actions.timelapse_settings import TimelapseSettings
+from justin.tools.timelapse.timelapse_settings import TimelapseSettings
 from justin.typer.timelapse_command import TimelapseCommand
 from tests.test_timelapse_prproj import make_timelapse
 

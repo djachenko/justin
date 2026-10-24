@@ -3,9 +3,9 @@ import re
 from pathlib import Path
 from typing import Self
 
-from justin.actions.timelapse_block import Block, Blocks, Edit
-from justin.actions.timelapse_re import TimelapseRe
-from justin.actions.timelapse_tags import Tag
+from justin.tools.timelapse.timelapse_block import Block, Blocks, Edit
+from justin.tools.timelapse.timelapse_re import TimelapseRe
+from justin.tools.timelapse.timelapse_tags import Tag
 
 
 class Xml:

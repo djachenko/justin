@@ -20,19 +20,19 @@ from unittest.mock import patch
 
 import pytest
 
-from justin.actions.timelapse_model import AudioClipTrackItem, Document
-from justin.actions.timelapse_prproj import (
+from justin.tools.timelapse.timelapse_model import AudioClipTrackItem, Document
+from justin.tools.timelapse.timelapse_prproj import (
     _lay_out_timeline,
     _resolve_timeline_sounds,
     build_prproj,
     generate_prproj,
     _TEMPLATE_DATA,
 )
-from justin.actions.timelapse_settings import TimelapseSettings
-from justin.actions.timelapse_sound import Sound
-from justin.actions.timelapse_sources import TimelapseSources
-from justin.actions.timelapse_ticks import PREMIERE_TIMEBASE
-from justin.actions.timelapse_xml import Xml
+from justin.tools.timelapse.timelapse_settings import TimelapseSettings
+from justin.tools.timelapse.timelapse_sound import Sound
+from justin.tools.timelapse.timelapse_sources import TimelapseSources
+from justin.tools.timelapse.timelapse_ticks import PREMIERE_TIMEBASE
+from justin.tools.timelapse.timelapse_xml import Xml
 
 
 # --------------------------------------------------------------------------- #
@@ -74,7 +74,7 @@ def stub_ffprobe():
         # Distinct per name so sequential layout is observable; the path is ffprobe's last argument.
         return CompletedProcess(args, 0, stdout=f"{len(Path(args[-1]).name) + 1}\n")
 
-    with patch("justin.actions.timelapse_sound.subprocess.run", side_effect=probe):
+    with patch("justin.tools.timelapse.timelapse_sound.subprocess.run", side_effect=probe):
         yield
 
 

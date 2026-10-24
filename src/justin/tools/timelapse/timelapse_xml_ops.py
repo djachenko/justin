@@ -1,8 +1,8 @@
 import re
 import uuid
 
-from justin.actions.timelapse_re import TimelapseRe, search_group
-from justin.actions.timelapse_xml import Xml
+from justin.tools.timelapse.timelapse_re import TimelapseRe, search_group
+from justin.tools.timelapse.timelapse_xml import Xml
 
 
 class TimelapseXmlOps:
