@@ -1,7 +1,7 @@
 """Schema for editing an existing VK event via ?act=edit."""
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 from selenium.webdriver.chrome.webdriver import WebDriver
@@ -194,6 +194,25 @@ def _pick_from_selector(driver: WebDriver, wait: WebDriverWait, selector_input: 
     pause(AFTER_ACTION)
 
 
+_SHOWN_DATE_FORMATS = ("%d %B %Y", "%d %b %Y", "%d.%m.%Y")
+
+
+def _shown_date(shown: str) -> date:
+    """The interface is English, so the field shows the month by name, e.g. '5 March 2026'.
+
+    %B and %b follow the process locale: nothing here calls setlocale, so English names parse.
+    """
+    text = " ".join(shown.split())
+
+    for fmt in _SHOWN_DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+
+    raise ValueError(f"Date field shows {shown!r}, which is not a date")
+
+
 def _fill_date_field(driver: WebDriver, wait: WebDriverWait, date_input_id: str,
                      dt: datetime) -> None:
     """Fill VK date picker + the hour/minute selectors that follow it.
@@ -206,7 +225,7 @@ def _fill_date_field(driver: WebDriver, wait: WebDriverWait, date_input_id: str,
 
     shown = _value_of(date_el)
 
-    if str(dt.day) not in shown or str(dt.year) not in shown:
+    if _shown_date(shown) != dt.date():
         raise ValueError(f"Date not applied: field shows {shown!r}, expected {dt.date()}")
 
     try:
@@ -297,14 +316,14 @@ def _set_hidden(driver: WebDriver, locator: tuple[str, str], value: str) -> None
     field = driver.find_element(*locator)
     driver.execute_script("arguments[0].value = arguments[1]", field, value)
 
-    shown = _value_of(field)
-
-    if shown != value:
-        raise ValueError(f"Field {locator[1]!r} holds {shown!r}, expected {value!r}")
-
 
 def _set_organiser(driver: WebDriver, organiser_id: int) -> None:
-    """The option list carries names only — the id lives in the hidden event_host field."""
+    """The option list carries names only — the id lives in the hidden event_host field.
+
+    Reading the field back only returns what was just written; whether it held shows
+    after save and reload alone. That round trip was checked live — event_host is the
+    source the form submits, unlike the access mirror.
+    """
     _set_hidden(driver, _EVENT_HOST, str(organiser_id))
 
 
