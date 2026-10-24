@@ -5,9 +5,9 @@ from typing import Annotated, Iterable, List
 import typer
 from typer import Typer, Argument, Option
 
-from justin.actions.timelapse_prproj import generate_prproj
-from justin.actions.timelapse_settings import TimelapseSettings
-from justin.actions.timelapse_sources import TimelapseSources
+from justin.tools.timelapse.timelapse_prproj import generate_prproj
+from justin.tools.timelapse.timelapse_settings import TimelapseSettings
+from justin.tools.timelapse.timelapse_sources import TimelapseSources
 from justin.shared.context import Context
 from justin.typer.base_commands.pattern_command import Extra
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand

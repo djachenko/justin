@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
-from justin.actions.timelapse_sound import Sound, AUDIO_ONLY_EXTENSIONS, VIDEO_AS_AUDIO_EXTENSIONS
+from justin.tools.timelapse.timelapse_sound import Sound, AUDIO_ONLY_EXTENSIONS, VIDEO_AS_AUDIO_EXTENSIONS
 
 JPEG_EXTENSIONS = {
     ".jpg",

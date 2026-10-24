@@ -60,9 +60,9 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import ClassVar, Iterator, NamedTuple, TypeVar
 
-from justin.actions.timelapse_block import Block, Blocks, Edit
-from justin.actions.timelapse_re import TimelapseRe, search_group
-from justin.actions.timelapse_tags import Tag
+from justin.tools.timelapse.timelapse_block import Block, Blocks, Edit
+from justin.tools.timelapse.timelapse_re import TimelapseRe, search_group
+from justin.tools.timelapse.timelapse_tags import Tag
 
 
 class PremiereClass(NamedTuple):

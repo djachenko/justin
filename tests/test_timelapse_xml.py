@@ -8,8 +8,8 @@ each method on small hand-written snippets.
 
 import gzip
 
-from justin.actions.timelapse_block import Block, Blocks, _HEADER_LEN
-from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
+from justin.tools.timelapse.timelapse_block import Block, Blocks, _HEADER_LEN
+from justin.tools.timelapse.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
 
 
 def _dump(xml: Xml) -> str:

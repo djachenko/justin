@@ -2,7 +2,7 @@ import re
 from collections.abc import Iterable, Set
 from typing import NamedTuple
 
-from justin.actions.timelapse_re import TimelapseRe, search_group
+from justin.tools.timelapse.timelapse_re import TimelapseRe, search_group
 
 # ObjectID / ObjectUID always sit in the opening tag — the very first line.
 # ~110 chars; 120 comfortably covers the longest opening tags we've seen.

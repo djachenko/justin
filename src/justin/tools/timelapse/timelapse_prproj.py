@@ -40,17 +40,17 @@ Functions below go top-down: the entry points first, then the steps of
 from importlib.resources import files as _resource_files
 from pathlib import Path
 
-from justin.actions.timelapse_block import Edit
-from justin.actions.timelapse_model import AudioClipTrackItem, Document
-from justin.actions.timelapse_re import TimelapseRe, search_group
-from justin.actions.timelapse_settings import TimelapseSettings
-from justin.actions.timelapse_sound import Sound
-from justin.actions.timelapse_sources import TimelapseSources
-from justin.actions.timelapse_tags import Tag
-from justin.actions.timelapse_template import TimelapseTemplate
-from justin.actions import timelapse_ticks
-from justin.actions.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
-from justin.actions.timelapse_xml_ops import TimelapseXmlOps
+from justin.tools.timelapse.timelapse_block import Edit
+from justin.tools.timelapse.timelapse_model import AudioClipTrackItem, Document
+from justin.tools.timelapse.timelapse_re import TimelapseRe, search_group
+from justin.tools.timelapse.timelapse_settings import TimelapseSettings
+from justin.tools.timelapse.timelapse_sound import Sound
+from justin.tools.timelapse.timelapse_sources import TimelapseSources
+from justin.tools.timelapse.timelapse_tags import Tag
+from justin.tools.timelapse.timelapse_template import TimelapseTemplate
+from justin.tools.timelapse import timelapse_ticks
+from justin.tools.timelapse.timelapse_xml import Xml, _CLIP_MEDIA_TYPES
+from justin.tools.timelapse.timelapse_xml_ops import TimelapseXmlOps
 
 _TEMPLATE_DATA: bytes = (
     _resource_files("justin.resources.timelapse_templates")

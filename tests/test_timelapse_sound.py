@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from justin.actions.timelapse_model import (
+from justin.tools.timelapse.timelapse_model import (
     AudioClip,
     AudioStream,
     Markers,
@@ -22,8 +22,8 @@ from justin.actions.timelapse_model import (
     VideoClip,
     VideoStream,
 )
-from justin.actions.timelapse_sound import Sound, AudioSound, VideoSound
-from justin.actions.timelapse_template import TimelapseTemplate
+from justin.tools.timelapse.timelapse_sound import Sound, AudioSound, VideoSound
+from justin.tools.timelapse.timelapse_template import TimelapseTemplate
 
 MARKER = TimelapseTemplate.SOUND_NAME  # the placeholder adapt renames away
 
