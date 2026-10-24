@@ -2,9 +2,10 @@ import builtins
 
 import pytest
 
-from justin.browser.shared import captcha
 from justin.browser.shared.captcha import CaptchaError, wait_for_captcha_if_needed
 from justin.shared.vk import VK_URL
+
+pytestmark = pytest.mark.usefixtures("no_pauses")
 
 STUCK_ON = "/groups_create"
 
@@ -12,11 +13,6 @@ STUCK_ON = "/groups_create"
 class FakeDriver:
     def __init__(self, url: str) -> None:
         self.current_url = url
-
-
-@pytest.fixture(autouse=True)
-def no_waiting(monkeypatch):
-    monkeypatch.setattr(captcha, "pause", lambda *_, **__: None)
 
 
 class TestWithAWindow:

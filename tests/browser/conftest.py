@@ -10,10 +10,17 @@ import os
 
 import pytest
 
+from justin.browser.shared import pacing
 from justin.browser.vk_browser import VKBrowser
 from tests.browser.vk_page import forget_page
 
 EVENT_ID_VAR = "VK_TEST_EVENT_ID"
+
+
+@pytest.fixture
+def no_pauses(monkeypatch) -> None:
+    """Not autouse: the live tests need the pauses."""
+    monkeypatch.setattr(pacing, "PACE", 0)
 
 
 @pytest.fixture(scope="module")

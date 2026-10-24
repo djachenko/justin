@@ -2,6 +2,9 @@ import pytest
 
 from justin.browser.event_settings import event_settings_schema
 from justin.browser.event_settings.event_settings_schema import _set_checkbox_label, _set_idd_toggle
+from tests.browser.fakes import fast_wait
+
+pytestmark = pytest.mark.usefixtures("no_pauses")
 
 
 class FakeSwitch:
@@ -67,29 +70,21 @@ class FakeDriver:
             element.click()
 
 
-class FakeWait:
-    def __init__(self, driver: FakeDriver) -> None:
-        self.driver = driver
-
-    def until(self, condition):
-        return condition(self.driver)
-
-
 def set_checkbox_label(driver: FakeDriver, enabled: bool) -> None:
     _set_checkbox_label(driver, "cta", enabled)
 
 
 def set_idd_toggle(driver: FakeDriver, enabled: bool) -> None:
-    _set_idd_toggle(driver, FakeWait(driver), "addresses", enabled)
+    _set_idd_toggle(driver, fast_wait(driver), "addresses", enabled)
 
 
 SETTERS = [(set_checkbox_label, FakeSwitch), (set_idd_toggle, FakeDropdown)]
 
 
 @pytest.fixture(autouse=True)
-def no_waiting(monkeypatch):
-    monkeypatch.setattr(event_settings_schema, "pause", lambda *_, **__: None)
-    monkeypatch.setattr(event_settings_schema, "_STATE_TIMEOUT", 0.3)
+def no_state_timeout(monkeypatch):
+    """The fake answers a click at once: one look at the state is enough."""
+    monkeypatch.setattr(event_settings_schema, "_STATE_TIMEOUT", 0)
 
 
 @pytest.mark.parametrize("setter,fake", SETTERS, ids=["set_checkbox_label", "set_idd_toggle"])

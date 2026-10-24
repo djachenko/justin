@@ -3,7 +3,8 @@ import pytest
 from justin.browser.event_setup.event_setup_schema import (
     _clear_and_type, _classes_of, _has_label, _is_day, _is_number, _value_of,
 )
-from justin.browser.shared import pacing
+
+pytestmark = pytest.mark.usefixtures("no_pauses")
 
 
 class FakeField:
@@ -31,11 +32,6 @@ class FakeCell(FakeField):
 
     def is_displayed(self) -> bool:
         return self.displayed
-
-
-@pytest.fixture(autouse=True)
-def no_waiting(monkeypatch):
-    monkeypatch.setattr(pacing.time, "sleep", lambda _: None)
 
 
 class TestValueOf:
