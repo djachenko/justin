@@ -119,7 +119,10 @@ class VKBrowser:
     def new_wait(self, timeout: float | None = None) -> WebDriverWait:
         """Tests pass a shorter timeout: a throttled VK would otherwise cost half a minute
         per wait, and a suite of them takes minutes to report what one page already said."""
-        return Wait(self._driver, timeout or self._TIMEOUT)
+        if timeout is None:
+            timeout = self._TIMEOUT
+
+        return Wait(self._driver, timeout)
 
     def create_event(
         self,
