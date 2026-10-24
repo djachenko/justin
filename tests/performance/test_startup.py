@@ -67,6 +67,7 @@ class TestStartup:
             f"completion answers in {elapsed:.2f} s against a {COMPLETION_BUDGET} ceiling"
 
 
+@pytest.mark.performance
 class TestCompletion:
     def test_commands_are_listed(self) -> None:
         result = subprocess.run([JUSTIN], capture_output=True, text=True, env=_completion("se"))
