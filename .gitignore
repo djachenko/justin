@@ -37,6 +37,8 @@ src/justin/resources/timelapse_templates/*.xml
 
 **/ide_runner_local.py
 
+.env
+
 memory/
 .repokit
 

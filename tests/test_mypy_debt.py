@@ -12,7 +12,15 @@ def test_no_mypy_suppressed_modules() -> None:
     with open(Path(__file__).parent.parent / "pyproject.toml", "rb") as f:
         config = tomllib.load(f)
 
-    overrides = config.get("tool", {}).get("mypy", {}).get("overrides", [])
-    suppressed = [m for o in overrides if o.get("ignore_errors") for m in o.get("module", [])]
+    overrides = config \
+        .get("tool", {}) \
+        .get("mypy", {}) \
+        .get("overrides", [])
+
+    suppressed = []
+
+    for override in filter(lambda o: o.get("ignore_errors"), overrides):
+        for m in override.get("module", []):
+            suppressed.append(m)
 
     assert not suppressed, f"{len(suppressed)} modules still suppressed — remove from pyproject.toml overrides:\n" + "\n".join(suppressed)
