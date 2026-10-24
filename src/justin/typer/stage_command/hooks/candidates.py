@@ -1,7 +1,7 @@
-from justin_utils.filesystem import PathBased
+from justkitten.filesystem import PathBased
 from typing import List
 
-from justin_utils.util import flat_map
+from justkitten.util import flat_map
 
 from justin.shared.models.photoset import Photoset
 from justin.typer.stage_command.abstracts.file_mover import FileMover

@@ -9,10 +9,10 @@ from typing import List, Iterator, Annotated
 import typer
 from PIL import Image
 
-from justin_utils.exif import parse_exif
-from justin_utils.filesystem import Folder, File
-from justin_utils.pylinq import Sequence
-from justin_utils.util import flat_map
+from justkitten.exif import parse_exif
+from justkitten.filesystem import Folder, File
+from justkitten.pylinq import Sequence
+from justkitten.util import flat_map
 from vk_api import ApiError, VkToolsException
 
 from pyvko.aspects.albums import Albums, Album

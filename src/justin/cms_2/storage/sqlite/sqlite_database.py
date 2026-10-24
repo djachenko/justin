@@ -8,8 +8,9 @@ from pathlib import Path
 from sqlite3 import Cursor, Row, Connection
 from typing import TypeVar, List, Type, Self, Iterable, Any, Dict
 
+from justkitten.util import group_by
+
 from justin.shared.helpers.utils import DictableDataclass
-from justin_utils.util import group_by
 
 
 @dataclass

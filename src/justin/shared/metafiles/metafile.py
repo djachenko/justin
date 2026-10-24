@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Type, TypeVar, List, Self, ClassVar
 from uuid import UUID, uuid4
 
-from justin_utils.filesystem import Folder
+from justkitten import util
+from justkitten.filesystem import Folder
+
 from justin.shared.helpers.utils import Json, fromdict
-from justin_utils import util
 
 T = TypeVar('T', bound='Metafile')
 V = TypeVar('V', bound='RootMetafile')

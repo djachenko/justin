@@ -3,8 +3,8 @@ from typing import Annotated, List, Iterable
 
 import typer
 
-from justin_utils.filesystem import Folder
-from justin_utils.pylinq import Sequence
+from justkitten.filesystem import Folder
+from justkitten.pylinq import Sequence
 from typer import Typer, Argument
 
 from justin.typer.base_commands.pattern_command import Extra

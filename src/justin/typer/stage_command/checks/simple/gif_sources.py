@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import List
 
 from justin.typer.stage_command.problems.stem_problem import StemProblem
-from justin_utils import joins, util
+from justkitten import joins, util
 
 from justin.typer.stage_command.abstracts.simple_check import SimpleCheck
 from justin.typer.stage_command.problems.problem import Problem

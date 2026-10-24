@@ -7,11 +7,11 @@ from functools import cache, cached_property
 from pathlib import Path
 from typing import List, Iterable, Type
 
-from justin_utils.filesystem import Folder
+from justkitten.filesystem import Folder
 from justin.shared.helpers.utils import Json
 from justin.shared.metafiles.metafile import LocationMetafile
 from justin.shared.models.photoset import Photoset
-from justin_utils.util import bfs, T
+from justkitten.util import bfs, T
 
 
 class Roots:

@@ -1,12 +1,13 @@
 from abc import abstractmethod
 from typing import List, Type
 
+from justkitten.filesystem import Folder
+from justkitten.util import bfs
+
 from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase, SQLiteEntry
 from justin.cms_2.storage.sqlite.sqlite_entries import Closed, Photoset as PhotosetEntry, PersonPhotos, Drive, MyPeople
-from justin_utils.filesystem import Folder
 from justin.shared.metafiles.metafile import PhotosetMetafile
 from justin.shared.models.photoset import Photoset
-from justin_utils.util import bfs
 
 
 class PhotosetsCMS:

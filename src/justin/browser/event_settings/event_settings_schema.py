@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import Callable
 
-from justin_utils.util import first
+from justkitten.util import first
 from selenium.common.exceptions import (
     NoSuchElementException, StaleElementReferenceException, TimeoutException,
 )

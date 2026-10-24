@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from justin_utils.filesystem import File, FolderBased, Folder
-from justin_utils.sources import Source, parse_sources
-from justin_utils.util import flat_map
+from justkitten.filesystem import File, FolderBased, Folder
+from justkitten.sources import Source, parse_sources
+from justkitten.util import flat_map
 from typing import List, Self
 from uuid import UUID
 

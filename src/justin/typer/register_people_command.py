@@ -2,12 +2,12 @@ from pathlib import Path
 from typing import Annotated, List
 
 import typer
-from justin_utils import util
+from justkitten import util
 from typer import Typer, Argument
 
 from justin.typer.base_commands.pattern_command import Extra
 from justin.shared.context import Context
-from justin_utils.filesystem import Folder
+from justkitten.filesystem import Folder
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
 from pyvko.aspects.groups import Group
 from pyvko.entities.user import User

@@ -3,7 +3,7 @@ from typing import List
 
 from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase
 from justin.cms_2.storage.sqlite.sqlite_entries import Tag
-from justin_utils.util import distinct
+from justkitten.util import distinct
 
 
 class TagsCMS:

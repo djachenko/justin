@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Annotated, Iterable, List, Optional
 
 import typer
-from justin_utils import util
-from justin_utils.filesystem import Folder
-from justin_utils.util import first, parse_date
+from justkitten import util
+from justkitten.filesystem import Folder
+from justkitten.util import first, parse_date
 from pyvko.aspects.groups import Group
 from typer import Typer, Argument
 

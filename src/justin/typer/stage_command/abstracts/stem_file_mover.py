@@ -1,6 +1,6 @@
 from abc import ABC
 
-from justin_utils.filesystem import PathBased
+from justkitten.filesystem import PathBased
 
 from justin.shared.helpers import photoset_utils
 from justin.shared.models.photoset import Photoset

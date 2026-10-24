@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from justin_utils import joins
+from justkitten import joins
 
 from justin.typer.stage_command.abstracts.simple_check import SimpleCheck
 from justin.typer.stage_command.problems.problem import Problem

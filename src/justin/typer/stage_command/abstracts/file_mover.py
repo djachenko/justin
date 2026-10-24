@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Iterable, List, TYPE_CHECKING
 
-from justin_utils.filesystem import File, RelativeFileset, PathBased
+from justkitten.filesystem import File, RelativeFileset, PathBased
 
 from justin.shared.metafiles.metafile import RootMetafile
 from justin.shared.models.photoset import Photoset

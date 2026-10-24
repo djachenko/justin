@@ -8,7 +8,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
-from justin_utils.util import first
+from justkitten.util import first
 
 from justin.browser.event_creation.event_creation_settings import Category
 from justin.browser.event_setup.event_setup_settings import EventSetupSettings

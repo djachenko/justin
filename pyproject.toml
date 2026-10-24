@@ -25,7 +25,7 @@ keywords = ["photo", "processing", "face-recognition", "vk"]
 # Они должны быть доступны в репозитории.
 dependencies = [
     "pyvko>=0.1.15",
-    "justin_utils>=0.5.0",
+    "justkitten>=0.5.0",
     "Pillow",
     "lazy-object-proxy",
     "google-api-python-client",
@@ -33,7 +33,6 @@ dependencies = [
     "frozendict",
     "typer[all]>=0.26.8",
     "selenium>=4.0",
-    # "face_recognition",  # Опциональная зависимость, может быть добавлена при необходимости
     "coverage"
 ]
 
