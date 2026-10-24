@@ -55,6 +55,7 @@ server = [
 test = [
     "pytest",
     "pytest-timeout",
+    "python-dotenv>=1.0",
     "ruff>=0.15,<0.16",
     "mypy",
 ]
