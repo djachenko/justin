@@ -61,7 +61,7 @@ class SetupEventCommand(PatternCommand):
 
     def run(self) -> None:
         if self.__manual:
-            self.__setup(self.__manual_title(), self.__manual_date(), self.__manual_parent())
+            self.__setup(self.__manual_title(), self.__manual_date(), self.__manual_parent(), None)
 
             return
 
@@ -75,10 +75,7 @@ class SetupEventCommand(PatternCommand):
         folder, parent = self.__target(candidates, photoset)
         title = self.__title or photoset.name
 
-        event_id = self.__setup(title, self.__date or self.__date_from_name(photoset.name), parent)
-
-        if GroupMetafile.get(folder) is None:
-            GroupMetafile(group_id=-event_id).save(folder)
+        self.__setup(title, self.__date or self.__date_from_name(photoset.name), parent, folder)
 
     def __manual_title(self) -> str:
         return self.__title or input("Enter event title: ")
@@ -171,7 +168,9 @@ class SetupEventCommand(PatternCommand):
 
         return VKBrowser()
 
-    def __setup(self, title: str, event_date: date, parent) -> int:
+    def __setup(self, title: str, event_date: date, parent, folder: Folder | None) -> None:
+        """The folder is linked as soon as the event exists: if applying the settings fails,
+        a rerun picks the event up by the link instead of creating a second one."""
         start_dt = datetime.combine(event_date, time(hour=12))
         end_dt = start_dt + timedelta(hours=4)
         organiser_id = self.__organiser_id(parent)
@@ -192,12 +191,13 @@ class SetupEventCommand(PatternCommand):
             else:
                 raise ValueError("Either --create or --url must be specified")
 
+            if folder is not None and GroupMetafile.get(folder) is None:
+                GroupMetafile(group_id=-event_id).save(folder)
+
             browser.apply_settings(
                 event_id, self._default_settings(title, organiser_id, start_dt, end_dt))
 
         print(f"Event is ready: {VK_URL}/event{event_id}")
-
-        return event_id
 
     @staticmethod
     def _default_settings(title: str, organiser_id: int | None, start_dt: datetime, end_dt: datetime) -> EventSettingsSettings:
