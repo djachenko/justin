@@ -6,8 +6,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-from justin_utils import util
-from justin_utils.filesystem import open_file_manager
+from justkitten import util
+from justkitten.filesystem import open_file_manager
 
 
 class FixMetafileOutput(ABC):

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from justin_utils.filesystem import Folder
+from justkitten.filesystem import Folder
 
 
 def main():

@@ -12,8 +12,8 @@ from justin.shared.models.photoset import Photoset
 from justin.typer.base_commands.destinations_aware_command import DestinationsAwareCommand
 from justin.typer.base_commands.pattern_command import Extra
 from justin.typer.fix_metafile_output import FixMetafileOutput, make_fix_metafile_output
-from justin_utils.filesystem import Folder
-from justin_utils.util import bfs
+from justkitten.filesystem import Folder
+from justkitten.util import bfs
 from pyvko.aspects.events import Event, Events
 from pyvko.aspects.groups import Group
 from pyvko.aspects.posts import Posts

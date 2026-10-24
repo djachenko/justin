@@ -1,4 +1,4 @@
-from justin_utils.filesystem import Folder, open_file_manager
+from justkitten.filesystem import Folder, open_file_manager
 
 from justin.shared.metafiles.metafile import GroupMetafile
 from justin.shared.models.photoset import Photoset

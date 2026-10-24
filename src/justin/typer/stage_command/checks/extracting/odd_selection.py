@@ -1,7 +1,7 @@
 from typing import List, Type
 
 from justin.typer.stage_command.problems.stem_problem import StemProblem
-from justin_utils import joins
+from justkitten import joins
 
 from justin.shared.models.photoset import Photoset
 from justin.typer.stage_command.checks.extracting.stem_extracting_check import StemExtractingCheck

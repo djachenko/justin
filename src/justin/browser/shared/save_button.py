@@ -1,5 +1,5 @@
 """The Save button: VK dropped its group_save class, only the label is left."""
-from justin_utils.util import first
+from justkitten.util import first
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait

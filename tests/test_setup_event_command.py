@@ -4,7 +4,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import pytest
-from justin_utils.filesystem import Folder
+from justkitten.filesystem import Folder
 from typer.testing import CliRunner
 
 from justin.browser.event_creation.event_creation_settings import Category

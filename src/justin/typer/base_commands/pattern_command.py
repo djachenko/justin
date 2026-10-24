@@ -8,7 +8,7 @@ from frozendict import frozendict
 
 from justin.shared.context import Context
 from justin.shared.models.photoset import Photoset
-from justin_utils.filesystem import Folder
+from justkitten.filesystem import Folder
 
 Extra = Dict[str, Any]
 

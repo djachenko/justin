@@ -40,7 +40,7 @@ pip install -e ".[dev]"
 2. Install local dependencies (if needed):
 ```bash
 pip install -e ../pyvko
-pip install -e ../justin_utils
+pip install -e ../justkitten
 ```
 
 ## Usage

@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from typing import List
 
+from justkitten.util import first
+
 from justin.cms_2.storage.sqlite.sqlite_database import SQLiteDatabase
 from justin.cms_2.storage.sqlite.sqlite_entries import Person
-from justin_utils.util import first
 
 
 class PeopleCMS:

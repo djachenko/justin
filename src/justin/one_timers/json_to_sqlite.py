@@ -1,7 +1,7 @@
 from argparse import Namespace
 
 from justin.shared.context import Context
-from justin_utils.cli import Action
+from justkitten.cli import Action
 
 
 class JsonToSqliteAction(Action):

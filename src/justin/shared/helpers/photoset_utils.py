@@ -3,8 +3,8 @@ from typing import Iterable, List
 from justin.shared.helpers.utils import validate_join, JpegType
 from justin.shared.metafiles.metafile import RootMetafile
 from justin.shared.models.photoset import Photoset
-from justin_utils import joins, util
-from justin_utils.filesystem import PathBased, File
+from justkitten import joins, util
+from justkitten.filesystem import PathBased, File
 
 
 def files_by_stems(stems: Iterable[str], photoset: Photoset, jpeg_types: JpegType = None) -> List[PathBased]:

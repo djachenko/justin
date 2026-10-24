@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 
-from justin_utils.util import first
+from justkitten.util import first
 
 from justin.browser.shared.elements import by_css, found
 from justin.browser.shared.pacing import AFTER_ACTION, pause

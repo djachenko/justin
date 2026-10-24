@@ -20,7 +20,7 @@ CLI-инструмент для автоматизации фотоворкфл�
 - **Python 3.12+**, Typer, SQLite
 - **Selenium** — автоматизация настроек VK там, где их нет в API
 - **pyvko** — самописная обёртка над VK API (`pip install -e ../pyvko`)
-- **justin_utils** — общие утилиты экосистемы (`pip install -e ../justin_utils`)
+- **justkitten** — общие утилиты экосистемы (`pip install -e ../justkitten`)
 - **valifold** — валидация файловых структур (PyPI: `pip install valifold`)
 
 ---
@@ -51,7 +51,7 @@ src/justin/
 └── postmypost/               # Telegram crossposting (pyrogram/MTProto)
 ```
 
-Работа с файлами — `justin_utils.filesystem` (`Folder`, `File`), не в этом репозитории.
+Работа с файлами — `justkitten.filesystem` (`Folder`, `File`), не в этом репозитории.
 
 Пакеты в `browser/` сгруппированы по фичам: схема и настройки одной страницы лежат
 рядом, потому что VK переверстывает страницы поодиночке и правится всегда пара.

@@ -8,7 +8,7 @@ from typing import Optional
 import sys
 import time
 from coverage import Coverage
-from justin_utils.singleton import Singleton
+from justkitten.singleton import Singleton
 
 
 @dataclass

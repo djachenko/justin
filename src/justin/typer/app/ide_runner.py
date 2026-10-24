@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from justin_utils.cd import cd
+from justkitten.cd import cd
 
 from justin.typer.app.app import build_app
 from justin.typer.app.ide_runner_local import get_config

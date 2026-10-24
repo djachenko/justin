@@ -1,8 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from justin_utils.exif import parse_exif
-from justin_utils.filesystem import Folder
+from justkitten.exif import parse_exif
+from justkitten.filesystem import Folder
 from PIL import Image
 from PIL.ExifTags import IFD, Base
 
